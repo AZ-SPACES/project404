@@ -45,7 +45,8 @@ class CheckoutIdempotencyScopeTest {
     private final HoldService holdService = mock(HoldService.class);
 
     private final CheckoutService service = new CheckoutService(
-            sessionRepository, splitRepository, merchantRepository, walletRepository, userRepository,
+            sessionRepository, splitRepository, merchantRepository, walletRepository,
+            new WalletLedger(walletRepository, new WalletLocker(walletRepository), transactionRepository), userRepository,
             transactionRepository, webhookEndpointRepository, webhookDeliveryRepository, userService,
             rateLimitService, objectMapper, emailService, notificationPrefRepository, notificationService,
             recipientResolver, holdService);

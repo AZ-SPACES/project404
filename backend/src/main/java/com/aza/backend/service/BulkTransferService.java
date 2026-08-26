@@ -30,6 +30,7 @@ public class BulkTransferService {
     private final MerchantRepository merchantRepository;
     private final UserRepository userRepository;
     private final WalletRepository walletRepository;
+    private final WalletLedger walletLedger;
     private final TransactionRepository transactionRepository;
     private final EmailService emailService;
 
@@ -111,7 +112,9 @@ public class BulkTransferService {
                 refundAmount = refundAmount.add(itemReq.getAmount());
             } else {
                 // Credit recipient wallet
-                Wallet recipientWallet = walletRepository.findByUserId(recipient.getId()).orElse(null);
+                // Locked, not a plain read: this credit is a read-modify-write and the
+                // item loop can run alongside any other credit to the same wallet.
+                Wallet recipientWallet = walletRepository.findByUserIdForUpdate(recipient.getId()).orElse(null);
                 if (recipientWallet == null) {
                     item.setStatus(BulkTransferItem.BulkTransferItemStatus.FAILED);
                     item.setFailureReason("Recipient wallet not found");
@@ -119,10 +122,7 @@ public class BulkTransferService {
                     failureCount++;
                     refundAmount = refundAmount.add(itemReq.getAmount());
                 } else {
-                    recipientWallet.setBalance(recipientWallet.getBalance().add(itemReq.getAmount()));
-                    walletRepository.save(recipientWallet);
-                    recipient.setBalance(recipientWallet.getBalance());
-                    userRepository.save(recipient);
+                    walletLedger.creditLocked(recipientWallet, itemReq.getAmount());
 
                     // Create a transaction record
                     String txNote = itemReq.getNote() != null && !itemReq.getNote().isBlank()

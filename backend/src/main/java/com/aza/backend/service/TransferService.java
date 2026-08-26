@@ -75,6 +75,7 @@ public class TransferService {
      * directions between the same people can never deadlock each other.
      */
     private final WalletLocker walletLocker;
+    private final WalletLedger walletLedger;
     /**
      * Defers pushes, SMS, email and WebSocket events until the money has actually
      * committed — never notify someone about a transfer that then rolls back.
@@ -413,10 +414,7 @@ public class TransferService {
 
         if (merchant != null) {
             // Debit sender
-            senderWallet.setBalance(senderWallet.getBalance().subtract(transaction.getAmount()));
-            walletRepository.save(senderWallet);
-            sender.setBalance(senderWallet.getBalance());
-            userRepository.save(sender);
+            walletLedger.debitLocked(senderWallet, transaction.getAmount());
 
             // Credit merchant
             BigDecimal feeRate = BigDecimal.valueOf(merchant.getFeeRateBps()).divide(BigDecimal.valueOf(10_000), 6, RoundingMode.HALF_UP);
@@ -522,28 +520,13 @@ public class TransferService {
                                 + " fee", HttpStatus.BAD_REQUEST);
             }
 
-            // Debit sender (amount + fee), credit recipient (amount)
-            senderWallet.setBalance(senderWallet.getBalance().subtract(totalDebit));
-            recipientWallet.setBalance(recipientWallet.getBalance().add(transaction.getAmount()));
-            transaction.setFeeAmount(fee);
+            // Debit sender (amount + fee), credit recipient (amount), and stamp the
+            // transaction COMPLETED — all inside this one transactional boundary, so the
+            // balances can never move without the row that records why.
+            walletLedger.transferLocked(senderWallet, recipientWallet, transaction.getAmount(), fee, transaction);
 
-            walletRepository.save(senderWallet);
-            walletRepository.save(recipientWallet);
-
-            // Update a cached balance in a user table for redundancy/quick lookup
             User recipient = userRepository.findById(transaction.getRecipientId())
                     .orElseThrow(() -> new AppException("Recipient not found"));
-
-            sender.setBalance(senderWallet.getBalance());
-            recipient.setBalance(recipientWallet.getBalance());
-            userRepository.save(sender);
-            userRepository.save(recipient);
-
-            // Mark transaction complete
-            transaction.setStatus(Transaction.TransactionStatus.COMPLETED);
-            LocalDateTime completedAt = LocalDateTime.now();
-            transaction.setCompletedAt(completedAt);
-            transactionRepository.save(transaction);
 
             // Consume the payer's rolling-monthly free P2P allowance (no-op for small
             // everyday transfers, which stay free under the per-transaction tier).
@@ -632,18 +615,8 @@ public class TransferService {
         User recipient = userRepository.findById(transaction.getRecipientId())
                 .orElseThrow(() -> new AppException("Recipient not found"));
 
-        senderWallet.setBalance(senderWallet.getBalance().subtract(transaction.getAmount()));
-        recipientWallet.setBalance(recipientWallet.getBalance().add(transaction.getAmount()));
-        walletRepository.save(senderWallet);
-        walletRepository.save(recipientWallet);
-        sender.setBalance(senderWallet.getBalance());
-        recipient.setBalance(recipientWallet.getBalance());
-        userRepository.save(sender);
-        userRepository.save(recipient);
-
-        transaction.setStatus(Transaction.TransactionStatus.COMPLETED);
-        transaction.setCompletedAt(LocalDateTime.now());
-        transactionRepository.save(transaction);
+        walletLedger.transferLocked(senderWallet, recipientWallet, transaction.getAmount(),
+                BigDecimal.ZERO, transaction);
 
         riskEngineService.recordHeldOutcome(transaction.getId(),
                 com.aza.backend.entity.RiskDecisionLog.Outcome.RELEASED);
@@ -908,25 +881,12 @@ public class TransferService {
         BigDecimal fee = feeCalculationService.quote("P2P", transaction.getAmount(), payer.getId()).fee();
         validateBalance(payerWallet, transaction.getAmount().add(fee));
 
-        payerWallet.setBalance(payerWallet.getBalance().subtract(transaction.getAmount().add(fee)));
-        requesterWallet.setBalance(requesterWallet.getBalance().add(transaction.getAmount()));
-        transaction.setFeeAmount(fee);
+        walletLedger.transferLocked(payerWallet, requesterWallet, transaction.getAmount(), fee, transaction);
 
-        walletRepository.save(payerWallet);
-        walletRepository.save(requesterWallet);
-
-        // Update cached balance in a user table
         User requester = userRepository.findById(transaction.getRecipientId())
                 .orElseThrow(() -> new AppException("User not found"));
 
-        payer.setBalance(payerWallet.getBalance());
-        requester.setBalance(requesterWallet.getBalance());
-        userRepository.save(payer);
-        userRepository.save(requester);
-
-        transaction.setStatus(Transaction.TransactionStatus.COMPLETED);
         transaction.setAcceptedAt(LocalDateTime.now());
-        transaction.setCompletedAt(LocalDateTime.now());
         transactionRepository.save(transaction);
 
         expenseSplitService.onLegSettled(transaction);
@@ -1340,16 +1300,10 @@ public class TransferService {
         if (senderWallet.getBalance().compareTo(totalDebit) < 0)
             throw new AppException("INSUFFICIENT_FUNDS", "Insufficient balance", HttpStatus.BAD_REQUEST);
 
-        senderWallet.setBalance(senderWallet.getBalance().subtract(totalDebit));
-        walletRepository.save(senderWallet);
-        sender.setBalance(senderWallet.getBalance());
-        userRepository.save(sender);
+        walletLedger.debitLocked(senderWallet, totalDebit);
 
         if (recipient != null) {
-            recipientWallet.setBalance(recipientWallet.getBalance().add(amount));
-            walletRepository.save(recipientWallet);
-            recipient.setBalance(recipientWallet.getBalance());
-            userRepository.save(recipient);
+            walletLedger.creditLocked(recipientWallet, amount);
         } else {
             // Apply the merchant's MDR, exactly like a single store payment, so bulk
             // payments to a merchant are charged consistently (the fee leaves circulation).

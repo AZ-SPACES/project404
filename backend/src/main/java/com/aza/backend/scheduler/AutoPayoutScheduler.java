@@ -2,12 +2,10 @@ package com.aza.backend.scheduler;
 
 import com.aza.backend.entity.Merchant;
 import com.aza.backend.entity.MerchantPayout;
-import com.aza.backend.entity.User;
-import com.aza.backend.entity.Wallet;
 import com.aza.backend.repository.MerchantPayoutRepository;
 import com.aza.backend.repository.MerchantRepository;
-import com.aza.backend.repository.UserRepository;
-import com.aza.backend.repository.WalletRepository;
+import com.aza.backend.service.WalletLedger;
+import com.aza.backend.service.WalletLocker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -25,9 +23,8 @@ import java.util.List;
 public class AutoPayoutScheduler {
 
     private final MerchantRepository merchantRepository;
-    private final WalletRepository walletRepository;
+    private final WalletLedger walletLedger;
     private final MerchantPayoutRepository merchantPayoutRepository;
-    private final UserRepository userRepository;
 
     private static final BigDecimal MINIMUM_PAYOUT = new BigDecimal("1.00");
 
@@ -86,27 +83,20 @@ public class AutoPayoutScheduler {
 
         BigDecimal payoutAmount = locked.getBalance();
 
-        // Debit merchant balance
+        // Credit first, debit second. The merchant row is already locked above, so the
+        // lock order stays merchant-then-wallet and still matches MerchantService.requestPayout.
+        //
+        // The order of the *writes* matters on its own: this previously zeroed the merchant
+        // balance, then logged a warning and carried on when the owner's wallet was missing,
+        // writing a COMPLETED payout for money that had been credited to nobody. Crediting
+        // first means a missing wallet throws before anything is debited, and the caller's
+        // per-merchant catch skips this merchant with its balance intact.
+        walletLedger.credit(
+                WalletLocker.personal(locked.getUserId(), "No personal wallet for merchant owner"),
+                payoutAmount);
+
         locked.setBalance(BigDecimal.ZERO);
         merchantRepository.save(locked);
-
-        // Credit the merchant owner's personal wallet
-        User owner = userRepository.findById(locked.getUserId()).orElse(null);
-        if (owner != null) {
-            Wallet wallet = walletRepository.findByUserId(locked.getUserId()).orElse(null);
-            if (wallet != null) {
-                wallet.setBalance(wallet.getBalance().add(payoutAmount));
-                walletRepository.save(wallet);
-                owner.setBalance(wallet.getBalance());
-                userRepository.save(owner);
-            } else {
-                log.warn("Auto-payout: no personal wallet found for userId={}, merchantId={}",
-                        locked.getUserId(), locked.getId());
-            }
-        } else {
-            log.warn("Auto-payout: no user found for userId={}, merchantId={}",
-                    locked.getUserId(), locked.getId());
-        }
 
         // Create the payout record
         MerchantPayout payout = MerchantPayout.builder()

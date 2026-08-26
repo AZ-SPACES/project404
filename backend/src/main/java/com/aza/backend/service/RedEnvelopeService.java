@@ -48,6 +48,7 @@ public class RedEnvelopeService {
     private final WalletRepository walletRepository;
     private final UserRepository userRepository;
     private final TransactionRepository transactionRepository;
+    private final WalletLedger walletLedger;
     private final ChatRepository chatRepository;
     private final BlockedUserRepository blockedUserRepository;
     private final NotificationService notificationService;
@@ -110,10 +111,7 @@ public class RedEnvelopeService {
 
         // The sender pays now. From here the money belongs to the gift: it has left this
         // wallet and reaches nobody until it is opened or returned.
-        wallet.setBalance(wallet.getBalance().subtract(amount));
-        walletRepository.save(wallet);
-        sender.setBalance(wallet.getBalance());
-        userRepository.save(sender);
+        walletLedger.debitLocked(wallet, amount);
 
         int expiryHours = req.getExpiresInHours() != null ? req.getExpiresInHours() : DEFAULT_EXPIRY_HOURS;
 
@@ -294,10 +292,7 @@ public class RedEnvelopeService {
         escrow.setCompletedAt(LocalDateTime.now());
         transactionRepository.save(escrow);
 
-        wallet.setBalance(wallet.getBalance().add(amount));
-        walletRepository.save(wallet);
-        recipient.setBalance(wallet.getBalance());
-        userRepository.save(recipient);
+        walletLedger.creditLocked(wallet, amount);
 
         gift.setStatus(RedEnvelope.Status.OPENED);
         gift.setOpenedAt(LocalDateTime.now());
@@ -359,12 +354,7 @@ public class RedEnvelopeService {
 
         gift.setStatus(RedEnvelope.Status.EXPIRED_REFUNDED);
         gift.setSettledAt(LocalDateTime.now());
-        senderWallet.setBalance(senderWallet.getBalance().add(outstanding));
-        walletRepository.save(senderWallet);
-        userRepository.findById(gift.getSenderId()).ifPresent(u -> {
-            u.setBalance(senderWallet.getBalance());
-            userRepository.save(u);
-        });
+        walletLedger.creditLocked(senderWallet, outstanding);
 
         gift.setRefundedAmount(
                 (gift.getRefundedAmount() == null ? BigDecimal.ZERO : gift.getRefundedAmount()).add(outstanding));

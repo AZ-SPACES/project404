@@ -61,6 +61,7 @@ public class SuperAgentService {
     private final WalletRepository walletRepository;
     private final UserRepository userRepository;
     private final TransactionRepository transactionRepository;
+    private final WalletLedger walletLedger;
     private final FloatDistributionRepository floatDistributionRepository;
     private final WalletLocker walletLocker;
     private final UserService userService;
@@ -228,10 +229,10 @@ public class SuperAgentService {
 
         // No margin: the same amount is debited and credited. Nothing is skimmed, and no
         // commission accrues on either agent — see the class comment.
-        from.setBalance(from.getBalance().subtract(amount));
-        to.setBalance(creditedBalance);
-        walletRepository.save(from);
-        walletRepository.save(to);
+        // Both wallets were locked in canonical order above, so this moves them without
+        // re-locking. Zero fee is the no-margin rule in code: the amount that leaves the
+        // master's float is exactly the amount that lands in the agent's.
+        walletLedger.transferLocked(from, to, amount, BigDecimal.ZERO, null);
 
         Transaction tx = transactionRepository.save(Transaction.builder()
                 .senderId(fromUserId)

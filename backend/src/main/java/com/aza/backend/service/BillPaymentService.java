@@ -58,6 +58,7 @@ public class BillPaymentService {
     private final BillPaymentRepository billPaymentRepository;
     private final BillerRepository billerRepository;
     private final WalletRepository walletRepository;
+    private final WalletLedger walletLedger;
     private final UserRepository userRepository;
     private final TransactionRepository transactionRepository;
     private final NotificationService notificationService;
@@ -174,10 +175,7 @@ public class BillPaymentService {
             throw new AppException("INSUFFICIENT_FUNDS", "Insufficient balance", HttpStatus.BAD_REQUEST);
         }
 
-        wallet.setBalance(wallet.getBalance().subtract(amount));
-        walletRepository.save(wallet);
-        user.setBalance(wallet.getBalance());
-        userRepository.save(user);
+        walletLedger.debitLocked(wallet, amount);
 
         BillPayment payment = billPaymentRepository.save(BillPayment.builder()
                 .userId(user.getId())
@@ -257,12 +255,7 @@ public class BillPaymentService {
                     payment.getId(), payment.getUserId());
             throw new AppException("NO_WALLET", "Wallet not found", HttpStatus.NOT_FOUND);
         }
-        wallet.setBalance(wallet.getBalance().add(payment.getAmount()));
-        walletRepository.save(wallet);
-        userRepository.findById(payment.getUserId()).ifPresent(u -> {
-            u.setBalance(wallet.getBalance());
-            userRepository.save(u);
-        });
+        walletLedger.creditLocked(wallet, payment.getAmount());
 
         payment.setStatus(BillPayment.Status.REFUNDED);
         payment.setFailureReason(reason);

@@ -34,10 +34,6 @@ public class User {
     @Column(name = "phone_number", unique = true, nullable = false)
     private String phoneNumber;
 
-    @Column(precision = 15, scale = 2)
-    @Builder.Default
-    private java.math.BigDecimal balance = java.math.BigDecimal.ZERO;
-
     @Column(name = "username", unique = true)
     private String username;
 

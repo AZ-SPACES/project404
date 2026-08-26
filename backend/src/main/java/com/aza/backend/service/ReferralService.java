@@ -3,10 +3,8 @@ package com.aza.backend.service;
 import com.aza.backend.entity.Notification;
 import com.aza.backend.entity.Referral;
 import com.aza.backend.entity.User;
-import com.aza.backend.entity.Wallet;
 import com.aza.backend.repository.ReferralRepository;
 import com.aza.backend.repository.UserRepository;
-import com.aza.backend.repository.WalletRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -29,7 +27,7 @@ public class ReferralService {
 
     private final ReferralRepository referralRepository;
     private final UserRepository userRepository;
-    private final WalletRepository walletRepository;
+    private final WalletLedger walletLedger;
     private final NotificationService notificationService;
 
     @Value("${app.referral.reward-ghs:10.00}")
@@ -83,10 +81,12 @@ public class ReferralService {
         referralRepository.findByReferredUserId(referredUserId).ifPresent(referral -> {
             if (referral.getStatus() != Referral.Status.PENDING) return;
 
-            walletRepository.findByUserId(referral.getReferrerId()).ifPresent(wallet -> {
-                wallet.setBalance(wallet.getBalance().add(referral.getRewardAmount()));
-                walletRepository.save(wallet);
-            });
+            // Locks the referrer's wallet before crediting. This used to be an unlocked
+            // read-modify-write, so a reward landing at the same moment as any other
+            // credit could overwrite it.
+            walletLedger.credit(
+                    WalletLocker.personal(referral.getReferrerId(), "Referrer wallet not found"),
+                    referral.getRewardAmount());
 
             referral.setStatus(Referral.Status.REWARDED);
             referral.setRewardedAt(LocalDateTime.now());

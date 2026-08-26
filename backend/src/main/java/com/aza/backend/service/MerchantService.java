@@ -48,7 +48,7 @@ public class MerchantService {
     private final WebhookDeliveryRepository webhookDeliveryRepository;
     private final MerchantPayoutRepository payoutRepository;
     private final UserService userService;
-    private final WalletRepository walletRepository;
+    private final WalletLedger walletLedger;
     private final UserRepository userRepository;
     private final CloudinaryService cloudinaryService;
     private final NotificationService notificationService;
@@ -752,12 +752,11 @@ public class MerchantService {
         merchant.setBalance(merchant.getBalance().subtract(request.getAmount()));
         merchantRepository.save(merchant);
 
-        Wallet wallet = walletRepository.findByUserId(userId)
-                .orElseThrow(() -> new AppException("NOT_FOUND", "Personal wallet not found", HttpStatus.NOT_FOUND));
-        wallet.setBalance(wallet.getBalance().add(request.getAmount()));
-        walletRepository.save(wallet);
-        owner.setBalance(wallet.getBalance());
-        userRepository.save(owner);
+        // The merchant row above is locked; this locks the destination wallet too, which
+        // the previous unlocked read-modify-write did not.
+        walletLedger.credit(
+                WalletLocker.personal(userId, "Personal wallet not found"),
+                request.getAmount());
 
         MerchantPayout payout = MerchantPayout.builder()
                 .merchantId(merchant.getId())

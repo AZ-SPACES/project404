@@ -41,6 +41,7 @@ public class AgentCashService {
     private final WalletRepository walletRepository;
     private final UserRepository userRepository;
     private final TransactionRepository transactionRepository;
+    private final WalletLedger walletLedger;
     private final FeeCalculationService feeCalculationService;
     private final WithdrawalCodeService withdrawalCodeService;
     private final LimitGuard limitGuard;
@@ -95,15 +96,9 @@ public class AgentCashService {
         // A deposit must keep the customer within their KYC tier's wallet ceiling.
         limitGuard.enforceWalletCeiling(customer, customerWallet.getBalance().add(amount));
 
-        // Move float -> customer (cash-in is free to the customer).
-        agentWallet.setBalance(agentWallet.getBalance().subtract(amount));
-        customerWallet.setBalance(customerWallet.getBalance().add(amount));
-        walletRepository.save(agentWallet);
-        walletRepository.save(customerWallet);
-
-        // Float lives only in the agent's float wallet — never touch their personal User.balance.
-        customer.setBalance(customerWallet.getBalance());
-        userRepository.save(customer);
+        // Move float -> customer (cash-in is free to the customer). Both wallets were
+        // locked as a pair above, so this applies the move without re-locking.
+        walletLedger.transferLocked(agentWallet, customerWallet, amount, BigDecimal.ZERO, null);
 
         // Accrue AZA's cash-in commission to the agent (payable, not e-money).
         BigDecimal commission = cashInCommission(agent, amount);
@@ -188,14 +183,15 @@ public class AgentCashService {
                     HttpStatus.CONFLICT);
         }
 
-        customerWallet.setBalance(customerWallet.getBalance().subtract(totalDebit));
-        agentWallet.setBalance(agentNewBalance);
-        walletRepository.save(customerWallet);
-        walletRepository.save(agentWallet);
-
-        // Float lives only in the agent's float wallet — never touch their personal User.balance.
-        customer.setBalance(customerWallet.getBalance());
-        userRepository.save(customer);
+        // Cash-out is deliberately asymmetric, so it is two ledger moves rather than one:
+        // the customer pays amount + fee, the agent receives the amount plus their share
+        // of that fee, and the remainder (fee - agentShare) is AZA's cut, which leaves
+        // circulation exactly like the P2P fee does.
+        walletLedger.transferLocked(customerWallet, agentWallet, amount, fee, null);
+        if (agentShare.signum() > 0) {
+            // Small cash-outs can carry a zero fee, and therefore a zero share.
+            walletLedger.creditLocked(agentWallet, agentShare);
+        }
 
         Transaction tx = transactionRepository.save(Transaction.builder()
                 .senderId(customer.getId())

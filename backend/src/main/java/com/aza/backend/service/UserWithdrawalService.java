@@ -34,6 +34,7 @@ public class UserWithdrawalService {
 
     private final UserWithdrawalRepository withdrawalRepository;
     private final WalletRepository walletRepository;
+    private final WalletLedger walletLedger;
     private final UserRepository userRepository;
     private final UserService userService;
     private final NotificationService notificationService;
@@ -56,10 +57,8 @@ public class UserWithdrawalService {
         }
 
         // Reserve the funds immediately so they cannot be double-withdrawn or spent while pending.
-        wallet.setBalance(wallet.getBalance().subtract(amount));
-        walletRepository.save(wallet);
-        user.setBalance(wallet.getBalance());
-        userRepository.save(user);
+        // The wallet is already locked above, so this applies the debit without re-locking.
+        walletLedger.debitLocked(wallet, amount);
 
         UserWithdrawal withdrawal = withdrawalRepository.save(UserWithdrawal.builder()
                 .userId(user.getId())
@@ -94,14 +93,9 @@ public class UserWithdrawalService {
         // Approval just records that the off-platform payout happened — the funds were already
         // reserved at request time. Rejection returns the reserved funds to the wallet.
         if (newStatus == UserWithdrawal.WithdrawalStatus.REJECTED) {
-            Wallet wallet = walletRepository.findByUserIdForUpdate(withdrawal.getUserId())
-                    .orElseThrow(() -> new AppException("NO_WALLET", "Wallet not found", HttpStatus.NOT_FOUND));
-            wallet.setBalance(wallet.getBalance().add(withdrawal.getAmount()));
-            walletRepository.save(wallet);
-            userRepository.findById(withdrawal.getUserId()).ifPresent(u -> {
-                u.setBalance(wallet.getBalance());
-                userRepository.save(u);
-            });
+            walletLedger.credit(
+                    WalletLocker.personal(withdrawal.getUserId(), "Wallet not found"),
+                    withdrawal.getAmount());
             log.info("Withdrawal rejected and funds refunded: id={}, amount={}", id, withdrawal.getAmount());
         }
 

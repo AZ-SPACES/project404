@@ -7,6 +7,7 @@ import com.aza.backend.entity.Wallet;
 import com.aza.backend.exception.AppException;
 import com.aza.backend.repository.AgentRepository;
 import com.aza.backend.repository.FloatMovementRepository;
+import com.aza.backend.repository.TransactionRepository;
 import com.aza.backend.repository.WalletRepository;
 import org.junit.jupiter.api.Test;
 
@@ -24,7 +25,8 @@ class FloatServiceTest {
     private final WalletRepository walletRepository = mock(WalletRepository.class);
     private final FloatMovementRepository floatMovementRepository = mock(FloatMovementRepository.class);
     private final FloatService service = new FloatService(
-            agentRepository, walletRepository, floatMovementRepository);
+            agentRepository, walletRepository, floatMovementRepository,
+            new WalletLedger(walletRepository, new WalletLocker(walletRepository), mock(TransactionRepository.class)));
 
     private final UUID agentId = UUID.randomUUID();
     private final UUID agentUserId = UUID.randomUUID();

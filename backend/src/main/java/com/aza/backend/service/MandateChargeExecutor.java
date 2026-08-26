@@ -28,6 +28,7 @@ class MandateChargeExecutor {
     private final UserRepository userRepository;
     private final MerchantRepository merchantRepository;
     private final WalletRepository walletRepository;
+    private final WalletLedger walletLedger;
     private final TransactionRepository transactionRepository;
 
     @Transactional
@@ -90,10 +91,7 @@ class MandateChargeExecutor {
         BigDecimal platformFee = amount.multiply(feeRate).setScale(2, RoundingMode.HALF_UP);
         BigDecimal netAmount = amount.subtract(platformFee);
 
-        payerWallet.setBalance(payerWallet.getBalance().subtract(amount));
-        walletRepository.save(payerWallet);
-        payer.setBalance(payerWallet.getBalance());
-        userRepository.save(payer);
+        walletLedger.debitLocked(payerWallet, amount);
 
         merchant.setBalance(merchant.getBalance().add(netAmount));
         merchant.setTotalVolume(merchant.getTotalVolume().add(amount));

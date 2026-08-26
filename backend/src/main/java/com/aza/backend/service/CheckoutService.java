@@ -47,6 +47,7 @@ public class CheckoutService {
     private final CheckoutSessionSplitRepository splitRepository;
     private final MerchantRepository merchantRepository;
     private final WalletRepository walletRepository;
+    private final WalletLedger walletLedger;
     private final UserRepository userRepository;
     private final TransactionRepository transactionRepository;
     private final WebhookEndpointRepository webhookEndpointRepository;
@@ -261,7 +262,9 @@ public class CheckoutService {
         for (CheckoutSessionSplit split : splits) {
             User seller = split.getRecipientUserId() != null
                     ? userRepository.findById(split.getRecipientUserId()).orElse(null) : null;
-            Wallet wallet = seller != null ? walletRepository.findByUserId(seller.getId()).orElse(null) : null;
+            // Locked, not a plain read: crediting a split is a read-modify-write, and the
+            // null result still drives the FALLBACK_TO_PLATFORM path below.
+            Wallet wallet = seller != null ? walletRepository.findByUserIdForUpdate(seller.getId()).orElse(null) : null;
 
             String reason = null;
             if (seller == null) reason = "Recipient not found";
@@ -277,10 +280,7 @@ public class CheckoutService {
                 continue;
             }
 
-            wallet.setBalance(wallet.getBalance().add(split.getAmount()));
-            walletRepository.save(wallet);
-            seller.setBalance(wallet.getBalance());
-            userRepository.save(seller);
+            walletLedger.creditLocked(wallet, split.getAmount());
             budgetLeft = budgetLeft.subtract(split.getAmount());
 
             String note = (split.getNote() != null && !split.getNote().isBlank())
@@ -419,10 +419,7 @@ public class CheckoutService {
         BigDecimal netAmount = session.getAmount().subtract(platformFee);
 
         // Debit customer
-        customerWallet.setBalance(customerWallet.getBalance().subtract(session.getAmount()));
-        walletRepository.save(customerWallet);
-        customer.setBalance(customerWallet.getBalance());
-        userRepository.save(customer);
+        walletLedger.debitLocked(customerWallet, session.getAmount());
 
         // Manual release: the money stops here. It has left the payer but reaches nobody
         // until the integrator calls release — so no wallet and no merchant balance is
@@ -1143,12 +1140,7 @@ public class CheckoutService {
         // 2. Each seller gives back their share.
         for (CheckoutSessionSplit split : credited) {
             Wallet w = sellerWallets.get(split.getRecipientUserId());
-            w.setBalance(w.getBalance().subtract(split.getAmount()));
-            walletRepository.save(w);
-            userRepository.findById(split.getRecipientUserId()).ifPresent(seller -> {
-                seller.setBalance(w.getBalance());
-                userRepository.save(seller);
-            });
+            walletLedger.debitLocked(w, split.getAmount());
             transactionRepository.save(Transaction.builder()
                     .senderId(split.getRecipientUserId())
                     .recipientId(session.getCustomerId())
@@ -1165,10 +1157,7 @@ public class CheckoutService {
         if (!credited.isEmpty()) splitRepository.saveAll(credited);
 
         // 3. Customer receives the full original amount.
-        customerWallet.setBalance(customerWallet.getBalance().add(refundAmount));
-        walletRepository.save(customerWallet);
-        customer.setBalance(customerWallet.getBalance());
-        userRepository.save(customer);
+        walletLedger.creditLocked(customerWallet, refundAmount);
 
         session.setStatus(CheckoutSession.SessionStatus.REFUNDED);
         session.setRefundedAt(LocalDateTime.now());

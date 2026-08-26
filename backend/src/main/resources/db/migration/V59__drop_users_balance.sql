@@ -1,0 +1,15 @@
+-- users.balance was a denormalised copy of the user's PERSONAL wallet balance, written
+-- alongside wallets.balance by most money paths and silently skipped by others: the
+-- referral reward, the promo credit, and float mint/burn all moved the wallet and left
+-- this column behind. Anything reading it could therefore be told a stale balance --
+-- the mini-app SDK's balance endpoint was doing exactly that.
+--
+-- There is now one place a wallet balance changes (WalletLedger), and it writes
+-- wallets.balance only. No API response was ever served from this column except the SDK
+-- endpoint, which now reads the wallet, so dropping it changes no contract.
+--
+-- Deploy note: the application no longer references this column, so drop it only after
+-- the release that removed the entity field is live. Rolling back past that release
+-- restores a column that starts at 0 for everyone, and the balances it would report are
+-- wrong -- roll forward instead.
+ALTER TABLE users DROP COLUMN IF EXISTS balance;

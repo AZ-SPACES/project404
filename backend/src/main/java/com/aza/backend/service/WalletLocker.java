@@ -71,7 +71,12 @@ public class WalletLocker {
         return new Locked(a, b);
     }
 
-    private Wallet lockOne(Target target) {
+    /**
+     * Locks exactly one wallet. Public because a single-sided credit or debit
+     * ({@link WalletLedger#credit}, {@link WalletLedger#debit}) needs the same row lock
+     * without a second wallet to order against.
+     */
+    public Wallet lockOne(Target target) {
         // findByUserIdForUpdate is the canonical PERSONAL-wallet accessor used throughout
         // the codebase (its query is already scoped to PERSONAL). Routing through it keeps
         // this helper's behaviour identical to the direct calls it replaces.

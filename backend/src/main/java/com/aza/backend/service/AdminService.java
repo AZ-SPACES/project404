@@ -42,6 +42,8 @@ public class AdminService {
 
     private final UserRepository userRepository;
     private final WalletRepository walletRepository;
+    private final WalletLedger walletLedger;
+    private final WalletLocker walletLocker;
     private final TransactionRepository transactionRepository;
     private final KycRecordRepository kycRecordRepository;
     private final MerchantRepository merchantRepository;
@@ -333,34 +335,21 @@ public class AdminService {
             throw new AppException("INVALID_STATE", "Only COMPLETED transactions can be reversed", HttpStatus.BAD_REQUEST);
         }
 
-        // Add the amount back to the sender
-        Wallet senderWallet = walletRepository.findByUserId(tx.getSenderId())
-                .orElseThrow(() -> new AppException("WALLET_NOT_FOUND", "Sender wallet not found", HttpStatus.NOT_FOUND));
-        senderWallet.setBalance(senderWallet.getBalance().add(tx.getAmount()));
-        walletRepository.save(senderWallet);
- 
-        // Update sender balance in user table
-        User senderUser = userRepository.findById(tx.getSenderId()).orElse(null);
-        if (senderUser != null) {
-            senderUser.setBalance(senderWallet.getBalance());
-            userRepository.save(senderUser);
-        }
+        // A reversal is the original transfer run backwards: the recipient is debited and
+        // the sender made whole. Both wallets were previously read without a lock, so a
+        // reversal racing any other movement on either wallet could lose one of the two
+        // writes. Locking both in canonical order first also keeps the funds check under
+        // the lock rather than against a stale read.
+        WalletLocker.Locked reversal = walletLocker.lock(
+                WalletLocker.personal(tx.getRecipientId(), "Recipient wallet not found"),
+                WalletLocker.personal(tx.getSenderId(), "Sender wallet not found"));
+        Wallet recipientWallet = reversal.first();
+        Wallet senderWallet = reversal.second();
 
-        // Deduct from the recipient (check they have enough)
-        Wallet recipientWallet = walletRepository.findByUserId(tx.getRecipientId())
-                .orElseThrow(() -> new AppException("WALLET_NOT_FOUND", "Recipient wallet not found", HttpStatus.NOT_FOUND));
         if (recipientWallet.getBalance().compareTo(tx.getAmount()) < 0) {
             throw new AppException("INSUFFICIENT_FUNDS", "Recipient has insufficient funds for reversal", HttpStatus.BAD_REQUEST);
         }
-        recipientWallet.setBalance(recipientWallet.getBalance().subtract(tx.getAmount()));
-        walletRepository.save(recipientWallet);
- 
-        // Update recipient balance in user table
-        User recipientUser = userRepository.findById(tx.getRecipientId()).orElse(null);
-        if (recipientUser != null) {
-            recipientUser.setBalance(recipientWallet.getBalance());
-            userRepository.save(recipientUser);
-        }
+        walletLedger.transferLocked(recipientWallet, senderWallet, tx.getAmount(), BigDecimal.ZERO, null);
 
         tx.setStatus(Transaction.TransactionStatus.REVERSED);
         tx.setCancelledAt(LocalDateTime.now());
@@ -434,14 +423,8 @@ public class AdminService {
             throw new AppException("INSUFFICIENT_FUNDS", "Requesting admin has insufficient balance", HttpStatus.BAD_REQUEST);
         }
 
-        requesterWallet.setBalance(requesterWallet.getBalance().subtract(amount));
-        recipientWallet.setBalance(recipientWallet.getBalance().add(amount));
-        walletRepository.save(requesterWallet);
-        walletRepository.save(recipientWallet);
-        requester.setBalance(requesterWallet.getBalance());
-        recipient.setBalance(recipientWallet.getBalance());
-        userRepository.save(requester);
-        userRepository.save(recipient);
+        // Both wallets are already locked in canonical order above.
+        walletLedger.transferLocked(requesterWallet, recipientWallet, amount, BigDecimal.ZERO, null);
 
         Transaction tx = Transaction.builder()
                 .senderId(requesterId)

@@ -35,6 +35,7 @@ class SuperAgentServiceTest {
     private final UserService userService = mock(UserService.class);
     private final SuperAgentService service = new SuperAgentService(
             agentRepository, walletRepository, userRepository, transactionRepository,
+            new WalletLedger(walletRepository, new WalletLocker(walletRepository), transactionRepository),
             floatDistributionRepository, new WalletLocker(walletRepository), userService);
 
     private final UUID masterUserId = UUID.randomUUID();

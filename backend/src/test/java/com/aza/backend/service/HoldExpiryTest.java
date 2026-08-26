@@ -34,6 +34,7 @@ class HoldExpiryTest {
     private final HoldService service = new HoldService(
             holdRepository, recipientRepository, eventRepository, sessionRepository,
             merchantRepository, walletRepository, userRepository, transactionRepository,
+            new WalletLedger(walletRepository, new WalletLocker(walletRepository), transactionRepository),
             recipientResolver, notificationService);
 
     private final UUID sessionId = UUID.randomUUID();

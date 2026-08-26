@@ -39,6 +39,7 @@ public class MiniAppService {
     private final NotificationService notificationService;
     private final PaymentMandateService paymentMandateService;
     private final MiniAppBundleService bundleService;
+    private final com.aza.backend.repository.WalletRepository walletRepository;
 
     // ── Public registry ────────────────────────────────────────────────────
 
@@ -394,7 +395,12 @@ public class MiniAppService {
 
     public java.math.BigDecimal getSdkBalance(String appId, User user) {
         requirePermission(appId, user, Permission.READ_BALANCE);
-        return user.getBalance();
+        // Reads the wallet, which is the balance. This used to return a denormalised
+        // copy on the user row that several credit paths never updated, so a mini-app
+        // could be told a balance that was hours or days out of date.
+        return walletRepository.findByUserId(user.getId())
+                .map(com.aza.backend.entity.Wallet::getBalance)
+                .orElse(java.math.BigDecimal.ZERO);
     }
 
     @Transactional

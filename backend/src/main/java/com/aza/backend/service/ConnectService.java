@@ -36,6 +36,7 @@ public class ConnectService {
     private final MerchantRepository merchantRepository;
     private final UserRepository userRepository;
     private final WalletRepository walletRepository;
+    private final WalletLedger walletLedger;
     private final TransactionRepository transactionRepository;
     private final ConnectTransferRepository connectTransferRepository;
     private final NotificationService notificationService;
@@ -193,10 +194,7 @@ public class ConnectService {
         merchant.setBalance(merchant.getBalance().subtract(amount));
         merchantRepository.save(merchant);
 
-        recipientWallet.setBalance(recipientWallet.getBalance().add(amount));
-        walletRepository.save(recipientWallet);
-        recipient.setBalance(recipientWallet.getBalance());
-        userRepository.save(recipient);
+        walletLedger.creditLocked(recipientWallet, amount);
 
         ConnectTransfer transfer = ConnectTransfer.builder()
                 .merchantId(merchantId)

@@ -43,6 +43,7 @@ public class HoldService {
     private final WalletRepository walletRepository;
     private final UserRepository userRepository;
     private final TransactionRepository transactionRepository;
+    private final WalletLedger walletLedger;
     private final RecipientResolver recipientResolver;
     private final NotificationService notificationService;
 
@@ -162,12 +163,9 @@ public class HoldService {
             Wallet wallet = walletRepository.findByUserIdForUpdate(recipient.getUserId())
                     .orElseThrow(() -> new AppException("RECIPIENT_UNPAYABLE",
                             "Recipient wallet vanished during release", HttpStatus.CONFLICT));
-            wallet.setBalance(wallet.getBalance().add(payout));
-            walletRepository.save(wallet);
+            walletLedger.creditLocked(wallet, payout);
 
             User recipientUser = resolution.user();
-            recipientUser.setBalance(wallet.getBalance());
-            userRepository.save(recipientUser);
 
             Transaction tx = transactionRepository.save(Transaction.builder()
                     .senderId(merchant.getUserId())
@@ -292,13 +290,7 @@ public class HoldService {
             Wallet payerWallet = walletRepository.findByUserIdForUpdate(hold.getPayerUserId())
                     .orElseThrow(() -> new AppException("NOT_FOUND",
                             "Payer wallet not found", HttpStatus.NOT_FOUND));
-            payerWallet.setBalance(payerWallet.getBalance().add(refundAmount));
-            walletRepository.save(payerWallet);
-
-            userRepository.findById(hold.getPayerUserId()).ifPresent(payer -> {
-                payer.setBalance(payerWallet.getBalance());
-                userRepository.save(payer);
-            });
+            walletLedger.creditLocked(payerWallet, refundAmount);
 
             transactionRepository.save(Transaction.builder()
                     .senderId(merchantId)

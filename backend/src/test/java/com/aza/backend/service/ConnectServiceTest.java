@@ -42,7 +42,8 @@ class ConnectServiceTest {
     private final RecipientInviteService inviteService = mock(RecipientInviteService.class);
 
     private final ConnectService service = new ConnectService(
-            merchantRepository, userRepository, walletRepository, transactionRepository,
+            merchantRepository, userRepository, walletRepository,
+            new WalletLedger(walletRepository, new WalletLocker(walletRepository), transactionRepository), transactionRepository,
             connectTransferRepository, notificationService, rateLimitService, recipientResolver,
             inviteService);
 

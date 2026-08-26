@@ -37,8 +37,9 @@ class UserWithdrawalServiceTest {
     @MockitoBean StringRedisTemplate stringRedisTemplate;
     @MockitoBean RedisMessageListenerContainer redisMessageListenerContainer;
 
-    private User user(UUID id, BigDecimal balance) {
-        return User.builder().id(id).balance(balance).build();
+    // The wallet is the balance; the user row no longer carries a copy of it.
+    private User user(UUID id) {
+        return User.builder().id(id).build();
     }
 
     private Wallet wallet(UUID userId, BigDecimal balance, boolean frozen) {
@@ -59,7 +60,7 @@ class UserWithdrawalServiceTest {
     @Test
     void request_reservesFundsAndCreatesPending() {
         UUID uid = UUID.randomUUID();
-        User u = user(uid, new BigDecimal("100"));
+        User u = user(uid);
         Wallet w = wallet(uid, new BigDecimal("100"), false);
         when(walletRepository.findByUserIdForUpdate(uid)).thenReturn(Optional.of(w));
         echoSavedWithdrawal();
@@ -67,17 +68,15 @@ class UserWithdrawalServiceTest {
         UserWithdrawal result = service.request(u, new BigDecimal("60"), "MTN", "024", null, "1234");
 
         assertEquals(0, new BigDecimal("40").compareTo(w.getBalance()), "wallet debited");
-        assertEquals(0, new BigDecimal("40").compareTo(u.getBalance()), "user balance mirror updated");
         assertEquals(UserWithdrawal.WithdrawalStatus.PENDING, result.getStatus());
         verify(walletRepository).save(w);
-        verify(userRepository).save(u);
         verify(userService).verifyPasscode(u, "1234");
     }
 
     @Test
     void request_insufficientBalance_throwsAndDoesNotDebit() {
         UUID uid = UUID.randomUUID();
-        User u = user(uid, new BigDecimal("50"));
+        User u = user(uid);
         Wallet w = wallet(uid, new BigDecimal("50"), false);
         when(walletRepository.findByUserIdForUpdate(uid)).thenReturn(Optional.of(w));
 
@@ -92,7 +91,7 @@ class UserWithdrawalServiceTest {
     @Test
     void request_frozenWallet_throws() {
         UUID uid = UUID.randomUUID();
-        User u = user(uid, new BigDecimal("100"));
+        User u = user(uid);
         Wallet w = wallet(uid, new BigDecimal("100"), true);
         when(walletRepository.findByUserIdForUpdate(uid)).thenReturn(Optional.of(w));
 
@@ -120,7 +119,7 @@ class UserWithdrawalServiceTest {
         when(withdrawalRepository.findById(wd.getId())).thenReturn(Optional.of(wd));
         echoSavedWithdrawal();
 
-        UserWithdrawal result = service.review(user(UUID.randomUUID(), BigDecimal.ZERO), wd.getId(), "APPROVE", "ok");
+        UserWithdrawal result = service.review(user(UUID.randomUUID()), wd.getId(), "APPROVE", "ok");
 
         assertEquals(UserWithdrawal.WithdrawalStatus.APPROVED, result.getStatus());
         // Funds were reserved at request time, so approval must NOT debit again.
@@ -132,18 +131,17 @@ class UserWithdrawalServiceTest {
     void review_reject_refundsReservedFunds() {
         UUID uid = UUID.randomUUID();
         UserWithdrawal wd = pending(uid, new BigDecimal("60"));
-        User u = user(uid, new BigDecimal("40"));
+        User u = user(uid);
         Wallet w = wallet(uid, new BigDecimal("40"), false); // already debited at request time
         when(withdrawalRepository.findById(wd.getId())).thenReturn(Optional.of(wd));
         when(walletRepository.findByUserIdForUpdate(uid)).thenReturn(Optional.of(w));
         when(userRepository.findById(uid)).thenReturn(Optional.of(u));
         echoSavedWithdrawal();
 
-        UserWithdrawal result = service.review(user(UUID.randomUUID(), BigDecimal.ZERO), wd.getId(), "REJECT", "no");
+        UserWithdrawal result = service.review(user(UUID.randomUUID()), wd.getId(), "REJECT", "no");
 
         assertEquals(UserWithdrawal.WithdrawalStatus.REJECTED, result.getStatus());
         assertEquals(0, new BigDecimal("100").compareTo(w.getBalance()), "reserved funds refunded");
-        assertEquals(0, new BigDecimal("100").compareTo(u.getBalance()), "user balance mirror refunded");
     }
 
     @Test
@@ -157,7 +155,7 @@ class UserWithdrawalServiceTest {
         when(withdrawalRepository.findById(wd.getId())).thenReturn(Optional.of(wd));
 
         AppException ex = assertThrows(AppException.class,
-                () -> service.review(user(UUID.randomUUID(), BigDecimal.ZERO), wd.getId(), "APPROVE", null));
+                () -> service.review(user(UUID.randomUUID()), wd.getId(), "APPROVE", null));
         assertTrue(ex.getMessage().toLowerCase().contains("already"));
     }
 }

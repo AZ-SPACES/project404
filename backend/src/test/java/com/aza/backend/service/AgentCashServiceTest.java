@@ -32,6 +32,7 @@ class AgentCashServiceTest {
     private final RiskEngineService riskEngineService = mock(RiskEngineService.class);
     private final AgentCashService service = new AgentCashService(
             agentRepository, walletRepository, userRepository, transactionRepository,
+            new WalletLedger(walletRepository, new WalletLocker(walletRepository), transactionRepository),
             feeCalculationService, withdrawalCodeService, new LimitGuard(), riskEngineService,
             new WalletLocker(walletRepository));
 

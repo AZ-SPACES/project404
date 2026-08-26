@@ -26,6 +26,7 @@ public class RecurringTransferService {
     private final RecurringTransferRepository recurringTransferRepository;
     private final UserRepository userRepository;
     private final WalletRepository walletRepository;
+    private final WalletLedger walletLedger;
     private final TransactionRepository transactionRepository;
     private final AnomalyDetectionService anomalyDetectionService;
     private final RiskEngineService riskEngineService;
@@ -155,28 +156,14 @@ public class RecurringTransferService {
             throw new RuntimeException("Recipient not found or inactive");
         }
 
-        Wallet senderWallet = walletRepository.findByUserIdForUpdate(rt.getUserId())
-                .orElseThrow(() -> new RuntimeException("Sender wallet not found"));
-
-        if (senderWallet.getBalance().compareTo(rt.getAmount()) < 0) {
-            throw new RuntimeException("Insufficient balance");
-        }
-
-        Wallet recipientWallet = walletRepository.findByUserId(recipient.getId())
-                .orElseThrow(() -> new RuntimeException("Recipient wallet not found"));
-
-        senderWallet.setBalance(senderWallet.getBalance().subtract(rt.getAmount()));
-        walletRepository.save(senderWallet);
-
-        userRepository.findById(rt.getUserId()).ifPresent(sender -> {
-            sender.setBalance(senderWallet.getBalance());
-            userRepository.save(sender);
-        });
-
-        recipientWallet.setBalance(recipientWallet.getBalance().add(rt.getAmount()));
-        walletRepository.save(recipientWallet);
-        recipient.setBalance(recipientWallet.getBalance());
-        userRepository.save(recipient);
+        // Locks both wallets in canonical order and applies the move. The recipient's
+        // wallet was previously read without a lock, so a standing order landing at the
+        // same moment as any other credit could overwrite it. The insufficient-funds
+        // check now happens under the lock, inside the ledger.
+        walletLedger.transfer(
+                WalletLocker.personal(rt.getUserId(), "Sender wallet not found"),
+                WalletLocker.personal(recipient.getId(), "Recipient wallet not found"),
+                rt.getAmount(), BigDecimal.ZERO, null);
 
         String note = rt.getNote() != null && !rt.getNote().isBlank()
                 ? rt.getNote()

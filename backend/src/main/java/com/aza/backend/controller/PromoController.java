@@ -4,11 +4,11 @@ import com.aza.backend.dto.ApiResponse;
 import com.aza.backend.entity.PromoCode;
 import com.aza.backend.entity.PromoCodeRedemption;
 import com.aza.backend.entity.User;
-import com.aza.backend.entity.Wallet;
 import com.aza.backend.exception.AppException;
+import com.aza.backend.service.WalletLedger;
+import com.aza.backend.service.WalletLocker;
 import com.aza.backend.repository.PromoCodeRedemptionRepository;
 import com.aza.backend.repository.PromoCodeRepository;
-import com.aza.backend.repository.WalletRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -27,7 +27,7 @@ public class PromoController {
 
     private final PromoCodeRepository promoCodeRepository;
     private final PromoCodeRedemptionRepository promoCodeRedemptionRepository;
-    private final WalletRepository walletRepository;
+    private final WalletLedger walletLedger;
 
     @GetMapping("/validate")
     public ResponseEntity<?> validate(@RequestParam String code) {
@@ -77,10 +77,9 @@ public class PromoController {
             throw new AppException("PROMO_ALREADY_REDEEMED", "You have already redeemed this promo code", HttpStatus.CONFLICT);
         }
 
-        Wallet wallet = walletRepository.findByUserIdForUpdate(user.getId())
-                .orElseThrow(() -> new AppException("WALLET_NOT_FOUND", "Wallet not found", HttpStatus.NOT_FOUND));
-        wallet.setBalance(wallet.getBalance().add(promo.getCreditAmountGhs()));
-        walletRepository.save(wallet);
+        walletLedger.credit(
+                WalletLocker.personal(user.getId(), "Wallet not found"),
+                promo.getCreditAmountGhs());
 
         promoCodeRedemptionRepository.save(PromoCodeRedemption.builder()
                 .promoCodeId(promo.getId())

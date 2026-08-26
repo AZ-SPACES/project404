@@ -223,7 +223,6 @@ class ConcurrentTransferIT extends PostgresIntegrationTest {
                     .passwordHash("x")
                     .dateOfBirth(LocalDate.of(1995, 1, 1))
                     .status(User.AccountStatus.ACTIVE)
-                    .balance(balance)
                     .build());
             walletRepository.saveAndFlush(Wallet.builder()
                     .userId(user.getId())

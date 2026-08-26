@@ -31,6 +31,7 @@ public class FloatService {
     private final AgentRepository agentRepository;
     private final WalletRepository walletRepository;
     private final FloatMovementRepository floatMovementRepository;
+    private final WalletLedger walletLedger;
 
     @Transactional
     public FloatMovement mint(User admin, UUID agentId, BigDecimal amount, String bankReference) {
@@ -47,8 +48,7 @@ public class FloatService {
                     "Minting would exceed the agent's float limit of GHS " + agent.getFloatLimit().toPlainString(),
                     HttpStatus.CONFLICT);
         }
-        wallet.setBalance(newBalance);
-        walletRepository.save(wallet);
+        walletLedger.creditLocked(wallet, amount);
         return record(agent, FloatMovement.Type.MINT, amount, bankReference, admin);
     }
 
@@ -62,8 +62,7 @@ public class FloatService {
             throw new AppException("INSUFFICIENT_FLOAT",
                     "Agent float is too low to burn this amount", HttpStatus.BAD_REQUEST);
         }
-        wallet.setBalance(wallet.getBalance().subtract(amount));
-        walletRepository.save(wallet);
+        walletLedger.debitLocked(wallet, amount);
         return record(agent, FloatMovement.Type.BURN, amount, bankReference, admin);
     }
 

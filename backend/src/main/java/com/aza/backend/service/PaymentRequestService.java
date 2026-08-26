@@ -39,6 +39,7 @@ public class PaymentRequestService {
     private final PaymentRequestRepository paymentRequestRepository;
     private final ChatRepository chatRepository;
     private final WalletRepository walletRepository;
+    private final WalletLedger walletLedger;
     private final TransactionRepository transactionRepository;
     private final UserRepository userRepository;
     private final BlockedUserRepository blockedUserRepository;
@@ -186,18 +187,8 @@ public class PaymentRequestService {
             throw new AppException("Insufficient balance");
         }
 
-        payerWallet.setBalance(payerWallet.getBalance().subtract(pr.getAmount()));
-        requesterWallet.setBalance(requesterWallet.getBalance().add(pr.getAmount()));
-
-        walletRepository.save(payerWallet);
-        walletRepository.save(requesterWallet);
-
-        payer.setBalance(payerWallet.getBalance());
-        userRepository.save(payer);
-        userRepository.findById(pr.getRequesterId()).ifPresent(requester -> {
-            requester.setBalance(requesterWallet.getBalance());
-            userRepository.save(requester);
-        });
+        // Both wallets are already locked in canonical order above.
+        walletLedger.transferLocked(payerWallet, requesterWallet, pr.getAmount(), BigDecimal.ZERO, null);
 
         // Scored for the fraud queues; chat payment requests complete inline (the
         // PAID status/chat flow can't park mid-payment) so HIGH alerts rather than holds.

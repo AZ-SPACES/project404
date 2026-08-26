@@ -6,6 +6,8 @@ import com.aza.backend.entity.Transaction;
 import com.aza.backend.entity.User;
 import com.aza.backend.entity.Wallet;
 import com.aza.backend.exception.AppException;
+import com.aza.backend.service.WalletLedger;
+import com.aza.backend.service.WalletLocker;
 import com.aza.backend.repository.AdminNoteRepository;
 import com.aza.backend.repository.RefreshTokenRepository;
 import com.aza.backend.repository.TransactionRepository;
@@ -36,6 +38,7 @@ public class AdminCSController {
 
     private final UserRepository userRepository;
     private final WalletRepository walletRepository;
+    private final WalletLedger walletLedger;
     private final TransactionRepository transactionRepository;
     private final AdminNoteRepository adminNoteRepository;
     private final RefreshTokenRepository refreshTokenRepository;
@@ -98,23 +101,18 @@ public class AdminCSController {
         if (body.amount() == null || body.amount().compareTo(BigDecimal.ZERO) <= 0) {
             throw new AppException("INVALID_AMOUNT", "Amount must be positive", HttpStatus.BAD_REQUEST);
         }
-        Wallet wallet = walletRepository.findByUserIdForUpdate(userId)
-                .orElseThrow(() -> new AppException("NOT_FOUND", "Wallet not found", HttpStatus.NOT_FOUND));
-
         BigDecimal newBalance;
         if ("CREDIT".equalsIgnoreCase(body.type())) {
-            newBalance = wallet.getBalance().add(body.amount());
+            newBalance = walletLedger.credit(
+                    WalletLocker.personal(userId, "Wallet not found"), body.amount()).getBalance();
         } else if ("DEBIT".equalsIgnoreCase(body.type())) {
-            newBalance = wallet.getBalance().subtract(body.amount());
-            if (newBalance.compareTo(BigDecimal.ZERO) < 0) {
-                throw new AppException("INSUFFICIENT_BALANCE", "Debit would result in negative balance", HttpStatus.BAD_REQUEST);
-            }
+            // The ledger refuses to overdraw, so the negative-balance guard is enforced
+            // under the row lock rather than against a balance read before it.
+            newBalance = walletLedger.debit(
+                    WalletLocker.personal(userId, "Wallet not found"), body.amount()).getBalance();
         } else {
             throw new AppException("INVALID_TYPE", "Type must be CREDIT or DEBIT", HttpStatus.BAD_REQUEST);
         }
-
-        wallet.setBalance(newBalance);
-        walletRepository.save(wallet);
 
         Map<String, Object> result = new HashMap<>();
         result.put("newBalance", newBalance);
