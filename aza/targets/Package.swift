@@ -14,7 +14,7 @@ import Foundation
 /// SwiftUI, WatchKit or WatchConnectivity is out of reach here, which is a
 /// standing argument for keeping decisions like date parsing and staleness in
 /// the model rather than in a view.
-let modelSources = ["WalletSnapshot.swift", "SnapshotStore.swift"]
+let modelSources = ["WalletSnapshot.swift", "SnapshotStore.swift", "QRCode.swift"]
 
 /// Everything else in `watch/` belongs to the Xcode target, not to this package.
 /// Computed rather than listed so adding a SwiftUI view does not silently start

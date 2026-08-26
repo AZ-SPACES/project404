@@ -109,7 +109,11 @@ final class MoneyNotificationController: WKUserNotificationHostingController<Mon
 
         // Expo nests the data map one level down; FCM flattens it. Read both so
         // the scene works whichever transport delivered the push.
-        let info = content.userInfo
+        // `userInfo` is keyed by AnyHashable, so it is narrowed to string keys
+        // first — the payload is JSON off the wire and has no others.
+        let info = content.userInfo.reduce(into: [String: Any]()) { result, entry in
+            if let key = entry.key as? String { result[key] = entry.value }
+        }
         let data = (info["body"] as? [String: Any]) ?? (info["data"] as? [String: Any]) ?? info
 
         amount = data["amount"] as? String ?? ""

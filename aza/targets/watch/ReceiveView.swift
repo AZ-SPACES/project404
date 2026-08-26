@@ -1,6 +1,4 @@
 import SwiftUI
-import CoreImage
-import CoreImage.CIFilterBuiltins
 
 /// The user's static receive code.
 ///
@@ -13,20 +11,23 @@ struct ReceiveView: View {
     let handle: String
     let displayName: String
 
-    /// Generated once per link rather than per render: CoreImage rasterisation is
-    /// cheap on a phone and conspicuously not on a watch.
-    @State private var code: UIImage?
+    @Environment(\.displayScale) private var displayScale
+
+    /// Encoded once per link rather than per render. Cheap even on a watch, but
+    /// there is no reason to redo it on every layout pass.
+    @State private var code: QRCode?
+
+    /// The spec's four-module margin. A code drawn flush to the edge of a dark
+    /// watch face is one a phone camera will hunt for and often miss.
+    private static let quietZone = 4
 
     var body: some View {
         ScrollView {
             VStack(spacing: 8) {
                 if let code {
-                    Image(uiImage: code)
-                        .interpolation(.none)
-                        .resizable()
-                        .scaledToFit()
+                    Canvas { context, size in draw(code, in: context, size: size) }
+                        .aspectRatio(1, contentMode: .fit)
                         .frame(maxWidth: .infinity)
-                        .padding(6)
                         .background(Color.white)
                         .clipShape(RoundedRectangle(cornerRadius: 8))
                 } else {
@@ -47,28 +48,33 @@ struct ReceiveView: View {
         }
         .navigationTitle("Receive")
         .navigationBarTitleDisplayMode(.inline)
-        .task(id: payLink) { code = Self.makeCode(from: payLink) }
+        .task(id: payLink) { code = QRCode.encode(payLink) }
         .accessibilityLabel("Payment code for \(handle.isEmpty ? displayName : "@\(handle)")")
     }
 
-    private static func makeCode(from link: String) -> UIImage? {
-        guard !link.isEmpty else { return nil }
+    /// Modules are snapped to whole pixels and all drawn in one path. Letting
+    /// them land on fractional boundaries antialiases every edge, which on a
+    /// screen this small is the difference between a code that scans first try
+    /// and one the user has to angle into the light.
+    private func draw(_ code: QRCode, in context: GraphicsContext, size: CGSize) {
+        let span = code.size + Self.quietZone * 2
+        let pixel = 1 / max(displayScale, 1)
+        let module = max((min(size.width, size.height) / CGFloat(span) / pixel).rounded(.down) * pixel, pixel)
+        let side = module * CGFloat(span)
+        let origin = CGPoint(x: (((size.width - side) / 2) / pixel).rounded() * pixel,
+                             y: (((size.height - side) / 2) / pixel).rounded() * pixel)
 
-        let filter = CIFilter.qrCodeGenerator()
-        filter.message = Data(link.utf8)
-        // Medium correction: a watch screen is small, and every level above M
-        // costs modules that turn into unscannable noise at this size.
-        filter.correctionLevel = "M"
+        context.fill(Path(CGRect(origin: origin, size: CGSize(width: side, height: side))),
+                     with: .color(.white))
 
-        guard let output = filter.outputImage else { return nil }
-
-        // The generator emits roughly one pixel per module. Scale up before
-        // rasterising so the code stays crisp instead of being smoothed into
-        // something a scanner cannot read.
-        let scaled = output.transformed(by: CGAffineTransform(scaleX: 8, y: 8))
-        guard let cgImage = CIContext().createCGImage(scaled, from: scaled.extent) else {
-            return nil
+        var dark = Path()
+        for y in 0..<code.size {
+            for x in 0..<code.size where code.isDark(x: x, y: y) {
+                dark.addRect(CGRect(x: origin.x + CGFloat(x + Self.quietZone) * module,
+                                    y: origin.y + CGFloat(y + Self.quietZone) * module,
+                                    width: module, height: module))
+            }
         }
-        return UIImage(cgImage: cgImage)
+        context.fill(dark, with: .color(.black))
     }
 }
