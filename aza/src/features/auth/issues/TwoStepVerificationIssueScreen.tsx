@@ -14,6 +14,7 @@ import { RootStackParamList } from "../../../navigation/types";
 import {  useAppTheme, ThemeColors, Typography, Spacing  } from "../../../theme";
 import { MaterialIcons } from '@react-native-vector-icons/material-icons';
 import { BackButton } from '../../../components/ui/BackButton';
+import { openSupportEmail } from '../../../utils/supportContact';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "TwoStepVerificationIssue">;
 
@@ -138,7 +139,7 @@ export default function TwoStepVerificationIssueScreen() {
           </View>
         </View>
 
-        <TouchableOpacity style={styles.helpButton} onPress={() => navigation.navigate('TalkToUs')}>
+        <TouchableOpacity style={styles.helpButton} onPress={() => openSupportEmail('2-step verification issue')}>
           <Text style={styles.helpText}>I still need help</Text>
         </TouchableOpacity>
       </Animated.ScrollView>

@@ -16,6 +16,7 @@ import Button from "../../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../../navigation/types";
 import { BackButton } from '../../../../components/ui/BackButton';
+import { openSupportEmail } from '../../../../utils/supportContact';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "Refund">;
 export default function Refund() {
@@ -125,7 +126,7 @@ export default function Refund() {
 
         <TouchableOpacity
           style={styles.helpButton}
-          onPress={() => navigation.navigate("TalkToUs")}
+          onPress={() => openSupportEmail("Refund for a deactivated account")}
         >
           <Text style={styles.helpText}>I still need help</Text>
         </TouchableOpacity>

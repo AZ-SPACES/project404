@@ -16,6 +16,7 @@ import Button from "../../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../../navigation/types";
 import { BackButton } from '../../../../components/ui/BackButton';
+import { openSupportEmail } from '../../../../utils/supportContact';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "Reason">;
 export default function Reason() {
@@ -132,7 +133,7 @@ export default function Reason() {
 
         <TouchableOpacity
           style={styles.helpButton}
-          onPress={() => navigation.navigate("TalkToUs")}
+          onPress={() => openSupportEmail("Account deactivated")}
         >
           <Text style={styles.helpText}>I still need help</Text>
         </TouchableOpacity>

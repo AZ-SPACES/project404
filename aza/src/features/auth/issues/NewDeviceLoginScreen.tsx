@@ -14,6 +14,7 @@ import { MaterialIcons } from '@react-native-vector-icons/material-icons';
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { BackButton } from '../../../components/ui/BackButton';
+import { openSupportEmail } from '../../../utils/supportContact';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "NewDeviceLogin">
 
@@ -133,7 +134,7 @@ export default function NewDeviceLogin() {
         <Text style={styles.paragraph}>
           You will now be able to log in with your new device.
         </Text>
-        <TouchableOpacity style={styles.helpButton} onPress={() => navigation.navigate('TalkToUs')}>
+        <TouchableOpacity style={styles.helpButton} onPress={() => openSupportEmail('Logging in on a new device')}>
           <Text style={styles.helpText}>I still need help</Text>
         </TouchableOpacity>
       </Animated.ScrollView>

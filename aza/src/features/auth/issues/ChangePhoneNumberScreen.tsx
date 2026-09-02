@@ -8,6 +8,7 @@ import {  useAppTheme, ThemeColors, Typography, Spacing, Radius  } from "../../.
 import { MaterialIcons } from '@react-native-vector-icons/material-icons';
 import Button from "../../../components/ui/Button";
 import { BackButton } from '../../../components/ui/BackButton';
+import { openSupportEmail } from '../../../utils/supportContact';
 
 type NavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -127,7 +128,7 @@ export default function ChangePhoneNumber() {
 
         <TouchableOpacity
           style={styles.helpButton}
-          onPress={() => navigation.navigate("TalkToUs")}
+          onPress={() => openSupportEmail("Change phone number")}
         >
           <Text style={styles.helpText}>I still need help</Text>
         </TouchableOpacity>

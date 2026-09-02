@@ -81,9 +81,9 @@ const linking = {
           FinancialDashboard: "analytics",
           AiAssistant: "ai",
           ContactsProfile: "profile/:username",
+          Inbox: "inbox",
           MainTabs: {
             screens: {
-              Inbox: "inbox",
               Hub: "hub",
             },
           },

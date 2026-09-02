@@ -242,16 +242,19 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
             },
           });
         } else if (type === 'KYB_APPROVED' || type === 'KYB_REJECTED' || type === 'KYB_MORE_INFO_REQUIRED') {
-          navigate('App', { screen: 'Hub' });
+          navigate('App', { screen: 'MainTabs', params: { screen: 'Hub' } });
         } else if (type === 'KYC_REJECTED') {
-          navigate('App', { screen: 'VerifyIdentity', params: {} });
+          // A rejected user is still behind the KYC gate, so RootNavigator is
+          // rendering the KYC branch — not App. Landing on KYCRejected also puts
+          // the rejection reason and the resubmit button in front of them.
+          navigate('KYC', { screen: 'KYCRejected' });
         } else if (type === 'INCOMING_CALL') {
           // Route through the store so we land on IncomingCallScreen with
           // working accept/decline, not directly on the in-call screen
           // (which previously rendered blank because activeCall was null).
           handleIncomingCallPush(data as CallPushData);
         } else if (type === 'MISSED_CALL') {
-          navigate('App', { screen: 'MainTabs', params: { screen: 'Inbox' } });
+          navigate('App', { screen: 'Inbox' });
         } else if (type === 'SECURITY_ALERT') {
           navigate('App', { screen: 'SecurityAndPrivacy' });
         } else if (type === 'SUPPORT_MESSAGE') {
@@ -268,10 +271,10 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
               },
             });
           } else {
-            navigate('App', { screen: 'MainTabs', params: { screen: 'Inbox' } });
+            navigate('App', { screen: 'Inbox' });
           }
         } else if (type === 'MONEY_RECEIVED') {
-          navigate('App', { screen: 'MainTabs', params: { screen: 'Home' } });
+          navigate('App', { screen: 'MainTabs', params: { screen: 'HomeTab' } });
         } else if (type === 'TRANSFER_COMPLETED') {
           navigate('App', { screen: 'Transactions', params: { balance: '' } });
         } else if (type === 'MINI_APP_REVIEW') {
@@ -285,9 +288,9 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         ) {
           navigate('App', { screen: 'RequestPending' });
         } else if (typeof type === 'string' && type.includes('PAYMENT_REQUEST')) {
-          navigate('App', { screen: 'MainTabs', params: { screen: 'Inbox' } });
+          navigate('App', { screen: 'Inbox' });
         } else {
-          navigate('App', { screen: 'MainTabs', params: { screen: 'Inbox' } });
+          navigate('App', { screen: 'Inbox' });
         }
       });
     } catch (e) {

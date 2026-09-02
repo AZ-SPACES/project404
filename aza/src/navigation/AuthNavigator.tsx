@@ -30,6 +30,9 @@ import {
   ConsentScreen,
   TermsOfServiceScreen,
   PrivacyPolicyScreen,
+  ReasonScreen,
+  RefundScreen,
+  StatementScreen,
 } from '../features/auth';
 
 import { createNativeStackNavigator as createStack } from '@react-navigation/native-stack';
@@ -54,6 +57,11 @@ export default function AuthNavigator() {
       <Stack.Screen name="TwoStepVerificationIssue" component={TwoStepVerificationIssueScreen} />
       <Stack.Screen name="ChangePhoneNumber" component={ChangePhoneNumberScreen} />
       <Stack.Screen name="AccountDeactivated" component={AccountDeactivatedScreen} />
+      {/* Reached only from AccountDeactivated, which is an Auth-stack screen — they
+          were previously registered on the App stack, where nothing links to them. */}
+      <Stack.Screen name="Reason" component={ReasonScreen} />
+      <Stack.Screen name="Refund" component={RefundScreen} />
+      <Stack.Screen name="Statement" component={StatementScreen} />
       <Stack.Screen name="NewDeviceLogin" component={NewDeviceLoginScreen} />
       <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
       <Stack.Screen name="ResetOTP" component={ResetOTPScreen} />

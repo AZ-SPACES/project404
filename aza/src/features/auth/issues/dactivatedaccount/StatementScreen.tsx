@@ -7,6 +7,7 @@ import { RootStackParamList } from '../../../../navigation/types';
 import {  useAppTheme, ThemeColors, Typography, Spacing, Radius  } from '../../../../theme';
 import { MaterialIcons } from '@react-native-vector-icons/material-icons';
 import { BackButton } from '../../../../components/ui/BackButton';
+import { openSupportEmail } from '../../../../utils/supportContact';
 
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Statement'>;
@@ -28,7 +29,7 @@ export default function Statement() {
           If your account has been deactivated and you would like a statement for your account, you can reach out to us. Click the link below to speak with one of our team.
         </Text>
 
-        <TouchableOpacity style={styles.helpButton} onPress={() => navigation.navigate('TalkToUs')}>
+        <TouchableOpacity style={styles.helpButton} onPress={() => openSupportEmail('Statement for a deactivated account')}>
             <Text style={styles.helpText}>I still need help</Text>
         </TouchableOpacity>
       </View>

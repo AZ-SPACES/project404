@@ -40,7 +40,7 @@ import RecurringTransfersScreen from '../features/transfer/recurring/RecurringTr
 import CreateRecurringTransferScreen from '../features/transfer/recurring/CreateRecurringTransferScreen';
 import BulkTransferScreen from '../features/transfer/send/BulkTransferScreen';
 import SpendingCategoriesScreen from '../features/home/screens/SpendingCategoriesScreen';
-import { ReasonScreen, RefundScreen, StatementScreen, TermsOfServiceScreen, PrivacyPolicyScreen, AppLoginApprovalScreen, GenerateRecoveryCodeScreen,} from '../features/auth';
+import { TermsOfServiceScreen, PrivacyPolicyScreen, AppLoginApprovalScreen, GenerateRecoveryCodeScreen,} from '../features/auth';
 import QrLoginApprovalScreen from '../features/scan/screens/QrLoginApprovalScreen';
 import MerchantCheckoutScreen from '../features/scan/screens/MerchantCheckoutScreen';
 import OAuthPaymentApprovalScreen from '../features/scan/screens/OAuthPaymentApprovalScreen';
@@ -156,9 +156,6 @@ export default function AppNavigator() {
       <Stack.Screen name="PaymentProof" component={PaymentProofScreen} />
       <Stack.Screen name="GenerateRecoveryCode" component={GenerateRecoveryCodeScreen} />
       <Stack.Screen name="AccountRecoveryContacts" component={AccountRecoveryContactsScreen} />
-      <Stack.Screen name="Reason" component={ReasonScreen} />
-      <Stack.Screen name="Refund" component={RefundScreen} />
-      <Stack.Screen name="Statement" component={StatementScreen}/>
       <Stack.Screen name="TermsOfService" component={TermsOfServiceScreen} />
       <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
       <Stack.Screen name="ChatScreen" component={ChatScreen} />
