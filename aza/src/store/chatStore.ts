@@ -21,7 +21,6 @@ import {
   deleteChatMessage,
   fetchUserKeyBundles,
   fetchOwnKeyBundles,
-  getDeviceId,
   getChatMessages,
   getOrCreateChat,
   listChats,
@@ -31,21 +30,17 @@ import {
   sendChatMessage,
   sendChatTypingIndicator,
   setDisappearingMessages,
-  type DeviceCiphertext,
   type SendMessagePayload,
 } from '../services/api';
-import {
-  base64ToBytes,
-  bytesToBase64,
-} from '../crypto/codec';
+import { base64ToBytes } from '../crypto/codec';
+// Decrypt-only. Message bodies are no longer encrypted on the way out — the
+// server stores them readable so history follows the account rather than the
+// device — but every message sent before that change is still an E2EE envelope
+// on the server, so the reading half has to stay.
 import {
   decryptFromSender,
   decryptV3,
-  encryptFirstMessageV3,
-  encryptFollowupMessageV3,
-  encryptForRecipient,
   verifyEd25519,
-  type RecipientBundle,
   type V3Envelope,
 } from '../crypto/e2ee';
 import {
@@ -402,129 +397,6 @@ function clearDeviceBundleCache(): void {
   recipientBundleInFlight.clear();
   ownBundleCache = null;
   ownBundleInFlight = null;
-}
-
-// ─── Outgoing envelope construction ──────────────────────────────────────────
-
-type EncryptedEnvelopes = {
-  deviceCiphertexts: Record<string, DeviceCiphertext>;
-  ciphertext?: string;
-  ephemeralKey?: string;
-  senderIdentityPublicKey?: string;
-  preKeyId?: string;
-};
-
-/**
- * Encrypt one plaintext for every device that has to read it, plus the legacy
- * v3 X3DH envelope for single-device peers that don't understand the
- * per-device map.
- *
- * Shared by sendText and sendMedia — the two had drifted into byte-identical
- * copies of this block.
- *
- * Latency: the three inputs (recipient device bundles, our own other-device
- * bundles, the peer's v3 key material) are independent, but used to be awaited
- * one after another, so a cold cache cost three sequential HTTP round trips
- * before the message could be published. They now resolve together, and since
- * ensurePeerKeys reads the same shared bundle cache as the recipient fan-out,
- * a cold send costs two concurrent requests rather than three serial ones.
- */
-async function encryptForAllDevices(args: {
-  plaintext: string;
-  chatId: string;
-  otherUserId: string;
-  selfUserId: string;
-  selfDeviceId: string;
-  selfIdentityPub: Uint8Array;
-  selfIdentityPriv: Uint8Array;
-  ensurePeerKeys: (otherUserId: string) => Promise<PeerKeys | null>;
-}): Promise<EncryptedEnvelopes> {
-  const {
-    plaintext, chatId, otherUserId, selfUserId, selfDeviceId,
-    selfIdentityPub, selfIdentityPriv, ensurePeerKeys,
-  } = args;
-
-  const [recipientFetch, ownBundles, peer] = await Promise.all([
-    fetchRecipientDeviceBundlesCached(otherUserId).catch(() => null),
-    fetchOwnDeviceBundlesCached().catch(() => [] as any[]),
-    ensurePeerKeys(otherUserId).catch(() => null),
-  ]);
-
-  const deviceCiphertexts: Record<string, DeviceCiphertext> = {};
-
-  // Recipient devices. If the fan-out fetch failed we still have the peer's
-  // identity key from the v3 path, so fall back to a single legacy envelope
-  // rather than dropping the send.
-  const recipientBundles: any[] = recipientFetch
-    ?? (peer
-      ? [{ deviceId: 'device_legacy', identityPublicKey: bytesToBase64(peer.identityPublicKey) }]
-      : []);
-
-  // Plus the sender's own other devices, so Device 2 can read what Device 1 sent.
-  const targets = [
-    ...recipientBundles,
-    ...ownBundles.filter((b: any) => b.deviceId !== selfDeviceId),
-  ];
-  for (const bundle of targets) {
-    if (!bundle?.identityPublicKey) continue;
-    const env = encryptForRecipient({
-      plaintext,
-      recipientIdentityPublic: base64ToBytes(bundle.identityPublicKey),
-      senderId: selfUserId,
-      chatId,
-    });
-    deviceCiphertexts[bundle.deviceId] = {
-      ciphertext: env.ciphertext,
-      ephemeralKey: env.ephemeralPublicKey,
-    };
-  }
-
-  if (!peer) return { deviceCiphertexts };
-
-  // Also maintain the v3 X3DH session (primary recipient, legacy-compat).
-  const rootKey = await loadSessionRoot(selfUserId, otherUserId, peer.identityPublicKey);
-  let envelope: V3Envelope;
-  let usedPreKeyId: string | undefined;
-  if (!rootKey) {
-    const bundle: RecipientBundle = {
-      identityPublicKey: peer.identityPublicKey,
-      signedPreKeyPublic: peer.signedPreKeyPublic,
-      ...(peer.oneTimePreKeyId ? { oneTimePreKeyId: peer.oneTimePreKeyId } : {}),
-      ...(peer.oneTimePreKeyPublic ? { oneTimePreKeyPublic: peer.oneTimePreKeyPublic } : {}),
-    };
-    const first = encryptFirstMessageV3({
-      plaintext,
-      senderIdentityKeyPair: { publicKey: selfIdentityPub, privateKey: selfIdentityPriv },
-      recipientBundle: bundle,
-      senderId: selfUserId,
-      chatId,
-    });
-    envelope = first.envelope;
-    usedPreKeyId = peer.oneTimePreKeyId ?? undefined;
-    await saveSessionRoot(selfUserId, otherUserId, first.rootKey, peer.identityPublicKey);
-    // Bookkeeping for the logout wipe only — nothing in this send depends on
-    // it, so don't hold the publish behind a SecureStore write.
-    indexSessionRoot(selfUserId, otherUserId).catch(() => {});
-  } else {
-    const followup = encryptFollowupMessageV3({
-      plaintext,
-      rootKey,
-      recipientIdentityPublic: peer.identityPublicKey,
-      senderId: selfUserId,
-      chatId,
-    });
-    envelope = followup.envelope;
-    await saveSessionRoot(selfUserId, otherUserId, followup.newRootKey, peer.identityPublicKey);
-    followup.newRootKey.fill(0);
-  }
-
-  return {
-    deviceCiphertexts,
-    ciphertext: envelope.ciphertext,
-    ephemeralKey: envelope.ephemeralPublicKey,
-    ...(envelope.senderIdentityPublicKey ? { senderIdentityPublicKey: envelope.senderIdentityPublicKey } : {}),
-    ...(usedPreKeyId ? { preKeyId: usedPreKeyId } : {}),
-  };
 }
 
 // ─── Encrypted-at-rest write coalescing ──────────────────────────────────────
