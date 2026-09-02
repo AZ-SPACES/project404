@@ -120,18 +120,23 @@ public class UserService {
         if (request.getFirstName() != null) user.setFirstName(request.getFirstName());
         if (request.getLastName() != null) user.setLastName(request.getLastName());
         
-        if (request.getEmail() != null && !request.getEmail().equals(user.getEmail())) {
-            if (userRepository.existsByEmail(request.getEmail())) {
-                throw new AppException("Email is already registered");
-            }
-            user.setEmail(request.getEmail());
+        // Email and phone are NOT editable here. They're the account's recovery and
+        // login identifiers, so changing one requires proving control of the new value
+        // via requestEmailChange/verifyEmailChange (and the phone equivalents). Letting
+        // this endpoint write them also skipped normalization: a raw "0241234567" or
+        // "Kofi@Gmail.com" stored here doesn't collide with the canonical "+233241234567"
+        // or "kofi@gmail.com" the unique index is guarding, so the same person could end
+        // up holding two accounts on one number.
+        if (request.getEmail() != null && !request.getEmail().equalsIgnoreCase(user.getEmail())) {
+            throw new AppException("EMAIL_CHANGE_REQUIRES_VERIFICATION",
+                    "Verify the new address before changing your email.", HttpStatus.BAD_REQUEST);
         }
 
-        if (request.getPhone() != null && !request.getPhone().equals(user.getPhoneNumber())) {
-            if (userRepository.existsByPhoneNumber(request.getPhone())) {
-                throw new AppException("Phone number is already registered");
-            }
-            user.setPhoneNumber(request.getPhone());
+        if (request.getPhone() != null
+                && !com.aza.backend.util.PhoneNumberUtil.normalize(request.getPhone())
+                        .equals(user.getPhoneNumber())) {
+            throw new AppException("PHONE_CHANGE_REQUIRES_VERIFICATION",
+                    "Verify the new number before changing your phone.", HttpStatus.BAD_REQUEST);
         }
 
         if (request.getPronouns() != null) user.setPronouns(request.getPronouns());
@@ -208,7 +213,10 @@ public class UserService {
     }
 
     public void requestPhoneChange(User user, String newPhone) {
-        String normalized = newPhone.trim();
+        // Canonical E.164, exactly as signup stores it — otherwise the availability
+        // check below looks for the wrong string and the OTP goes to a different
+        // Redis key than the one verifyPhoneChange reads.
+        String normalized = com.aza.backend.util.PhoneNumberUtil.normalize(newPhone);
         requestCredentialChange(user, normalized, "PHONE_ALREADY_EXISTS", 
             "This phone number is already registered with another account", "change_phone",
             "A request to change your phone number to " + normalized + " was initiated.",
@@ -217,7 +225,7 @@ public class UserService {
 
     @Transactional
     public AuthResponse.UserInfo verifyPhoneChange(User user, String newPhone, String code) {
-        String normalized = newPhone.trim();
+        String normalized = com.aza.backend.util.PhoneNumberUtil.normalize(newPhone);
         otpService.verifyOtp(normalized, code, "change_phone");
         user.setPhoneNumber(normalized);
         return getProfile(userRepository.save(user));

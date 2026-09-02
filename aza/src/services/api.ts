@@ -484,14 +484,12 @@ export type Akyede = {
 };
 
 export const createAkyede = (payload: {
-  /** Handle, phone, or email — resolved the same way a transfer resolves a payee. */
   recipient: string;
   amount: number;
   occasion?: AkyedeOccasion;
   message?: string;
   chatId?: string;
   expiresInHours?: number;
-  /** Sending a gift is a debit, so it is authorised like any other. */
   passcode: string;
   idempotencyKey: string;
 }) => api.post('/api/v1/akyede', payload);

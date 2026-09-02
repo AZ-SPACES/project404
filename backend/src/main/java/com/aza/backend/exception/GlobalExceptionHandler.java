@@ -53,9 +53,49 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleDataIntegrityViolation(
             org.springframework.dao.DataIntegrityViolationException ex) {
         log.warn("Data integrity violation: {}", ex.getMessage());
-        return ResponseEntity
-                .status(HttpStatus.CONFLICT)
-                .body(ApiResponse.error("CONFLICT", "This action conflicts with existing data"));
+
+        // Signup checks existsByEmail/existsByPhoneNumber before inserting, but two
+        // requests racing on the same address both pass that check and one loses at the
+        // unique index. It's the same "already taken" condition the client already knows
+        // how to show, so name the field instead of returning a generic conflict the
+        // signup screen can only render as an unexplained failure.
+        // Postgres reports both a constraint name ("users_email_key") and a detail line
+        // ("Key (email)=(…) already exists"); match either so this survives a constraint
+        // being renamed.
+        String detail = rootMessage(ex).toLowerCase();
+        // Email has two unique indexes: users_email_key on the raw column and
+        // users_email_lower_key on lower(email). Either can be the one that fires.
+        if (violates(detail, "users_email_key", "users_email_lower_key", "key (email)", "key (lower(email")) {
+            return conflict("EMAIL_ALREADY_EXISTS", "This email address is already in use");
+        }
+        if (violates(detail, "users_phone_number_key", "key (phone_number)")) {
+            return conflict("PHONE_ALREADY_EXISTS", "This phone number is already in use");
+        }
+        if (violates(detail, "users_username_key", "key (username)")) {
+            return conflict("HANDLE_ALREADY_EXISTS", "This handle is already in use");
+        }
+        return conflict("CONFLICT", "This action conflicts with existing data");
+    }
+
+    private boolean violates(String detail, String... markers) {
+        for (String marker : markers) {
+            if (detail.contains(marker)) return true;
+        }
+        return false;
+    }
+
+    private ResponseEntity<ApiResponse<Void>> conflict(String code, String message) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(code, message));
+    }
+
+    /** The constraint name lives on the driver's exception, not the Spring wrapper's message. */
+    private String rootMessage(Throwable ex) {
+        StringBuilder sb = new StringBuilder();
+        for (Throwable t = ex; t != null && sb.length() < 2000; t = t.getCause()) {
+            if (t.getMessage() != null) sb.append(t.getMessage()).append(' ');
+            if (t.getCause() == t) break;
+        }
+        return sb.toString();
     }
 
     /**
