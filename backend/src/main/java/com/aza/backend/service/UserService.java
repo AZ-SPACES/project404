@@ -646,6 +646,9 @@ public class UserService {
 
     @Transactional
     public void setPasscode(User user, String passcode) {
+        // The single chokepoint for set, change and reset — signup encodes its own, and
+        // validates there too.
+        com.aza.backend.util.PasscodePolicy.validate(passcode);
         user.setPasscodeHash(passwordEncoder.encode(passcode));
         userRepository.save(user);
     }

@@ -101,3 +101,16 @@ export function formatWait(seconds: number): string {
 export function rateLimitMessage(err: unknown): string {
   return `Too many attempts. Please wait ${formatWait(getRetryAfterSeconds(err))} and try again.`;
 }
+
+/**
+ * The backend's machine-readable error code (ApiResponse.error.code), e.g.
+ * "EMAIL_ALREADY_EXISTS". Use this rather than matching on the message, which is
+ * user-facing copy and changes.
+ */
+export function getErrorCode(err: unknown): string | undefined {
+  if (!err || typeof err !== 'object') return undefined;
+  const data = ((err as Record<string, unknown>).response as Record<string, unknown> | undefined)
+    ?.data as Record<string, unknown> | undefined;
+  const error = data?.error as Record<string, unknown> | undefined;
+  return typeof error?.code === 'string' ? error.code : undefined;
+}

@@ -84,6 +84,10 @@ public class AuthService {
         // per-device fingerprint limits and behavioral blocking cover the rest.
         rateLimitService.enforceRateLimit("signup:" + ipAddress, 25, Duration.ofHours(1));
 
+        if (request.getPasscode() != null && !request.getPasscode().isEmpty()) {
+            com.aza.backend.util.PasscodePolicy.validate(request.getPasscode());
+        }
+
         String email = request.getEmail().toLowerCase().trim();
         // The client's validate-email call is advisory — a scripted signup skips it
         // entirely, so the throwaway-domain and undeliverable-domain rules are enforced

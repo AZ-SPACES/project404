@@ -21,9 +21,25 @@ import { useToast } from "../../../providers/ToastProvider";
 import * as SecureStore from "expo-secure-store";
 import { TOKEN_KEY, REFRESH_TOKEN_KEY, recordConsent } from "../../../services/api";
 import { BackButton } from '../../../components/ui/BackButton';
-import { extractErrorMessage } from '../../../utils/errorUtils';
+import { extractErrorMessage, getErrorCode } from '../../../utils/errorUtils';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "Consent">;
+
+/**
+ * Signup can still fail at the final submit on a value collected ten screens ago: the
+ * address was registered while this signup was being filled in, or the client-side
+ * check failed open on a flaky connection and the server rejected it. Each of these
+ * codes maps to the screen that can actually fix it.
+ */
+const SCREEN_OWNING_ERROR: Record<string, keyof RootStackParamList | undefined> = {
+  EMAIL_ALREADY_EXISTS: "SignUpEmail",
+  INVALID_FORMAT: "SignUpEmail",
+  DISPOSABLE_DOMAIN: "SignUpEmail",
+  UNRESOLVABLE_DOMAIN: "SignUpEmail",
+  PHONE_ALREADY_EXISTS: "SignUpNumber",
+  HANDLE_ALREADY_EXISTS: "SignUpHandle",
+  WEAK_PASSCODE: "CreatePasscode",
+};
 
 export default function ConsentScreen() {
   const { colors: Colors } = useAppTheme();
@@ -79,17 +95,19 @@ export default function ConsentScreen() {
 
       if (!accessToken || !refreshToken) throw new Error('Signup did not return tokens');
 
-      const fullName = [data.firstName, data.lastName].filter(Boolean).join(' ');
-
       // Save passcode locally for biometrics/verification
       if (data.passcode) {
         await savePasscodeValue(data.passcode);
       }
 
-      reset();
-
       await SecureStore.setItemAsync(TOKEN_KEY, accessToken);
       await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, refreshToken);
+
+      // Only once the session is genuinely persisted. Clearing first meant a failed
+      // SecureStore write left an account created on the server and nothing on the
+      // device — the user would be told "Signup failed" and, on retry, that their own
+      // email was already taken.
+      reset();
 
       // Token is stored, so these authenticate via the request interceptor
       recordConsents();
@@ -97,7 +115,18 @@ export default function ConsentScreen() {
       // hasPasscode=true because we just set it during signup
       login({ token: accessToken, hasPasscode: true, isKYCVerified: false });
     } catch (error: unknown) {
-      showToast(extractErrorMessage(error, 'Signup failed'), 'error');
+      const message = extractErrorMessage(error, 'Signup failed');
+      const screen = SCREEN_OWNING_ERROR[getErrorCode(error) ?? ''];
+
+      // The stack was reset to this screen, so there is nothing to go back to. Telling
+      // someone their email is taken while stranding them on the last screen leaves a
+      // retry that can never succeed — send them to the field that owns the problem.
+      if (screen) {
+        showToast(message, 'error');
+        navigation.reset({ index: 0, routes: [{ name: screen }] });
+        return;
+      }
+      showToast(message, 'error');
     }
   };
 
@@ -117,7 +146,14 @@ export default function ConsentScreen() {
             },
           ]}
         >
-          <BackButton onPress={() => navigation.goBack()} size={28} />
+          {/* ConfirmPasscode resets the stack onto this screen, so there is usually
+              nothing to go back to. Rendering the control anyway gave a button that
+              answered a tap with haptics and no navigation. */}
+          {navigation.canGoBack() ? (
+            <BackButton onPress={() => navigation.goBack()} size={28} />
+          ) : (
+            <View style={styles.backButtonPlaceholder} />
+          )}
         </Animated.View>
 
         {/* Content */}
@@ -279,6 +315,12 @@ function createStyles(Colors: ThemeColors) {
     alignItems: "center",
     paddingHorizontal: Spacing.lg,
     borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  // Holds the back button's footprint so the header title doesn't shift when the
+  // control is absent.
+  backButtonPlaceholder: {
+    width: 44,
+    height: 44,
   },
   backButton: {
     width: 44,

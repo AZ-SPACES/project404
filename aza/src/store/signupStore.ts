@@ -136,9 +136,12 @@ export const useSignupStore = create<SignupState>((set, get) => ({
       set({ isLoading: false });
       return response.data;
     } catch (error: unknown) {
-      const errorMsg = extractErrorMessage(error, 'Signup failed');
-      set({ isLoading: false, error: errorMsg });
-      throw new Error(errorMsg);
+      set({ isLoading: false, error: extractErrorMessage(error, 'Signup failed') });
+      // Rethrow the original, not a bare Error built from its message. The caller needs
+      // the response body to tell EMAIL_ALREADY_EXISTS from WEAK_PASSCODE and send the
+      // user back to the screen that owns the problem; flattening it to a string threw
+      // that away and left every failure looking identical.
+      throw error;
     }
   },
 }));

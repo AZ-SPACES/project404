@@ -1,4 +1,4 @@
-import { extractErrorMessage, toError, getErrorStatus } from '../errorUtils';
+import { extractErrorMessage, toError, getErrorStatus, getErrorCode, getRetryAfterSeconds, formatWait } from '../errorUtils';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -162,5 +162,51 @@ describe('getErrorStatus', () => {
 
   it('returns undefined for a string', () => {
     expect(getErrorStatus('error string')).toBeUndefined();
+  });
+});
+
+// ── getErrorCode ──────────────────────────────────────────────────────────────
+// Signup routes the user back to the screen that owns a failure using this code, so a
+// regression here silently strands people on the consent screen instead.
+
+describe('getErrorCode', () => {
+  it('reads the backend error code from an ApiResponse body', () => {
+    const err = axiosError({
+      status: 409,
+      data: { success: false, error: { code: 'EMAIL_ALREADY_EXISTS', message: 'in use' } },
+    });
+    expect(getErrorCode(err)).toBe('EMAIL_ALREADY_EXISTS');
+  });
+
+  it('returns undefined when the body carries no code', () => {
+    expect(getErrorCode(axiosError({ data: { message: 'boom' } }))).toBeUndefined();
+    expect(getErrorCode(axiosError({ data: { error: 'a plain string' } }))).toBeUndefined();
+    expect(getErrorCode(new Error('network'))).toBeUndefined();
+    expect(getErrorCode(undefined)).toBeUndefined();
+    expect(getErrorCode('nope')).toBeUndefined();
+  });
+});
+
+// ── rate-limit helpers ────────────────────────────────────────────────────────
+
+describe('getRetryAfterSeconds', () => {
+  it('uses the value the response interceptor attached', () => {
+    const err = Object.assign(axiosError({ status: 429 }), { retryAfterSeconds: 45 });
+    expect(getRetryAfterSeconds(err)).toBe(45);
+  });
+
+  it('falls back to 60s when absent or nonsensical', () => {
+    expect(getRetryAfterSeconds(axiosError({ status: 429 }))).toBe(60);
+    expect(getRetryAfterSeconds(Object.assign(axiosError({}), { retryAfterSeconds: 0 }))).toBe(60);
+    expect(getRetryAfterSeconds(undefined)).toBe(60);
+  });
+});
+
+describe('formatWait', () => {
+  it('renders seconds under a minute and whole minutes above', () => {
+    expect(formatWait(45)).toBe('45s');
+    expect(formatWait(0.4)).toBe('1s');
+    expect(formatWait(60)).toBe('1m');
+    expect(formatWait(150)).toBe('3m');
   });
 });
