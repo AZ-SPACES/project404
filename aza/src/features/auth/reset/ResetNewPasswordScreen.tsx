@@ -10,7 +10,8 @@ import {
   TouchableOpacity,
   StyleSheet,
   StatusBar,
-  Alert
+  Alert,
+  ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
@@ -71,119 +72,125 @@ export default function ResetNewPasswordScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" />
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-        <KeyboardAvoidingView
-          style={styles.container}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-        >
-          {/* Header */}
-          <View style={styles.header}>
-            <BackButton onPress={() => navigation.goBack()} size={28} />
-          </View>
-
-          {/* Content */}
-          <View style={styles.content}>
-            <Text style={styles.title}>New Password</Text>
-            <Text style={styles.subtitle}>
-              Choose a strong password that you haven't used before.
-            </Text>
-
-            <Text style={styles.label}>New Password</Text>
-            <View style={styles.inputContainer}>
-              <MaterialIcons
-                name="lock-outline"
-                size={24}
-                color={Colors.primary}
-                style={styles.inputIcon}
-              />
-              <TextInput
-                underlineColorAndroid="transparent"
-                style={styles.input}
-                placeholder="********"
-                placeholderTextColor={Colors.textSecondary}
-                value={password}
-                onChangeText={setPassword}
-                onBlur={() => setPasswordTouched(true)}
-                secureTextEntry={!isPasswordVisible}
-                autoCapitalize="none"
-                autoFocus
-              />
-              <TouchableOpacity
-                onPress={() => setIsPasswordVisible(!isPasswordVisible)}
-              >
-                <MaterialIcons
-                  name={isPasswordVisible ? "visibility" : "visibility-off"}
-                  size={20}
-                  color={Colors.primary}
-                />
-              </TouchableOpacity>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Header */}
+            <View style={styles.header}>
+              <BackButton onPress={() => navigation.goBack()} size={28} />
             </View>
-            {passwordTouched && password.length > 0 && (
-              <View style={styles.rulesContainer}>
-                {rules.map((r) => (
-                  <Text
-                    key={r.label}
-                    style={[styles.ruleText, r.met ? styles.ruleMet : styles.ruleUnmet]}
-                  >
-                    {r.met ? '✓' : '✗'} {r.label}
-                  </Text>
-                ))}
+
+            {/* Content */}
+            <View style={styles.content}>
+              <Text style={styles.title}>New Password</Text>
+              <Text style={styles.subtitle}>
+                Choose a strong password that you haven't used before.
+              </Text>
+
+              <Text style={styles.label}>New Password</Text>
+              <View style={styles.inputContainer}>
+                <MaterialIcons
+                  name="lock-outline"
+                  size={24}
+                  color={Colors.primary}
+                  style={styles.inputIcon}
+                />
+                <TextInput
+                  underlineColorAndroid="transparent"
+                  style={styles.input}
+                  placeholder="********"
+                  placeholderTextColor={Colors.textSecondary}
+                  value={password}
+                  onChangeText={setPassword}
+                  onBlur={() => setPasswordTouched(true)}
+                  secureTextEntry={!isPasswordVisible}
+                  autoCapitalize="none"
+                  autoFocus
+                />
+                <TouchableOpacity
+                  onPress={() => setIsPasswordVisible(!isPasswordVisible)}
+                >
+                  <MaterialIcons
+                    name={isPasswordVisible ? "visibility" : "visibility-off"}
+                    size={20}
+                    color={Colors.primary}
+                  />
+                </TouchableOpacity>
               </View>
-            )}
+              {passwordTouched && password.length > 0 && (
+                <View style={styles.rulesContainer}>
+                  {rules.map((r) => (
+                    <Text
+                      key={r.label}
+                      style={[styles.ruleText, r.met ? styles.ruleMet : styles.ruleUnmet]}
+                    >
+                      {r.met ? '✓' : '✗'} {r.label}
+                    </Text>
+                  ))}
+                </View>
+              )}
 
-            <Text style={styles.label}>Confirm New Password</Text>
-            <View style={styles.inputContainer}>
-              <MaterialIcons
-                name="lock-outline"
-                size={24}
-                color={Colors.primary}
-                style={styles.inputIcon}
-              />
-              <TextInput
-                underlineColorAndroid="transparent"
-                style={styles.input}
-                placeholder="********"
-                placeholderTextColor={Colors.textSecondary}
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                onBlur={() => setConfirmTouched(true)}
-                secureTextEntry={!isConfirmPasswordVisible}
-                autoCapitalize="none"
-              />
-              <TouchableOpacity
-                onPress={() =>
-                  setIsConfirmPasswordVisible(!isConfirmPasswordVisible)
-                }
-              >
+              <Text style={styles.label}>Confirm New Password</Text>
+              <View style={styles.inputContainer}>
                 <MaterialIcons
-                  name={
-                    isConfirmPasswordVisible ? "visibility" : "visibility-off"
-                  }
-                  size={20}
+                  name="lock-outline"
+                  size={24}
                   color={Colors.primary}
+                  style={styles.inputIcon}
                 />
-              </TouchableOpacity>
+                <TextInput
+                  underlineColorAndroid="transparent"
+                  style={styles.input}
+                  placeholder="********"
+                  placeholderTextColor={Colors.textSecondary}
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  onBlur={() => setConfirmTouched(true)}
+                  secureTextEntry={!isConfirmPasswordVisible}
+                  autoCapitalize="none"
+                />
+                <TouchableOpacity
+                  onPress={() =>
+                    setIsConfirmPasswordVisible(!isConfirmPasswordVisible)
+                  }
+                >
+                  <MaterialIcons
+                    name={
+                      isConfirmPasswordVisible ? "visibility" : "visibility-off"
+                    }
+                    size={20}
+                    color={Colors.primary}
+                  />
+                </TouchableOpacity>
+              </View>
+              {mismatchError ? <Text style={styles.errorText}>{mismatchError}</Text> : null}
             </View>
-            {mismatchError ? <Text style={styles.errorText}>{mismatchError}</Text> : null}
-          </View>
 
-          {/* Footer */}
-          <View style={styles.buttonContainer}>
-            <Button
-              title="Reset Password"
-              onPress={handleReset}
-              backgroundColor={Colors.primary}
-              textColor={Colors.secondary}
-              borderRadius={30}
-              paddingVertical={16}
-              fontSize={Typography.button.fontSize}
-              fontWeight={Typography.button.fontWeight}
-              disabled={!isFormValid || isLoading}
-              loading={isLoading}
-            />
-          </View>
-        </KeyboardAvoidingView>
-      </TouchableWithoutFeedback>
+            {/* Footer */}
+            <View style={styles.buttonContainer}>
+              <Button
+                title="Reset Password"
+                onPress={handleReset}
+                backgroundColor={Colors.primary}
+                textColor={Colors.secondary}
+                borderRadius={30}
+                paddingVertical={16}
+                fontSize={Typography.button.fontSize}
+                fontWeight={Typography.button.fontWeight}
+                disabled={!isFormValid || isLoading}
+                loading={isLoading}
+              />
+            </View>
+          </ScrollView>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -197,6 +204,11 @@ function createStyles(Colors: ThemeColors) {
   },
   container: {
     flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'space-between',
+    paddingBottom: Spacing.lg,
   },
   header: {
     paddingHorizontal: Spacing.lg,
@@ -273,6 +285,7 @@ function createStyles(Colors: ThemeColors) {
   },
   buttonContainer: {
     paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.xl,
     marginBottom: Spacing.lg,
   },
 });

@@ -18,8 +18,29 @@ import { BASE_URL, TOKEN_KEY } from '../services/api';
 import { useAuth } from './AuthProvider';
 import { useE2EE } from './E2EEProvider';
 import { useChatStore } from '../store/chatStore';
+import { loadCursor } from '../store/eventCursor';
 import { subscribeAuthEvents } from './authEvents';
 import { flushSessionRoots } from '../store/sessionRootCache';
+
+/**
+ * Ask the backend to replay the chat events we missed, starting from the last
+ * event-log id we processed. A first connect with no stored cursor still sends
+ * the frame — the server treats an absent cursor as an unmeasurable gap and
+ * tells us to full-sync, which is what we want on a cold start.
+ */
+function requestResync(client: Client) {
+  const userId = useChatStore.getState().selfUserId;
+  if (!userId) return;
+  loadCursor(userId, 'chat')
+    .then((lastEventId) => {
+      if (!client.connected) return;
+      client.publish({
+        destination: '/app/resync',
+        body: JSON.stringify({ dest: 'chat', lastEventId }),
+      });
+    })
+    .catch(() => {});
+}
 
 export function ChatSocketProvider({ children }: { children: React.ReactNode }) {
   const { userToken } = useAuth();
@@ -72,11 +93,18 @@ export function ChatSocketProvider({ children }: { children: React.ReactNode }) 
         });
         // Reset retry visuals on each reconnect by replaying any pending sends.
         useChatStore.getState().retryFailedSends().catch(() => {});
-        // Nothing replays the events published while we were disconnected, so
-        // pull the open thread back from the server — otherwise a message sent
-        // during a backgrounded stretch or a network blip stays invisible
-        // until the chat screen is remounted.
-        useChatStore.getState().resyncActiveThread().catch(() => {});
+        // Ask the server for everything published while we were disconnected.
+        // It replays from our cursor out of its per-user event log, so a
+        // message sent during a backgrounded stretch or a network blip lands
+        // in every chat, not just the open one — and costs no REST round trip.
+        // Sent after subscribing, so an event published mid-handshake arrives
+        // live rather than falling between the two; if it arrives both ways,
+        // the store drops the duplicate by id.
+        //
+        // When the server cannot replay — the log is off, or our cursor has
+        // aged out of it — it answers `resync.required` and the store falls
+        // back to reloading from the REST history.
+        requestResync(client);
       },
       onStompError: (frame) => {
         console.warn('[chat-ws] STOMP error', frame.headers['message'], frame.body);

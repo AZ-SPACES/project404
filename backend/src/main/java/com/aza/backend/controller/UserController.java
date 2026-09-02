@@ -2,6 +2,7 @@ package com.aza.backend.controller;
 
 import com.aza.backend.dto.ApiResponse;
 import com.aza.backend.dto.user.DeactivateRequest;
+import com.aza.backend.dto.user.EmailCheckResponse;
 import com.aza.backend.dto.user.PrivacySettingsRequest;
 import com.aza.backend.dto.user.SilentHoursRequest;
 import com.aza.backend.dto.user.UpdateProfileRequest;
@@ -279,6 +280,16 @@ public class UserController {
         // enumeration of a single address (IP/fingerprint limits cap volume).
         rateLimitService.enforceRateLimit("check:email:" + email.toLowerCase().trim(), 15, Duration.ofMinutes(10));
         return ResponseEntity.ok(ApiResponse.success(userService.isEmailAvailable(email)));
+    }
+
+    /**
+     * Availability plus deliverability and a typo correction. Superset of /check-email,
+     * which stays as-is so app builds already in the wild keep working.
+     */
+    @GetMapping("/validate-email")
+    public ResponseEntity<ApiResponse<EmailCheckResponse>> validateEmail(@RequestParam String email) {
+        rateLimitService.enforceRateLimit("check:email:" + email.toLowerCase().trim(), 15, Duration.ofMinutes(10));
+        return ResponseEntity.ok(ApiResponse.success(userService.checkEmail(email)));
     }
 
     @GetMapping("/check-phone")

@@ -12,6 +12,7 @@ import com.aza.backend.repository.MerchantRepository;
 import com.aza.backend.security.JwtUtil;
 import com.aza.backend.util.CloudinaryService;
 import com.aza.backend.util.EmailService;
+import com.aza.backend.util.EmailValidationService;
 import com.aza.backend.util.SmsService;
 import com.aza.backend.exception.AppException;
 import org.springframework.http.HttpStatus;
@@ -53,6 +54,7 @@ public class UserService {
     private final PresenceService presenceService;
     private final StaffRoleService staffRoleService;
     private final HandleRegistry handleRegistry;
+    private final EmailValidationService emailValidationService;
 
     private static final String BLACKLIST_PREFIX = "jwt:blacklist:";
 
@@ -186,6 +188,11 @@ public class UserService {
 
     public void requestEmailChange(User user, String newEmail) {
         String normalized = newEmail.toLowerCase().trim();
+        EmailValidationService.Result validation = emailValidationService.validate(normalized);
+        if (!validation.valid()) {
+            throw new AppException(validation.reason().name(),
+                    emailRejectionMessage(validation.reason()), HttpStatus.BAD_REQUEST);
+        }
         requestCredentialChange(user, normalized, "EMAIL_ALREADY_EXISTS", 
             "This email address is already registered with another account", "change_email",
             "A request to change your email address to " + normalized + " was initiated. If this wasn't you, secure your account immediately.",
@@ -687,6 +694,39 @@ public class UserService {
 
     public boolean isEmailAvailable(String email) {
         return isFieldAvailable(email, EMAIL_PATTERN, userRepository::existsByEmail);
+    }
+
+    /**
+     * The signup screen's email check: deliverability and availability in one round trip,
+     * plus a typo correction to offer when the domain looks mistyped.
+     */
+    public EmailCheckResponse checkEmail(String email) {
+        EmailValidationService.Result result = emailValidationService.validate(email);
+        if (!result.valid()) {
+            return EmailCheckResponse.builder()
+                    .valid(false)
+                    .available(false)
+                    .reason(result.reason().name())
+                    .suggestion(result.suggestion())
+                    .build();
+        }
+
+        boolean available = !userRepository.existsByEmail(email.toLowerCase().trim());
+        return EmailCheckResponse.builder()
+                .valid(true)
+                .available(available)
+                .reason(available ? null : "ALREADY_REGISTERED")
+                .suggestion(result.suggestion())
+                .build();
+    }
+
+    /** Shared user-facing copy for a rejected address, so signup and email-change agree. */
+    public static String emailRejectionMessage(EmailValidationService.Reason reason) {
+        return switch (reason) {
+            case DISPOSABLE_DOMAIN -> "Temporary email addresses aren't supported. Please use a permanent address.";
+            case UNRESOLVABLE_DOMAIN -> "We can't deliver mail to that domain. Please check the address.";
+            case INVALID_FORMAT -> "Enter a valid email address.";
+        };
     }
 
     public boolean isPhoneAvailable(String phone) {

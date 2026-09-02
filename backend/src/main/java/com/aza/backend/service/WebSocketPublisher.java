@@ -18,8 +18,19 @@ import java.util.UUID;
 @Slf4j
 public class WebSocketPublisher {
 
+    /**
+     * STOMP queue suffixes. These double as the {@code dest} recorded in the
+     * event log, so a replay can be scoped to the queue the client is asking
+     * about — see {@link WebSocketEventLog}.
+     */
+    public static final String DEST_CHAT = "chat";
+    public static final String DEST_CALLS = "calls";
+    public static final String DEST_PRESENCE = "presence";
+    public static final String DEST_NOTIFICATIONS = "notifications";
+
     private final StringRedisTemplate redisTemplate;
     private final SimpMessagingTemplate messagingTemplate;
+    private final WebSocketEventLog eventLog;
     private final ObjectMapper objectMapper;
 
     /**
@@ -28,6 +39,9 @@ public class WebSocketPublisher {
      * publish/subscribe round-trip. MUST stay false when running more than one
      * backend instance — a recipient connected to another instance would never
      * receive the event. Default false keeps the safe cross-instance behavior.
+     *
+     * <p>Independent of the event log: durable events are appended to the log
+     * either way, so replay works the same on one instance or several.
      */
     @Value("${app.websocket.local-delivery:false}")
     private boolean localDeliveryOnly;
@@ -37,7 +51,7 @@ public class WebSocketPublisher {
      * The RedisMessageSubscriber forwards it over WebSocket to the user's /queue/notifications.
      */
     public void publishNotification(UUID userId, WebSocketEventType type, Object payload) {
-        publish(RedisPubSubConfig.NOTIFY_CHANNEL_PREFIX + userId, type, payload);
+        publish(userId, RedisPubSubConfig.NOTIFY_CHANNEL_PREFIX + userId, DEST_NOTIFICATIONS, type, payload);
     }
 
     /**
@@ -46,8 +60,10 @@ public class WebSocketPublisher {
      */
     public void publishToChatRoom(UUID participantOne, UUID participantTwo,
                                    WebSocketEventType type, Object payload) {
-        publish(RedisPubSubConfig.CHAT_USER_CHANNEL_PREFIX + participantOne, type, payload);
-        publish(RedisPubSubConfig.CHAT_USER_CHANNEL_PREFIX + participantTwo, type, payload);
+        publish(participantOne, RedisPubSubConfig.CHAT_USER_CHANNEL_PREFIX + participantOne,
+                DEST_CHAT, type, payload);
+        publish(participantTwo, RedisPubSubConfig.CHAT_USER_CHANNEL_PREFIX + participantTwo,
+                DEST_CHAT, type, payload);
     }
 
     /**
@@ -55,7 +71,7 @@ public class WebSocketPublisher {
      * The RedisMessageSubscriber forwards it to the user's /queue/calls.
      */
     public void publishCallEvent(UUID userId, WebSocketEventType type, Object payload) {
-        publish(RedisPubSubConfig.CALL_CHANNEL_PREFIX + userId, type, payload);
+        publish(userId, RedisPubSubConfig.CALL_CHANNEL_PREFIX + userId, DEST_CALLS, type, payload);
     }
 
     /**
@@ -64,7 +80,8 @@ public class WebSocketPublisher {
      * with a chat or contact relationship to the subject should learn about it.
      */
     public void publishPresenceToUser(UUID recipientId, WebSocketEventType type, Object payload) {
-        publish(RedisPubSubConfig.PRESENCE_USER_CHANNEL_PREFIX + recipientId, type, payload);
+        publish(recipientId, RedisPubSubConfig.PRESENCE_USER_CHANNEL_PREFIX + recipientId,
+                DEST_PRESENCE, type, payload);
     }
 
     /**
@@ -72,7 +89,9 @@ public class WebSocketPublisher {
      * Used to push live inbox updates when any user sends a support message.
      */
     public void publishToAdminSupport(WebSocketEventType type, Object payload) {
-        publish(RedisPubSubConfig.ADMIN_SUPPORT_CHANNEL, type, payload);
+        // No recipient id: a shared topic has no per-user cursor, so these are
+        // never logged regardless of the event type's durability.
+        publish(null, RedisPubSubConfig.ADMIN_SUPPORT_CHANNEL, null, type, payload);
     }
 
     /**
@@ -83,9 +102,40 @@ public class WebSocketPublisher {
         messagingTemplate.convertAndSendToUser(userId, destination, payload);
     }
 
-    private void publish(String channel, WebSocketEventType type, Object payload) {
+    /**
+     * Deliver an event that was already serialized and logged — used by the
+     * replay path, which re-sends stored events to a reconnecting client
+     * without logging them a second time.
+     */
+    public void sendRawToUser(UUID userId, String dest, String json) {
+        messagingTemplate.convertAndSendToUser(userId.toString(), "/queue/" + dest, json);
+    }
+
+    /**
+     * Append the event to the recipient's durable log (when the type warrants
+     * it), then hand it to the live transport carrying the log entry id.
+     *
+     * <p>Order matters: the log write happens first so that an event delivered
+     * live is always already recoverable. The reverse would leave a window in
+     * which a client receives an event, drops the connection, and asks for a
+     * replay that does not contain it.
+     */
+    private void publish(UUID recipientId, String channel, String dest,
+                         WebSocketEventType type, Object payload) {
         try {
-            String json = objectMapper.writeValueAsString(WebSocketMessage.of(type, payload));
+            WebSocketMessage message = WebSocketMessage.of(type, payload);
+            String json = objectMapper.writeValueAsString(message);
+
+            if (recipientId != null && dest != null && type.isDurable()) {
+                String eventId = eventLog.append(recipientId, dest, json);
+                if (eventId != null) {
+                    // Re-serialize rather than patch the string: the id has to
+                    // reach the client inside the same frame it labels.
+                    message.setId(eventId);
+                    json = objectMapper.writeValueAsString(message);
+                }
+            }
+
             if (localDeliveryOnly) {
                 deliverLocally(channel, json);
             } else {

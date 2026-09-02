@@ -15,6 +15,7 @@ import { navigate } from '../navigation/navigationRef';
 import { queryClient } from '../lib/queryClient';
 import { queryKeys } from '../lib/queryKeys';
 import { useCallStore } from '../store/callStore';
+import { isExpoGo } from '../lib/expoGo';
 
 type NotificationContextType = {
   checkPermissions: () => Promise<Notifications.PermissionResponse | { status: string }>;
@@ -342,6 +343,12 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   };
 
   const registerForNotifications = async (requestIfNotGranted: boolean = true): Promise<boolean> => {
+    // Expo Go has no push credentials of its own to hand out, so asking for a
+    // token there fails with an error that reads like a misconfiguration of
+    // ours. Local notifications below still work; remote push needs a
+    // development build.
+    if (isExpoGo) return false;
+
     try {
       const { status: existingStatus } = await checkPermissions();
       let finalStatus = existingStatus;

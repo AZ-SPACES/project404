@@ -89,6 +89,7 @@ public class SecurityConfig {
                             "/api/v1/waitlist",
                             "/api/v1/users/check-handle",
                             "/api/v1/users/check-email",
+                            "/api/v1/users/validate-email",
                             "/api/v1/users/check-phone",
                             "/api/v1/users/suggest-handles",
                             "/api/v1/security/verify-challenge",

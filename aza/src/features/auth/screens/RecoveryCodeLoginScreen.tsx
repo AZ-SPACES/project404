@@ -9,6 +9,7 @@ import {
   Keyboard,
   StyleSheet,
   StatusBar,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -85,64 +86,69 @@ export default function RecoveryCodeLoginScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor="transparent" />
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-        <KeyboardAvoidingView
-          style={styles.container}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
-          <View style={styles.header}>
-            <BackButton onPress={() => navigation.goBack()} />
-          </View>
-
-          <View style={styles.content}>
-            <Text style={styles.title}>Use a recovery code</Text>
-
-            <View style={styles.iconContainer}>
-              <Feather name="key" size={24} color={Colors.textSecondary} />
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.header}>
+              <BackButton onPress={() => navigation.goBack()} />
             </View>
 
-            <Text style={styles.subtitle}>
-              Enter one of the recovery codes you saved when you set up 2-step verification.
-            </Text>
+            <View style={styles.content}>
+              <Text style={styles.title}>Use a recovery code</Text>
 
-            <TextInput
+              <View style={styles.iconContainer}>
+                <Feather name="key" size={24} color={Colors.textSecondary} />
+              </View>
 
-              underlineColorAndroid="transparent"
-              style={styles.input}
-              value={code}
-              onChangeText={handleCodeChange}
-              placeholder="xxxx-xxxx-xxxx"
-              placeholderTextColor={Colors.textSecondary}
-              autoCapitalize="none"
-              autoCorrect={false}
-              autoFocus
-              keyboardType="default"
-            />
-
-            <View style={styles.warningBox}>
-              <Feather name="alert-triangle" size={16} color="#B45309" />
-              <Text style={styles.warningText}>
-                Each recovery code can only be used once and will be consumed immediately.
+              <Text style={styles.subtitle}>
+                Enter one of the recovery codes you saved when you set up 2-step verification.
               </Text>
-            </View>
-          </View>
 
-          <View style={styles.footer}>
-            <Button
-              title="Verify"
-              onPress={handleSubmit}
-              loading={isLoading}
-              disabled={!isValid || isLoading}
-              backgroundColor={Colors.primary}
-              textColor={Colors.secondary}
-              borderRadius={Radius.full}
-              paddingVertical={16}
-              fontSize={Typography.button.fontSize}
-              fontWeight={Typography.button.fontWeight}
-            />
-          </View>
-        </KeyboardAvoidingView>
-      </TouchableWithoutFeedback>
+              <TextInput
+                underlineColorAndroid="transparent"
+                style={styles.input}
+                value={code}
+                onChangeText={handleCodeChange}
+                placeholder="xxxx-xxxx-xxxx"
+                placeholderTextColor={Colors.textSecondary}
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoFocus
+                keyboardType="default"
+              />
+
+              <View style={styles.warningBox}>
+                <Feather name="alert-triangle" size={16} color="#B45309" />
+                <Text style={styles.warningText}>
+                  Each recovery code can only be used once and will be consumed immediately.
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.footer}>
+              <Button
+                title="Verify"
+                onPress={handleSubmit}
+                loading={isLoading}
+                disabled={!isValid || isLoading}
+                backgroundColor={Colors.primary}
+                textColor={Colors.secondary}
+                borderRadius={Radius.full}
+                paddingVertical={16}
+                fontSize={Typography.button.fontSize}
+                fontWeight={Typography.button.fontWeight}
+              />
+            </View>
+          </ScrollView>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -151,7 +157,13 @@ function createStyles(Colors: ThemeColors) {
   const isDark = Colors.isDark;
   return StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: Colors.background },
-    container: { flex: 1, paddingHorizontal: Spacing.lg },
+    container: { flex: 1 },
+    scrollContent: {
+      flexGrow: 1,
+      paddingHorizontal: Spacing.lg,
+      justifyContent: 'space-between',
+      paddingBottom: Spacing.lg,
+    },
     header: { paddingTop: Spacing.sm, paddingBottom: Spacing.md },
     content: { flex: 1, paddingTop: Spacing.sm },
     title: {
@@ -203,6 +215,9 @@ function createStyles(Colors: ThemeColors) {
       color: '#92400E',
       lineHeight: 18,
     },
-    footer: { paddingVertical: Spacing.lg },
+    footer: {
+      paddingTop: Spacing.xl,
+      paddingBottom: Spacing.lg,
+    },
   });
 }

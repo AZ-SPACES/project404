@@ -6,7 +6,10 @@
  * calls into these helpers on call-state transitions; UI just toggles speaker.
  */
 
-import InCallManager from 'react-native-incall-manager';
+// Wrapped rather than imported directly so a binary without the native module
+// (Expo Go, or a build predating the call feature) degrades to silent audio
+// routing instead of a TypeError per call. See src/native/optional.ts.
+import { InCallManager } from '../native/incallManager';
 
 /**
  * Two independent flags, deliberately. The audio *session* (which grabs the

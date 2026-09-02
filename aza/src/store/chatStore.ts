@@ -55,6 +55,14 @@ import {
   readOneTimePreKey,
 } from '../crypto/keystore';
 import type { LocalMessage, LocalMessageStatus } from './chatTypes';
+import {
+  advanceCursor,
+  clearCursors,
+  clearSeen,
+  isDuplicate,
+  markSeen,
+  resetCursor,
+} from './eventCursor';
 import { usePresenceStore } from './presenceStore';
 import {
   loadCachedThread,
@@ -173,8 +181,10 @@ type ChatStoreState = {
   ensurePeerKeys: (otherUserId: string) => Promise<PeerKeys | null>;
   prewarmSend: (otherUserId: string) => void;
 
-  // Internal — invoked by ChatSocketProvider when a frame arrives.
-  handleSocketEvent: (event: { type?: string; payload?: any }) => void;
+  // Internal — invoked by ChatSocketProvider when a frame arrives. `id` is the
+  // server's event-log id, present on durable events and used as the replay
+  // cursor; ephemeral events (typing) arrive without one.
+  handleSocketEvent: (event: { id?: string; type?: string; payload?: any }) => void;
 };
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -628,6 +638,12 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
     cancelPendingDelivered();
     // Drop cached device bundles — they hold other users' keys in memory.
     clearDeviceBundleCache();
+    // Replay cursors belong to the account that earned them; the next user on
+    // this device must not resume from them, and this one starts clean because
+    // its cached threads have just been wiped.
+    if (uid) resetCursor(uid, 'chat', null);
+    clearCursors();
+    clearSeen();
     if (uid) {
       await Promise.all([
         wipeAllChatCaches(uid),
@@ -1286,6 +1302,31 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
     const payload = event?.payload;
     if (!type || !payload) return;
 
+    // Our cursor has fallen outside the server's retained event log, so what we
+    // missed can't be enumerated from the log alone. Reload from the REST
+    // history — the source of truth — and adopt the tip the server handed back
+    // so the next reconnect resumes from there instead of reporting the same
+    // gap forever.
+    if (type === 'resync.required') {
+      resetCursor(selfUserId, 'chat', (payload.cursor as string) ?? null);
+      get().fetchChats().catch((e) => console.warn('[chat] chat list resync failed', e));
+      get().resyncActiveThread().catch(() => {});
+      return;
+    }
+
+    // Durable events carry their event-log id. A replay can overlap events
+    // already delivered live — delivery is at-least-once by design — so drop
+    // anything this session has applied already.
+    const eventId = event?.id;
+    if (eventId) {
+      if (isDuplicate(eventId)) return;
+      markSeen(eventId);
+    }
+    // Advance past everything except the message branches, which are async and
+    // move the cursor themselves once they have settled.
+    const deferCursor = type === 'chat.message' || type === 'chat.message.edited';
+    if (eventId && !deferCursor) advanceCursor(selfUserId, 'chat', eventId);
+
     switch (type) {
       case 'chat.message':
       case 'chat.message.edited': {
@@ -1325,7 +1366,14 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
           const uid = get().selfUserId;
           if (uid) scheduleThreadSave(uid, chatId, () => get().messagesByChat[chatId] ?? []);
           if (!local.isSelf) scheduleMarkDelivered(chatId);
-        })().catch((e) => console.warn('[chat] decrypt failed', e));
+        })()
+          .catch((e) => console.warn('[chat] decrypt failed', e))
+          // Either way the event is consumed: a message we cannot decrypt will
+          // not decrypt on a replay either, and leaving the cursor behind it
+          // would re-deliver it on every reconnect forever.
+          .finally(() => {
+            if (eventId) advanceCursor(selfUserId, 'chat', eventId);
+          });
         break;
       }
       case 'chat.message.deleted': {

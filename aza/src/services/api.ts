@@ -253,6 +253,19 @@ export const checkHandleAvailability = (handle: string) =>
 export const checkEmailAvailability = (email: string) =>
   api.get(`/api/v1/users/check-email?email=${encodeURIComponent(email)}`);
 
+export type EmailCheck = {
+  valid: boolean;
+  available: boolean;
+  reason?: "INVALID_FORMAT" | "DISPOSABLE_DOMAIN" | "UNRESOLVABLE_DOMAIN" | "ALREADY_REGISTERED";
+  suggestion?: string;
+};
+
+/** Availability plus deliverability and a typo correction, in one round trip. */
+export const validateEmail = (email: string) =>
+  api.get<{ success: boolean; data: EmailCheck }>(
+    `/api/v1/users/validate-email?email=${encodeURIComponent(email)}`,
+  );
+
 export const checkPhoneAvailability = (phone: string) =>
   api.get(`/api/v1/users/check-phone?phone=${encodeURIComponent(phone)}`);
 
@@ -464,10 +477,6 @@ export type Akyede = {
   expiresAt: string;
   createdAt: string;
   openedAt?: string | null;
-  /**
-   * What the gift holds. Null for the recipient until they open it — the surprise is
-   * the whole point — and null for anyone else always.
-   */
   amount?: number | null;
   openable: boolean;
   blockedReason?: 'NOT_YOURS' | 'ALREADY_OPENED' | 'EXPIRED' | 'OWN_GIFT' | null;

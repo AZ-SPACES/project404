@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import {View,Text,TextInput,TouchableOpacity,StyleSheet,KeyboardAvoidingView,Platform,TouchableWithoutFeedback,Keyboard,StatusBar,} from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard, StatusBar, ScrollView, } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -24,6 +24,7 @@ type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, '
 
 const LoginScreen: React.FC = () => {
   const { colors: Colors } = useAppTheme();
+  const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<LoginScreenNavigationProp>();
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -182,123 +183,129 @@ const LoginScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor={Colors.background} />
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-        <KeyboardAvoidingView
-          style={styles.container}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
-        {/* Header */}
-        <View style={styles.header}>
-          <CloseButton onPress={handleClose} />
-        </View>
-
-        {/* Content */}
-        <View style={styles.content}>
-          <Text style={styles.title}>Login</Text>
-
-          <Text style={styles.label}>
-            {useEmail ? 'Your Email' : 'Your Phone Number'}
-          </Text>
-
-          <View style={styles.inputContainer}>
-            {!useEmail ? (
-              <MaterialIcons name="smartphone" color={Colors.primary} style={styles.inputIcon}/>
-            ) : (
-              <MaterialIcons name="mail-outline" color={Colors.primary} style={styles.inputIcon}/>
-            )}
-            <TextInput
-              underlineColorAndroid="transparent"
-              key={useEmail ? 'email' : 'phone'}
-              style={styles.input}
-              placeholder={useEmail ? 'Email Address' : 'Phone Number'}
-              placeholderTextColor={Colors.textSecondary}
-              value={useEmail ? email : phoneNumber}
-              onChangeText={useEmail
-                ? (t) => setEmail(sanitizeEmail(t))
-                : (text) => setPhoneNumber(text.replace(/[^0-9]/g, '').slice(0, 10))}
-              onBlur={() => setTouched(true)}
-              keyboardType={useEmail ? 'email-address' : 'phone-pad'}
-              autoComplete={useEmail ? 'email' : 'tel'}
-              textContentType={useEmail ? 'emailAddress' : 'telephoneNumber'}
-              autoCapitalize="none"
-              accessibilityLabel={useEmail ? 'Email address' : 'Phone number'}
-              maxLength={useEmail ? undefined : 10}
-            />
-          </View>
-          {credentialError ? <Text style={styles.errorText}>{credentialError}</Text> : null}
-
-          <TouchableOpacity 
-            onPress={toggleInputMode} 
-            style={styles.toggleRow}
-            activeOpacity={0.7}
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={Colors.background} />
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
           >
-            <Text style={styles.toggleText}>
-              {useEmail ? 'Use phone instead' : 'Use email instead'}
-            </Text>
-          </TouchableOpacity>
+            {/* Header */}
+            <View style={styles.header}>
+              <CloseButton onPress={handleClose} />
+            </View>
 
-          <View style={styles.passwordSection}>
-            <Text style={styles.label}>Password</Text>
-            <View style={styles.inputContainer}>
-              <MaterialIcons name="lock-outline" color={Colors.primary} style={styles.inputIcon} />
-              <TextInput
-                underlineColorAndroid="transparent"
-                style={styles.input}
-                placeholder="********"
-                placeholderTextColor={Colors.textSecondary}
-                value={password}
-                onChangeText={setPassword}
-                onBlur={() => setTouched(true)}
-                secureTextEntry={!isPasswordVisible}
-                autoCapitalize="none"
-                accessibilityLabel="Password"
-              />
-              <TouchableOpacity onPress={() => setIsPasswordVisible(!isPasswordVisible)}>
-                <MaterialIcons
-                  name={isPasswordVisible ? "visibility" : "visibility-off"}
-                  size={20}
-                  color={Colors.primary}
+            {/* Content */}
+            <View style={styles.content}>
+              <Text style={styles.title}>Login</Text>
+
+              <Text style={styles.label}>
+                {useEmail ? 'Your Email' : 'Your Phone Number'}
+              </Text>
+
+              <View style={styles.inputContainer}>
+                {!useEmail ? (
+                  <MaterialIcons name="smartphone" color={Colors.primary} style={styles.inputIcon}/>
+                ) : (
+                  <MaterialIcons name="mail-outline" color={Colors.primary} style={styles.inputIcon}/>
+                )}
+                <TextInput
+                  underlineColorAndroid="transparent"
+                  key={useEmail ? 'email' : 'phone'}
+                  style={styles.input}
+                  placeholder={useEmail ? 'Email Address' : 'Phone Number'}
+                  placeholderTextColor={Colors.textSecondary}
+                  value={useEmail ? email : phoneNumber}
+                  onChangeText={useEmail
+                    ? (t) => setEmail(sanitizeEmail(t))
+                    : (text) => setPhoneNumber(text.replace(/[^0-9]/g, '').slice(0, 10))}
+                  onBlur={() => setTouched(true)}
+                  keyboardType={useEmail ? 'email-address' : 'phone-pad'}
+                  autoComplete={useEmail ? 'email' : 'tel'}
+                  textContentType={useEmail ? 'emailAddress' : 'telephoneNumber'}
+                  autoCapitalize="none"
+                  accessibilityLabel={useEmail ? 'Email address' : 'Phone number'}
+                  maxLength={useEmail ? undefined : 10}
                 />
+              </View>
+              {credentialError ? <Text style={styles.errorText}>{credentialError}</Text> : null}
+
+              <TouchableOpacity 
+                onPress={toggleInputMode} 
+                style={styles.toggleRow}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.toggleText}>
+                  {useEmail ? 'Use phone instead' : 'Use email instead'}
+                </Text>
+              </TouchableOpacity>
+
+              <View style={styles.passwordSection}>
+                <Text style={styles.label}>Password</Text>
+                <View style={styles.inputContainer}>
+                  <MaterialIcons name="lock-outline" color={Colors.primary} style={styles.inputIcon} />
+                  <TextInput
+                    underlineColorAndroid="transparent"
+                    style={styles.input}
+                    placeholder="********"
+                    placeholderTextColor={Colors.textSecondary}
+                    value={password}
+                    onChangeText={setPassword}
+                    onBlur={() => setTouched(true)}
+                    secureTextEntry={!isPasswordVisible}
+                    autoCapitalize="none"
+                    accessibilityLabel="Password"
+                  />
+                  <TouchableOpacity onPress={() => setIsPasswordVisible(!isPasswordVisible)}>
+                    <MaterialIcons
+                      name={isPasswordVisible ? "visibility" : "visibility-off"}
+                      size={20}
+                      color={Colors.primary}
+                    />
+                  </TouchableOpacity>
+                </View>
+                {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
+              </View>
+            </View>
+
+            {/* Footer */}
+            <View style={styles.footer}>
+              <Button
+                title="Login"
+                onPress={handleLogin}
+                backgroundColor={Colors.primary}
+                textColor={Colors.secondary}
+                borderRadius={Radius.md}
+                paddingVertical={16}
+                fontSize={Typography.button.fontSize}
+                fontWeight={Typography.button.fontWeight}
+                loading={isLoading}
+                disabled={isLoading}
+              />
+
+              {hasBiometricToken && (
+                <TouchableOpacity
+                  style={styles.biometricButton}
+                  onPress={handleBiometricAuth}
+                  disabled={isBiometricLoading}
+                  accessibilityLabel="Login with biometrics"
+                >
+                  <MaterialIcons name="fingerprint" size={40} color={isBiometricLoading ? Colors.textSecondary : Colors.primary} />
+                  <Text style={styles.biometricText}>Login with Biometrics</Text>
+                </TouchableOpacity>
+              )}
+
+              <TouchableOpacity style={styles.troubleButton} onPress={handleTrouble}>
+                <Text style={styles.troubleText}>Trouble logging in?</Text>
               </TouchableOpacity>
             </View>
-            {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
-          </View>
-        </View>
-
-        {/* Footer */}
-        <View style={styles.footer}>
-          <Button
-            title="Login"
-            onPress={handleLogin}
-            backgroundColor={Colors.primary}
-            textColor={Colors.secondary}
-            borderRadius={Radius.md}
-            paddingVertical={16}
-            fontSize={Typography.button.fontSize}
-            fontWeight={Typography.button.fontWeight}
-            loading={isLoading}
-            disabled={isLoading}
-          />
-
-          {hasBiometricToken && (
-            <TouchableOpacity
-              style={styles.biometricButton}
-              onPress={handleBiometricAuth}
-              disabled={isBiometricLoading}
-              accessibilityLabel="Login with biometrics"
-            >
-              <MaterialIcons name="fingerprint" size={40} color={isBiometricLoading ? Colors.textSecondary : Colors.primary} />
-              <Text style={styles.biometricText}>Login with Biometrics</Text>
-            </TouchableOpacity>
-          )}
-
-          <TouchableOpacity style={styles.troubleButton} onPress={handleTrouble}>
-            <Text style={styles.troubleText}>Trouble logging in?</Text>
-          </TouchableOpacity>
-        </View>
+          </ScrollView>
+        </TouchableWithoutFeedback>
       </KeyboardAvoidingView>
-      </TouchableWithoutFeedback>
     </SafeAreaView>
   );
 };
@@ -312,7 +319,12 @@ function createStyles(Colors: ThemeColors) {
   },
   container: {
     flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
     paddingHorizontal: Spacing.lg,
+    justifyContent: 'space-between',
+    paddingBottom: Spacing.lg,
   },
   header: {
     paddingTop: Spacing.sm,
@@ -390,6 +402,7 @@ function createStyles(Colors: ThemeColors) {
     marginTop: 4,
   },
   footer: {
+    paddingTop: Spacing.xl,
     paddingBottom: Spacing.lg,
     gap: Spacing.sm,
     alignItems: 'center',

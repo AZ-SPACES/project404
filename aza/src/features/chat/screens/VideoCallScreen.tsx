@@ -15,7 +15,7 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { RTCView } from 'react-native-webrtc';
+import { RTCView } from '../../../native/webrtc';
 import { RootStackParamList } from '../../../navigation/types';
 import { CloseButton } from '../../../components/ui/CloseButton';
 import { useCallStore } from '../../../store/callStore';

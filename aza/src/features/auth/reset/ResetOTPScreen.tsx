@@ -7,16 +7,15 @@ import {
   Platform,
   TouchableWithoutFeedback,
   Keyboard,
-  TouchableOpacity,
   StyleSheet,
   NativeSyntheticEvent,
   TextInputKeyPressEventData,
   StatusBar,
+  ScrollView,
 } from "react-native";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { MaterialIcons } from '@react-native-vector-icons/material-icons';
-import {  useAppTheme, ThemeColors, Typography, Spacing, Radius  } from "../../../theme";
+import {  useAppTheme, ThemeColors, Typography, Spacing  } from "../../../theme";
 import Button from "../../../components/ui/Button";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { RootStackParamList } from "../../../navigation/types";
@@ -102,70 +101,76 @@ const ResetOTPScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" />
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-        <KeyboardAvoidingView
-          style={styles.container}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-        >
-          {/* Header */}
-          <View style={styles.header}>
-            <BackButton onPress={handleClose} />
-          </View>
-
-          {/* Content */}
-          <View style={styles.content}>
-            <Text style={styles.title}>Enter Code</Text>
-
-            <Text style={styles.subTitle}>
-              Check your email to get your confirmation code. If you need to
-              request a new code, go back and reselect a confirmation
-            </Text>
-
-            <View style={styles.otpInputWrapper}>
-              {otp.map((digit, index) => (
-                <View key={index} style={styles.otpSlot}>
-                  <TextInput
-                    underlineColorAndroid="transparent"
-                    ref={(ref) => {
-                      inputRefs.current[index] = ref;
-                    }}
-                    style={styles.otpInput}
-                    value={digit}
-                    onChangeText={(text) => handleOtpChange(text, index)}
-                    onKeyPress={(e) => handleKeyPress(e, index)}
-                    keyboardType="number-pad"
-                    maxLength={1}
-                    autoFocus={index === 0}
-                    cursorColor={Colors.primary}
-                  />
-                  {!digit && <View style={styles.dash} pointerEvents="none" />}
-                </View>
-              ))}
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Header */}
+            <View style={styles.header}>
+              <BackButton onPress={handleClose} />
             </View>
 
-            <View style={styles.countdownContainer}>
-              <Text style={styles.countdownText}>
-                The code should arrive within{" "}
-                <Text style={styles.boldText}>{timeLeft}s</Text>
+            {/* Content */}
+            <View style={styles.content}>
+              <Text style={styles.title}>Enter Code</Text>
+
+              <Text style={styles.subTitle}>
+                Check your email to get your confirmation code. If you need to
+                request a new code, go back and reselect a confirmation
               </Text>
-            </View>
-          </View>
 
-          <View style={styles.verifyButtonContainer}>
-            <Button
-              title="Verify"
-              onPress={handleVerify}
-              backgroundColor={Colors.primary}
-              textColor={Colors.secondary}
-              borderRadius={30}
-              paddingVertical={16}
-              fontSize={Typography.button.fontSize}
-              fontWeight={Typography.button.fontWeight}
-              disabled={otp.join('').length < 6}
-            />
-          </View>
-        </KeyboardAvoidingView>
-      </TouchableWithoutFeedback>
+              <View style={styles.otpInputWrapper}>
+                {otp.map((digit, index) => (
+                  <View key={index} style={styles.otpSlot}>
+                    <TextInput
+                      underlineColorAndroid="transparent"
+                      ref={(ref) => {
+                        inputRefs.current[index] = ref;
+                      }}
+                      style={styles.otpInput}
+                      value={digit}
+                      onChangeText={(text) => handleOtpChange(text, index)}
+                      onKeyPress={(e) => handleKeyPress(e, index)}
+                      keyboardType="number-pad"
+                      maxLength={1}
+                      autoFocus={index === 0}
+                      cursorColor={Colors.primary}
+                    />
+                    {!digit && <View style={styles.dash} pointerEvents="none" />}
+                  </View>
+                ))}
+              </View>
+
+              <View style={styles.countdownContainer}>
+                <Text style={styles.countdownText}>
+                  The code should arrive within{" "}
+                  <Text style={styles.boldText}>{timeLeft}s</Text>
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.verifyButtonContainer}>
+              <Button
+                title="Verify"
+                onPress={handleVerify}
+                backgroundColor={Colors.primary}
+                textColor={Colors.secondary}
+                borderRadius={30}
+                paddingVertical={16}
+                fontSize={Typography.button.fontSize}
+                fontWeight={Typography.button.fontWeight}
+                disabled={otp.join('').length < 6}
+              />
+            </View>
+          </ScrollView>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -179,7 +184,12 @@ function createStyles(Colors: ThemeColors) {
   },
   container: {
     flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
     paddingHorizontal: Spacing.lg,
+    justifyContent: 'space-between',
+    paddingBottom: Spacing.lg,
   },
   header: {
     paddingTop: Spacing.sm,
@@ -262,7 +272,8 @@ function createStyles(Colors: ThemeColors) {
     fontWeight: "700",
   },
   verifyButtonContainer: {
-    paddingVertical: Spacing.lg,
+    paddingTop: Spacing.xl,
+    paddingBottom: Spacing.lg,
   },
 });
 }

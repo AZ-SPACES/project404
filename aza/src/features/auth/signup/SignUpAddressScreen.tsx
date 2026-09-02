@@ -324,6 +324,7 @@ function createStyles(Colors: ThemeColors) {
   },
   buttonContainer: {
     paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.xl,
     marginBottom: Spacing.lg,
   },
   detectLocationButton: {

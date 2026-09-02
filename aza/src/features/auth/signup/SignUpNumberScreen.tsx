@@ -14,6 +14,7 @@ import {
   ActivityIndicator,
   Modal,
   FlatList,
+  ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -184,83 +185,89 @@ export default function SignUpNumberScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" />
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-        <KeyboardAvoidingView
-          style={styles.container}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-        >
-          {/* Header */}
-          <View style={styles.header}>
-            <BackButton onPress={() => navigation.goBack()} />
-          </View>
-
-          <SignUpProgressBar step={1} total={10} />
-
-          {/* Content */}
-          <View style={styles.content}>
-            <Text style={styles.title}>What's your mobile number?</Text>
-            <Text style={styles.subtitle}>
-              Your number will be used for signing into your account.
-            </Text>
-            <Text style={styles.label}>Your Phone Number</Text>
-            <View style={[
-              styles.inputContainer,
-              isAvailable === true && styles.inputSuccess,
-              isAvailable === false && styles.inputError,
-            ]}>
-              {/* Country code selector */}
-              <TouchableOpacity
-                style={styles.countryCodeButton}
-                onPress={() => setShowCountryPicker(true)}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.countryFlag}>{selectedCountry.flag}</Text>
-                <Text style={styles.countryCode}>{selectedCountry.code}</Text>
-                <MaterialIcons name="arrow-drop-down" size={18} color={Colors.textSecondary} />
-              </TouchableOpacity>
-              <View style={styles.countryDivider} />
-              <TextInput
-                underlineColorAndroid="transparent"
-                style={styles.input}
-                placeholder="000 000 0000"
-                placeholderTextColor={Colors.textSecondary}
-                value={localNumber}
-                onChangeText={handleTextChange}
-                onBlur={() => setTouched(true)}
-                keyboardType="phone-pad"
-                autoCapitalize="none"
-                autoFocus
-                cursorColor={Colors.primary}
-                selectionColor={Colors.primary}
-              />
-              {isValidating && <ActivityIndicator size="small" color={Colors.primary} />}
-              {!isValidating && isAvailable === true && (
-                <MaterialIcons name="check-circle" size={20} color={Colors.success} />
-              )}
-              {!isValidating && isAvailable === false && (
-                <MaterialIcons name="error" size={20} color={Colors.error} />
-              )}
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Header */}
+            <View style={styles.header}>
+              <BackButton onPress={() => navigation.goBack()} />
             </View>
-            {phoneError ? <Text style={styles.errorText}>{phoneError}</Text> : null}
-          </View>
 
-          {/* Footer */}
-          <View style={styles.buttonContainer}>
-            <Button
-              title="Next"
-              onPress={handleNext}
-              backgroundColor={Colors.primary}
-              textColor={Colors.secondary}
-              borderRadius={Radius.sm}
-              paddingVertical={16}
-              fontSize={Typography.button.fontSize}
-              fontWeight={Typography.button.fontWeight}
-              disabled={isButtonDisabled}
-              loading={loading}
-            />
-          </View>
-        </KeyboardAvoidingView>
-      </TouchableWithoutFeedback>
+            <SignUpProgressBar step={1} total={10} />
+
+            {/* Content */}
+            <View style={styles.content}>
+              <Text style={styles.title}>What's your mobile number?</Text>
+              <Text style={styles.subtitle}>
+                Your number will be used for signing into your account.
+              </Text>
+              <Text style={styles.label}>Your Phone Number</Text>
+              <View style={[
+                styles.inputContainer,
+                isAvailable === true && styles.inputSuccess,
+                isAvailable === false && styles.inputError,
+              ]}>
+                {/* Country code selector */}
+                <TouchableOpacity
+                  style={styles.countryCodeButton}
+                  onPress={() => setShowCountryPicker(true)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.countryFlag}>{selectedCountry.flag}</Text>
+                  <Text style={styles.countryCode}>{selectedCountry.code}</Text>
+                  <MaterialIcons name="arrow-drop-down" size={18} color={Colors.textSecondary} />
+                </TouchableOpacity>
+                <View style={styles.countryDivider} />
+                <TextInput
+                  underlineColorAndroid="transparent"
+                  style={styles.input}
+                  placeholder="000 000 0000"
+                  placeholderTextColor={Colors.textSecondary}
+                  value={localNumber}
+                  onChangeText={handleTextChange}
+                  onBlur={() => setTouched(true)}
+                  keyboardType="phone-pad"
+                  autoCapitalize="none"
+                  autoFocus
+                  cursorColor={Colors.primary}
+                  selectionColor={Colors.primary}
+                />
+                {isValidating && <ActivityIndicator size="small" color={Colors.primary} />}
+                {!isValidating && isAvailable === true && (
+                  <MaterialIcons name="check-circle" size={20} color={Colors.success} />
+                )}
+                {!isValidating && isAvailable === false && (
+                  <MaterialIcons name="error" size={20} color={Colors.error} />
+                )}
+              </View>
+              {phoneError ? <Text style={styles.errorText}>{phoneError}</Text> : null}
+            </View>
+
+            {/* Footer */}
+            <View style={styles.buttonContainer}>
+              <Button
+                title="Next"
+                onPress={handleNext}
+                backgroundColor={Colors.primary}
+                textColor={Colors.secondary}
+                borderRadius={Radius.sm}
+                paddingVertical={16}
+                fontSize={Typography.button.fontSize}
+                fontWeight={Typography.button.fontWeight}
+                disabled={isButtonDisabled}
+                loading={loading}
+              />
+            </View>
+          </ScrollView>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
 
       {/* Country Code Picker Modal */}
       <Modal
@@ -312,6 +319,11 @@ function createStyles(Colors: ThemeColors) {
   },
   container: {
     flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'space-between',
+    paddingBottom: Spacing.lg,
   },
   header: {
     paddingHorizontal: Spacing.lg,
@@ -394,6 +406,7 @@ function createStyles(Colors: ThemeColors) {
   },
   buttonContainer: {
     paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.xl,
     marginBottom: Spacing.lg,
   },
   modalBackdrop: {

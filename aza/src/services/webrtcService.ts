@@ -7,13 +7,18 @@
  * is the store's job; this module never talks to the network.
  */
 
-import {
+import type {
   MediaStream,
   MediaStreamTrack,
   RTCIceCandidate,
   RTCPeerConnection,
-  mediaDevices,
 } from 'react-native-webrtc';
+
+// The library is reached through this wrapper rather than imported directly:
+// it touches its native module as it evaluates, which crashes the bundle on
+// start in any binary without WebRTC compiled in (Expo Go, or a build that
+// predates the call feature). See src/native/optional.ts.
+import { requireWebRTC } from '../native/webrtc';
 
 /**
  * react-native-webrtc declares RTCConfiguration, RTCIceServer and
@@ -80,7 +85,9 @@ const FALLBACK_ICE_SERVERS: IceServer[] = [{ urls: 'stun:stun.l.google.com:19302
 
 export const webrtcService = {
   createPeerConnection(iceServers: IceServer[], callbacks: WebRTCCallbacks): RTCPeerConnection {
-    const pc = new RTCPeerConnection({
+    const { RTCPeerConnection: PeerConnection, MediaStream: Stream } = requireWebRTC();
+
+    const pc = new PeerConnection({
       iceServers: iceServers.length > 0 ? iceServers : FALLBACK_ICE_SERVERS,
       // One transport carrying audio+video with multiplexed RTCP: fewer ports
       // to punch through, fewer candidates to gather, faster setup.
@@ -105,7 +112,7 @@ export const webrtcService = {
       if (stream) {
         callbacks.onTrack(stream);
       } else if (event.track) {
-        callbacks.onTrack(new MediaStream([event.track]));
+        callbacks.onTrack(new Stream([event.track]));
       }
     });
 
@@ -123,7 +130,7 @@ export const webrtcService = {
     try {
       // facingMode picks the camera; the old enumerateDevices/sourceId dance
       // was redundant and enumerateDevices is typed `Promise<unknown>` here.
-      return await mediaDevices.getUserMedia({
+      return await requireWebRTC().mediaDevices.getUserMedia({
         audio: true,
         video:
           type === 'VIDEO'
@@ -162,7 +169,8 @@ export const webrtcService = {
   },
 
   async addIceCandidate(pc: RTCPeerConnection, candidate: IceCandidateInit): Promise<void> {
-    await pc.addIceCandidate(new RTCIceCandidate(candidate));
+    const { RTCIceCandidate: IceCandidate } = requireWebRTC();
+    await pc.addIceCandidate(new IceCandidate(candidate));
   },
 
   teardown(pc: RTCPeerConnection | null, stream: MediaStream | null) {

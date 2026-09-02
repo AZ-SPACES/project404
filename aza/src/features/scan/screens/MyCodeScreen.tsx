@@ -10,7 +10,7 @@ import { RootStackParamList } from '../../../navigation/types';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import QrCode from '../../../components/ui/QrCode';
 import * as Haptics from 'expo-haptics';
-import { captureRef } from 'react-native-view-shot';
+import { captureRef } from '../../../native/viewShot';
 import * as Sharing from 'expo-sharing';
 import { useProfile } from '../../../providers/ProfileProvider';
 import { useToast } from '../../../providers/ToastProvider';

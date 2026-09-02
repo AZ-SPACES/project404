@@ -54,6 +54,37 @@ Aza is a comprehensive financial and wallet mobile application built with React 
 - Press `a` in the terminal to open the Android emulator.
 - Scan the QR code with your phone's camera (iOS) or Expo Go app (Android) to run on a physical device.
 
+### Running in Expo Go
+
+`npm start` launches in development-build mode, because `expo-dev-client` is
+installed. To run inside Expo Go instead:
+
+```bash
+npm run start:go
+```
+
+Expo Go ships a fixed set of native modules, so the features built on native
+code we add ourselves are unavailable there and degrade rather than crash:
+
+| Feature | In Expo Go |
+| --- | --- |
+| Voice / video calls (`react-native-webrtc`, `react-native-incall-manager`) | Call setup fails and is logged; the rest of chat works |
+| Rasterising a view (`react-native-view-shot`) | Capture fails cleanly: the QR poster shares as a link, the receipt reports it could not be saved, edited chat photos send unedited |
+| The OS-native tab bar (`react-native-bottom-tabs`) | Falls back to the JS tab bar |
+| Apple Watch mirroring (`modules/aza-watch`) | No-op |
+| Remote push notifications | Not registered; local notifications still work |
+| OTA updates (`expo-updates`) | Disabled |
+
+Everything gated this way goes through `src/native/` (see
+`src/native/optional.ts`) or `src/lib/expoGo.ts`. Adding a dependency with
+native code means adding a wrapper there too — importing such a package
+directly crashes the bundle as it evaluates, before any error boundary exists,
+with "Invariant Violation: Your JavaScript code tried to access a native module
+that doesn't exist".
+
+Use a development build (`npm run ios` / `npm run android`) to exercise any of
+the features above.
+
 ## Testing
 
 The project uses Jest and React Native Testing Library for testing.

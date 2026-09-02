@@ -1,5 +1,5 @@
 import { Platform, Share } from 'react-native';
-import { captureRef } from 'react-native-view-shot';
+import { captureRef } from '../native/viewShot';
 import * as Sharing from 'expo-sharing';
 
 /**

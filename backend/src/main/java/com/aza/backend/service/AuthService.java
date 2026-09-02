@@ -16,6 +16,7 @@ import com.aza.backend.repository.UserRepository;
 import com.aza.backend.repository.WalletRepository;
 import com.aza.backend.security.JwtUtil;
 import com.aza.backend.util.EmailService;
+import com.aza.backend.util.EmailValidationService;
 import com.aza.backend.util.RateLimitService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -50,6 +51,7 @@ public class AuthService {
     private final StringRedisTemplate redisTemplate;
     private final EmailService emailService;
     private final RateLimitService rateLimitService;
+    private final EmailValidationService emailValidationService;
     private final UserService userService;
     private final OtpService otpService;
     private final BiometricService biometricService;
@@ -83,6 +85,15 @@ public class AuthService {
         rateLimitService.enforceRateLimit("signup:" + ipAddress, 25, Duration.ofHours(1));
 
         String email = request.getEmail().toLowerCase().trim();
+        // The client's validate-email call is advisory — a scripted signup skips it
+        // entirely, so the throwaway-domain and undeliverable-domain rules are enforced
+        // here too. Fails open on DNS trouble; see EmailValidationService.
+        EmailValidationService.Result emailCheck = emailValidationService.validate(email);
+        if (!emailCheck.valid()) {
+            throw new com.aza.backend.exception.AppException(emailCheck.reason().name(),
+                    UserService.emailRejectionMessage(emailCheck.reason()),
+                    org.springframework.http.HttpStatus.BAD_REQUEST);
+        }
         // Canonicalize before ANY lookup or persistence so "+233024…", "024…" and
         // "+23324…" all resolve to the same stored account.
         String phone = com.aza.backend.util.PhoneNumberUtil.normalize(request.getPhone());
