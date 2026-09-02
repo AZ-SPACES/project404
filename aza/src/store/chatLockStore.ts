@@ -1,5 +1,8 @@
 import { create } from 'zustand';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { persist } from 'zustand/middleware';
+import { accountPersistOptions, bindAccountStore } from './persistence';
+
+const STORE_NAME = 'aza_chat_locks';
 
 interface ChatLockState {
   lockedChatIds: string[];
@@ -8,25 +11,27 @@ interface ChatLockState {
   isLocked: (chatId: string) => boolean;
 }
 
-export const useChatLockStore = create<ChatLockState>((set, get) => ({
-  lockedChatIds: [],
-  lock: (chatId) => {
-    const next = [...new Set([...get().lockedChatIds, chatId])];
-    set({ lockedChatIds: next });
-    AsyncStorage.setItem('aza_chat_locks_v1', JSON.stringify(next)).catch(() => {});
-  },
-  unlock: (chatId) => {
-    const next = get().lockedChatIds.filter(id => id !== chatId);
-    set({ lockedChatIds: next });
-    AsyncStorage.setItem('aza_chat_locks_v1', JSON.stringify(next)).catch(() => {});
-  },
-  isLocked: (chatId) => get().lockedChatIds.includes(chatId),
-}));
+export const useChatLockStore = create<ChatLockState>()(
+  persist(
+    (set, get) => ({
+      lockedChatIds: [],
 
-AsyncStorage.getItem('aza_chat_locks_v1').then(val => {
-  if (!val) return;
-  try {
-    const ids = JSON.parse(val) as string[];
-    useChatLockStore.setState({ lockedChatIds: ids });
-  } catch {}
-}).catch(() => {});
+      lock: (chatId) =>
+        set((s) => ({ lockedChatIds: [...new Set([...s.lockedChatIds, chatId])] })),
+
+      unlock: (chatId) =>
+        set((s) => ({ lockedChatIds: s.lockedChatIds.filter((id) => id !== chatId) })),
+
+      isLocked: (chatId) => get().lockedChatIds.includes(chatId),
+    }),
+    accountPersistOptions<ChatLockState>({
+      name: STORE_NAME,
+      version: 1,
+      partialize: (s) => ({ lockedChatIds: s.lockedChatIds }),
+    }),
+  ),
+);
+
+// Which chats are locked is a per-account privacy setting — carrying it across
+// a logout would either expose or hide the wrong person's chats.
+bindAccountStore(useChatLockStore, { name: STORE_NAME, empty: () => ({ lockedChatIds: [] }) });

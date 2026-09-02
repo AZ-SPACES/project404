@@ -6,7 +6,7 @@ import {
 import { BlurView } from 'expo-blur';
 import { Feather } from '@react-native-vector-icons/feather';
 import { useAppTheme, Typography, Spacing, Radius } from '../../theme';
-import { useContactStore } from '../../store/contactStore';
+import { useContacts } from '../../hooks/useContacts';
 
 type Props = {
   visible: boolean;
@@ -18,9 +18,7 @@ export const ContactPickerSheet = memo(function ContactPickerSheet({ visible, on
   const { colors: Colors, isDark } = useAppTheme();
   const [query, setQuery] = useState('');
 
-  const contacts = useContactStore((s) => s.contacts);
-  const fetchContacts = useContactStore((s) => s.fetchContacts);
-  const isLoading = useContactStore((s) => s.isLoading);
+  const { contacts, isLoading, refetch: fetchContacts } = useContacts();
 
   useEffect(() => {
     if (visible && contacts.length === 0) {

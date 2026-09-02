@@ -11,9 +11,10 @@
  * before the request id was embedded — the request card's chat message id.
  */
 import { create } from 'zustand';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { persist } from 'zustand/middleware';
+import { accountPersistOptions, bindAccountStore } from './persistence';
 
-const STORAGE_KEY = 'aza_settled_requests_v1';
+const STORE_NAME = 'aza_settled_requests';
 
 interface SettledRequestsState {
   paidIds: string[];
@@ -22,32 +23,27 @@ interface SettledRequestsState {
   markDeclined: (id: string) => void;
 }
 
-function persist(state: Pick<SettledRequestsState, 'paidIds' | 'declinedIds'>) {
-  AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(state)).catch(() => {});
-}
+export const useSettledRequestsStore = create<SettledRequestsState>()(
+  persist(
+    (set) => ({
+      paidIds: [],
+      declinedIds: [],
 
-export const useSettledRequestsStore = create<SettledRequestsState>((set, get) => ({
-  paidIds: [],
-  declinedIds: [],
-  markPaid: (id) => {
-    const next = [...new Set([...get().paidIds, id])];
-    set({ paidIds: next });
-    persist({ paidIds: next, declinedIds: get().declinedIds });
-  },
-  markDeclined: (id) => {
-    const next = [...new Set([...get().declinedIds, id])];
-    set({ declinedIds: next });
-    persist({ paidIds: get().paidIds, declinedIds: next });
-  },
-}));
+      markPaid: (id) => set((s) => ({ paidIds: [...new Set([...s.paidIds, id])] })),
 
-AsyncStorage.getItem(STORAGE_KEY).then(val => {
-  if (!val) return;
-  try {
-    const { paidIds, declinedIds } = JSON.parse(val) as { paidIds?: string[]; declinedIds?: string[] };
-    useSettledRequestsStore.setState({
-      paidIds: Array.isArray(paidIds) ? paidIds : [],
-      declinedIds: Array.isArray(declinedIds) ? declinedIds : [],
-    });
-  } catch {}
-}).catch(() => {});
+      markDeclined: (id) => set((s) => ({ declinedIds: [...new Set([...s.declinedIds, id])] })),
+    }),
+    accountPersistOptions<SettledRequestsState>({
+      name: STORE_NAME,
+      version: 1,
+      partialize: (s) => ({ paidIds: s.paidIds, declinedIds: s.declinedIds }),
+    }),
+  ),
+);
+
+// These are transaction ids the signed-in user settled. Carried across a logout
+// they would suppress the Pay button on another account's live requests.
+bindAccountStore(useSettledRequestsStore, {
+  name: STORE_NAME,
+  empty: () => ({ paidIds: [], declinedIds: [] }),
+});

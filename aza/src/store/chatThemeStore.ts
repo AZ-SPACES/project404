@@ -1,7 +1,8 @@
 import { create } from 'zustand';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { persist } from 'zustand/middleware';
+import { accountPersistOptions, bindAccountStore } from './persistence';
 
-const KEY = 'aza_chat_themes_v2';
+const STORE_NAME = 'aza_chat_themes';
 
 export type ChatWallpaper = {
   type: 'none' | 'solid' | 'image';
@@ -22,108 +23,73 @@ export type ChatThemeConfig = {
 const DEFAULT_WALLPAPER: ChatWallpaper = { type: 'none', value: '' };
 const DEFAULT_CONFIG: ChatThemeConfig = { bubbleColor: '', wallpaper: DEFAULT_WALLPAPER };
 
-// V1 theme-id → hex migration map
-const V1_COLOR_MAP: Record<string, string> = {
-  default: '', blue: '#3B82F6', green: '#10B981',
-  purple: '#8B5CF6', orange: '#F97316', pink: '#EC4899',
-};
-
 type ChatThemeState = {
   themes: Record<string, ChatThemeConfig>;
-  loaded: boolean;
-  load: () => Promise<void>;
-  setBubbleColor: (chatId: string, color: string) => Promise<void>;
-  setWallpaper: (chatId: string, wallpaper: ChatWallpaper) => Promise<void>;
-  setFontSize: (chatId: string, size: ChatFontSize) => Promise<void>;
-  setPattern: (chatId: string, pattern: ChatWallpaperPattern | null) => Promise<void>;
+  setBubbleColor: (chatId: string, color: string) => void;
+  setWallpaper: (chatId: string, wallpaper: ChatWallpaper) => void;
+  setFontSize: (chatId: string, size: ChatFontSize) => void;
+  setPattern: (chatId: string, pattern: ChatWallpaperPattern | null) => void;
   getBubbleColor: (chatId: string) => string;
   getWallpaper: (chatId: string) => ChatWallpaper;
   getFontSize: (chatId: string) => ChatFontSize;
   getPattern: (chatId: string) => ChatWallpaperPattern | null;
-  resetTheme: (chatId: string) => Promise<void>;
+  resetTheme: (chatId: string) => void;
 };
 
-async function persist(themes: Record<string, ChatThemeConfig>) {
-  await AsyncStorage.setItem(KEY, JSON.stringify(themes));
-}
-
-function get(themes: Record<string, ChatThemeConfig>, chatId: string): ChatThemeConfig {
+function configFor(themes: Record<string, ChatThemeConfig>, chatId: string): ChatThemeConfig {
   return themes[chatId] ?? DEFAULT_CONFIG;
 }
 
-export const useChatThemeStore = create<ChatThemeState>((set, getState) => ({
-  themes: {},
-  loaded: false,
+export const useChatThemeStore = create<ChatThemeState>()(
+  persist(
+    (set, get) => ({
+      themes: {},
 
-  load: async () => {
-    if (getState().loaded) return;
-    try {
-      const raw = await AsyncStorage.getItem(KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        // Migrate v1: Record<chatId, themeId string>
-        const firstVal = Object.values(parsed as object)[0];
-        if (typeof firstVal === 'string') {
-          const migrated: Record<string, ChatThemeConfig> = {};
-          for (const [id, themeId] of Object.entries(parsed as Record<string, string>)) {
-            migrated[id] = { bubbleColor: V1_COLOR_MAP[themeId] ?? '', wallpaper: DEFAULT_WALLPAPER };
-          }
-          set({ themes: migrated, loaded: true });
-          await persist(migrated);
-          return;
-        }
-        set({ themes: parsed, loaded: true });
-      } else {
-        set({ loaded: true });
-      }
-    } catch {
-      set({ loaded: true });
-    }
-  },
+      setBubbleColor: (chatId, bubbleColor) =>
+        set((s) => ({
+          themes: { ...s.themes, [chatId]: { ...configFor(s.themes, chatId), bubbleColor } },
+        })),
 
-  setBubbleColor: async (chatId, color) => {
-    const current = get(getState().themes, chatId);
-    const next = { ...getState().themes, [chatId]: { ...current, bubbleColor: color } };
-    set({ themes: next });
-    await persist(next);
-  },
+      setWallpaper: (chatId, wallpaper) =>
+        set((s) => ({
+          themes: { ...s.themes, [chatId]: { ...configFor(s.themes, chatId), wallpaper } },
+        })),
 
-  setWallpaper: async (chatId, wallpaper) => {
-    const current = get(getState().themes, chatId);
-    const next = { ...getState().themes, [chatId]: { ...current, wallpaper } };
-    set({ themes: next });
-    await persist(next);
-  },
+      setFontSize: (chatId, fontSize) =>
+        set((s) => ({
+          themes: { ...s.themes, [chatId]: { ...configFor(s.themes, chatId), fontSize } },
+        })),
 
-  setFontSize: async (chatId, fontSize) => {
-    const current = get(getState().themes, chatId);
-    const next = { ...getState().themes, [chatId]: { ...current, fontSize } };
-    set({ themes: next });
-    await persist(next);
-  },
+      setPattern: (chatId, pattern) =>
+        set((s) => {
+          const updated: ChatThemeConfig = { ...configFor(s.themes, chatId) };
+          if (pattern === null) delete updated.pattern;
+          else updated.pattern = pattern;
+          return { themes: { ...s.themes, [chatId]: updated } };
+        }),
 
-  getBubbleColor: (chatId) => get(getState().themes, chatId).bubbleColor,
+      resetTheme: (chatId) =>
+        set((s) => {
+          const next = { ...s.themes };
+          delete next[chatId];
+          return { themes: next };
+        }),
 
-  getWallpaper: (chatId) => get(getState().themes, chatId).wallpaper,
+      getBubbleColor: (chatId) => configFor(get().themes, chatId).bubbleColor,
+      getWallpaper: (chatId) => configFor(get().themes, chatId).wallpaper,
+      getFontSize: (chatId) => configFor(get().themes, chatId).fontSize ?? 'medium',
+      getPattern: (chatId) => configFor(get().themes, chatId).pattern ?? null,
+    }),
+    accountPersistOptions<ChatThemeState>({
+      name: STORE_NAME,
+      version: 1,
+      partialize: (s) => ({ themes: s.themes }),
+    }),
+  ),
+);
 
-  getFontSize: (chatId) => get(getState().themes, chatId).fontSize ?? 'medium',
-
-  setPattern: async (chatId, pattern) => {
-    const current = get(getState().themes, chatId);
-    const updated: ChatThemeConfig = { ...current };
-    if (pattern === null) delete updated.pattern;
-    else updated.pattern = pattern;
-    const next = { ...getState().themes, [chatId]: updated };
-    set({ themes: next });
-    await persist(next);
-  },
-
-  getPattern: (chatId) => get(getState().themes, chatId).pattern ?? null,
-
-  resetTheme: async (chatId) => {
-    const next = { ...getState().themes };
-    delete next[chatId];
-    set({ themes: next });
-    await persist(next);
-  },
-}));
+// Per-chat appearance is per-account: chat ids mean nothing to the next person
+// to sign in on this device. The old `aza_chat_themes_v2` key was device-global
+// and is purged on upgrade rather than migrated — attributing it to whoever
+// signs in first is the bug this scoping exists to prevent.
+bindAccountStore(useChatThemeStore, { name: STORE_NAME, empty: () => ({ themes: {} }) });

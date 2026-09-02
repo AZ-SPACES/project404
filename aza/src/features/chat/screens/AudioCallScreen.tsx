@@ -20,6 +20,7 @@ import { RTCView } from '../../../native/webrtc';
 import { RootStackParamList } from '../../../navigation/types';
 import { BackButton } from '../../../components/ui/BackButton';
 import { useCallStore } from '../../../store/callStore';
+import { useShallow } from 'zustand/react/shallow';
 
 const { width } = Dimensions.get('window');
 const AVATAR_SIZE = width * 0.42;
@@ -44,8 +45,21 @@ export default function AudioCallScreen() {
     toggleSpeaker,
     toggleVideo,
     flipCamera,
-    endCurrentCall
-  } = useCallStore();
+    endCurrentCall,
+  } = useCallStore(
+    useShallow((s) => ({
+      activeCall: s.activeCall,
+      isMuted: s.isMuted,
+      isSpeakerOn: s.isSpeakerOn,
+      isLocalVideoEnabled: s.isLocalVideoEnabled,
+      cameraFacing: s.cameraFacing,
+      toggleMute: s.toggleMute,
+      toggleSpeaker: s.toggleSpeaker,
+      toggleVideo: s.toggleVideo,
+      flipCamera: s.flipCamera,
+      endCurrentCall: s.endCurrentCall,
+    })),
+  );
 
   const [isVideoMode, setIsVideoMode] = useState(false);
   const [duration, setDuration] = useState(0);

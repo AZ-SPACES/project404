@@ -21,7 +21,7 @@ import { BackButton } from '../../../components/ui/BackButton';
 import Button from '../../../components/ui/Button';
 import { createSplit, Split } from '../../../services/api';
 import { extractErrorMessage } from '../../../utils/errorUtils';
-import { useContactStore } from '../../../store/contactStore';
+import { useContacts } from '../../../hooks/useContacts';
 import type { Contact } from '../../contacts/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CreateSplit'>;
@@ -40,7 +40,7 @@ export default function CreateSplitScreen({ navigation }: Props) {
   const { colors: Colors } = useAppTheme();
   const styles = useMemo(() => createStyles(Colors), [Colors]);
 
-  const { contacts, fetchContacts } = useContactStore();
+  const { contacts, refetch: fetchContacts } = useContacts();
   const [total, setTotal] = useState('');
   const [description, setDescription] = useState('');
   const [mode, setMode] = useState<Mode>('EQUAL');

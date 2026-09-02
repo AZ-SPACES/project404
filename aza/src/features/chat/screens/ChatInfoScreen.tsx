@@ -26,7 +26,7 @@ import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { useChatStore } from "../../../store/chatStore";
-import { useContactStore } from "../../../store/contactStore";
+import { useContacts } from "../../../hooks/useContacts";
 import { useStarredMessagesStore } from "../../../store/starredMessagesStore";
 import { useChatThemeStore } from "../../../store/chatThemeStore";
 import { useE2EE } from "../../../providers/E2EEProvider";
@@ -197,19 +197,11 @@ export default function ChatInfoScreen() {
   const clearChatMessages = useChatStore((s) => s.clearChatMessages);
   const messagesByChat = useChatStore((s) => s.messagesByChat);
 
-  const contacts = useContactStore((s) => s.contacts);
+  const { contacts } = useContacts();
 
-  const loadStarred = useStarredMessagesStore((s) => s.load);
   const starredCount = useStarredMessagesStore((s) =>
     chatIdParam ? s.entries.filter((e) => e.chatId === chatIdParam).length : 0,
   );
-
-  const loadTheme = useChatThemeStore((s) => s.load);
-
-  useEffect(() => {
-    loadStarred();
-    loadTheme();
-  }, [loadStarred, loadTheme]);
 
   // The route param `id` carries chatId. Resolve live data from the store.
   const chat = chatIdParam ? chats[chatIdParam] : undefined;

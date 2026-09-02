@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { persist } from 'zustand/middleware';
+import { devicePersistOptions } from './persistence';
 
 const DAY = 86_400_000;
 
@@ -45,6 +45,16 @@ export const useFeedbackPromptStore = create<State>()(
         return true;
       },
     }),
-    { name: 'aza_feedback_prompt_v1', storage: createJSONStorage(() => AsyncStorage) },
+    // Device-scoped: this throttles the OS review prompt, which the OS itself
+    // rate-limits per install. Key name kept so the cooldown survives upgrade.
+    devicePersistOptions<State>({
+      name: 'aza_feedback_prompt_v1',
+      version: 1,
+      partialize: (s) => ({
+        lastPromptAt: s.lastPromptAt,
+        promptedAt: s.promptedAt,
+        answeredAt: s.answeredAt,
+      }),
+    }),
   ),
 );

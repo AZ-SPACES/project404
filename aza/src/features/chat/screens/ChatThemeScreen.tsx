@@ -312,7 +312,6 @@ export default function ChatThemeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { chatId, name } = route.params;
 
-  const load          = useChatThemeStore(s => s.load);
   const setBubbleColor  = useChatThemeStore(s => s.setBubbleColor);
   const setWallpaper  = useChatThemeStore(s => s.setWallpaper);
   const setFontSizeStore = useChatThemeStore(s => s.setFontSize);
@@ -337,14 +336,14 @@ export default function ChatThemeScreen() {
   const previewColor = useMemo(() => hsbToHex(hue, sat, bri), [hue, sat, bri]);
   const [pickerLoading, setPickerLoading] = useState(false);
 
+  // The theme store is hydrated by the account session before any screen
+  // mounts, so seed the local editing copy directly.
   useEffect(() => {
-    load().then(() => {
-      setBubbleColorLocal(getBubbleColor(chatId));
-      setWallpaperLocal(getWallpaper(chatId));
-      setFontSizeLocal(getFontSize(chatId));
-      setPattern(getPattern(chatId));
-    });
-  }, [chatId]);
+    setBubbleColorLocal(getBubbleColor(chatId));
+    setWallpaperLocal(getWallpaper(chatId));
+    setFontSizeLocal(getFontSize(chatId));
+    setPattern(getPattern(chatId));
+  }, [chatId, getBubbleColor, getWallpaper, getFontSize, getPattern]);
 
   useEffect(() => {
     Animated.parallel([
@@ -360,15 +359,15 @@ export default function ChatThemeScreen() {
     setBubbleColorLocal(color);
     setWallpaperLocal(pack.wallpaper);
     setPattern(null);
-    setBubbleColor(chatId, color).catch(() => {});
-    setWallpaper(chatId, pack.wallpaper).catch(() => {});
-    setPatternStore(chatId, null).catch(() => {});
+    setBubbleColor(chatId, color);
+    setWallpaper(chatId, pack.wallpaper);
+    setPatternStore(chatId, null);
   }, [chatId, setBubbleColor, setWallpaper, setPatternStore]);
 
   const handleSelectBubble = useCallback((color: string | null) => {
     const c = color ?? '';
     setBubbleColorLocal(c);
-    setBubbleColor(chatId, c).catch(() => {});
+    setBubbleColor(chatId, c);
   }, [chatId, setBubbleColor]);
 
   const handleOpenCustom = useCallback(() => {
@@ -384,28 +383,28 @@ export default function ChatThemeScreen() {
   const handleApplyColor = useCallback(() => {
     const hex = hsbToHex(hue, sat, bri);
     setBubbleColorLocal(hex);
-    setBubbleColor(chatId, hex).catch(() => {});
+    setBubbleColor(chatId, hex);
     setHexVisible(false);
   }, [hue, sat, bri, chatId, setBubbleColor]);
 
   const handleSelectWallpaper = useCallback((wp: ChatWallpaper) => {
     setWallpaperLocal(wp);
     setPattern(null);
-    setWallpaper(chatId, wp).catch(() => {});
-    setPatternStore(chatId, null).catch(() => {});
+    setWallpaper(chatId, wp);
+    setPatternStore(chatId, null);
   }, [chatId, setWallpaper, setPatternStore]);
 
   const handleTogglePattern = useCallback((pid: PatternId) => {
     setPattern(prev => {
       const next = prev === pid ? null : pid;
-      setPatternStore(chatId, next).catch(() => {});
+      setPatternStore(chatId, next);
       return next;
     });
   }, [chatId, setPatternStore]);
 
   const handleSelectFontSize = useCallback((size: ChatFontSize) => {
     setFontSizeLocal(size);
-    setFontSizeStore(chatId, size).catch(() => {});
+    setFontSizeStore(chatId, size);
   }, [chatId, setFontSizeStore]);
 
   const handlePickPhoto = useCallback(async () => {
@@ -418,8 +417,8 @@ export default function ChatThemeScreen() {
         const wp: ChatWallpaper = { type: 'image', value: result.assets[0].uri };
         setWallpaperLocal(wp);
         setPattern(null);
-        setWallpaper(chatId, wp).catch(() => {});
-        setPatternStore(chatId, null).catch(() => {});
+        setWallpaper(chatId, wp);
+        setPatternStore(chatId, null);
       }
     } finally {
       setPickerLoading(false);
@@ -434,7 +433,7 @@ export default function ChatThemeScreen() {
         setWallpaperLocal({ type: 'none', value: '' });
         setFontSizeLocal('medium');
         setPattern(null);
-        resetTheme(chatId).catch(() => {});
+        resetTheme(chatId);
       }},
     ]);
   }, [chatId, resetTheme]);

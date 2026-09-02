@@ -38,7 +38,7 @@ export default function SendConfirmScreen({ navigation, route }: SendConfirmScre
   const [isEditingNote, setIsEditingNote] = useState(false);
   const [editedNote, setEditedNote] = useState(note || '');
 
-  const { initiateTransfer } = useTransferStore();
+  const initiateTransfer = useTransferStore((s) => s.initiateTransfer);
 
   const { data: anomalyData } = useQuery({
     queryKey: queryKeys.anomalyCheck(identifier, amount),

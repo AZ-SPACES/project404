@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -17,9 +17,10 @@ import { useAppTheme, Typography, Spacing, ThemeColors } from '../../../theme';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../../navigation/types';
 import { useFocusEffect } from '@react-navigation/native';
-import { useContactStore } from '../../../store/contactStore';
+import { useContacts } from '../../../hooks/useContacts';
 import { Contact } from '../../contacts/types';
 import { BackButton } from '../../../components/ui/BackButton';
+import { useTransferStore } from '../../../store/transferStore';
 
 type ReceiveScreenProps = NativeStackScreenProps<RootStackParamList, 'Receive'>;
 
@@ -50,6 +51,12 @@ type ContactItemProps = { contact: ListContact; onPress: (contact: ListContact) 
 function ContactRow({ contact, onPress }: ContactItemProps) {
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
+  // Entering a send/request flow clears whatever the last, possibly
+  // abandoned, flow left in the shared transfer store.
+  useEffect(() => {
+    useTransferStore.getState().beginFlow();
+  }, []);
+
   return (
     <TouchableOpacity
       style={styles.contactRow}
@@ -80,20 +87,20 @@ export default function RequestContactScreen({ navigation }: ReceiveScreenProps)
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const isDark = Colors.isDark;
 
-  const { contacts, isLoading, error, fetchContacts } = useContactStore();
+  const { contacts, isLoading, error, refetch: fetchContacts } = useContacts();
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
 
   // Re-fetch every time this screen gains focus (matches ContactsScreen behaviour)
   useFocusEffect(
     useCallback(() => {
-      fetchContacts(0, 200);
+      fetchContacts();
     }, [fetchContacts]),
   );
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    await fetchContacts(0, 200);
+    await fetchContacts();
     setRefreshing(false);
   }, [fetchContacts]);
 
@@ -166,7 +173,7 @@ export default function RequestContactScreen({ navigation }: ReceiveScreenProps)
         <View style={styles.centerState}>
           <Feather name="wifi-off" size={32} color={Colors.textSecondary} style={{ marginBottom: 8 }} />
           <Text style={styles.stateText}>Failed to load contacts</Text>
-          <TouchableOpacity onPress={() => fetchContacts(0, 200)} style={styles.retryButton}>
+          <TouchableOpacity onPress={() => fetchContacts()} style={styles.retryButton}>
             <Text style={[styles.sectionLabel, { color: Colors.primary, marginBottom: 0 }]}>Retry</Text>
           </TouchableOpacity>
         </View>

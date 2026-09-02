@@ -13,7 +13,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../navigation/types';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useContactStore } from '../../../store/contactStore';
+import { findUserByHandle } from '../../../hooks/useContacts';
 import { getPublicMerchant, reportHandle } from '../../../services/api';
 import { useProfile } from '../../../providers/ProfileProvider';
 import { useToast } from '../../../providers/ToastProvider';
@@ -44,7 +44,6 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
   const [frameLayout, setFrameLayout] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const scanAnim = useRef(new Animated.Value(0)).current;
   const isProcessing = useRef(false);
-  const { findUserByHandle } = useContactStore();
   const { handle: myHandle, displayName: myName } = useProfile();
   const { showToast } = useToast();
 

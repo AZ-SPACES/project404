@@ -2,6 +2,7 @@ import React, {
   createContext,
   useCallback,
   useContext,
+  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -94,10 +95,14 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     [translateY, opacity, dismiss],
   );
 
+  // `useToast` has ~51 call sites — by far the most-consumed context in the
+  // app — and this provider re-renders on every toast shown and dismissed.
+  const value = useMemo(() => ({ showToast }), [showToast]);
+
   const cfg = toast ? CONFIG[toast.type] : null;
 
   return (
-    <ToastContext.Provider value={{ showToast }}>
+    <ToastContext.Provider value={value}>
       {children}
       {toast && cfg && (
         <Animated.View

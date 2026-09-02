@@ -1,8 +1,9 @@
 import { create } from 'zustand';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { persist } from 'zustand/middleware';
 import type { Message } from '../components/chat/chatTypes';
+import { accountPersistOptions, bindAccountStore } from './persistence';
 
-const KEY = 'aza_starred_messages_v1';
+const STORE_NAME = 'aza_starred_messages';
 
 export type StarredEntry = {
   messageId: string;
@@ -14,54 +15,46 @@ export type StarredEntry = {
 
 type StarredState = {
   entries: StarredEntry[];
-  loaded: boolean;
-  load: () => Promise<void>;
-  star: (message: Message, chatId: string, chatName: string) => Promise<void>;
-  unstar: (messageId: string) => Promise<void>;
+  star: (message: Message, chatId: string, chatName: string) => void;
+  unstar: (messageId: string) => void;
   isStarred: (messageId: string) => boolean;
   countForChat: (chatId: string) => number;
 };
 
-async function save(entries: StarredEntry[]) {
-  await AsyncStorage.setItem(KEY, JSON.stringify(entries));
-}
+export const useStarredMessagesStore = create<StarredState>()(
+  persist(
+    (set, get) => ({
+      entries: [],
 
-export const useStarredMessagesStore = create<StarredState>((set, get) => ({
-  entries: [],
-  loaded: false,
+      star: (message, chatId, chatName) => {
+        const { entries } = get();
+        if (entries.some((e) => e.messageId === message.id)) return;
+        const entry: StarredEntry = {
+          messageId: message.id,
+          chatId,
+          chatName,
+          message,
+          starredAt: Date.now(),
+        };
+        set({ entries: [entry, ...entries] });
+      },
 
-  load: async () => {
-    if (get().loaded) return;
-    try {
-      const raw = await AsyncStorage.getItem(KEY);
-      set({ entries: raw ? JSON.parse(raw) : [], loaded: true });
-    } catch {
-      set({ loaded: true });
-    }
-  },
+      unstar: (messageId) =>
+        set((s) => ({ entries: s.entries.filter((e) => e.messageId !== messageId) })),
 
-  star: async (message, chatId, chatName) => {
-    const { entries } = get();
-    if (entries.some(e => e.messageId === message.id)) return;
-    const entry: StarredEntry = {
-      messageId: message.id,
-      chatId,
-      chatName,
-      message,
-      starredAt: Date.now(),
-    };
-    const next = [entry, ...entries];
-    set({ entries: next });
-    await save(next);
-  },
+      isStarred: (messageId) => get().entries.some((e) => e.messageId === messageId),
 
-  unstar: async (messageId) => {
-    const next = get().entries.filter(e => e.messageId !== messageId);
-    set({ entries: next });
-    await save(next);
-  },
+      countForChat: (chatId) => get().entries.filter((e) => e.chatId === chatId).length,
+    }),
+    accountPersistOptions<StarredState>({
+      name: STORE_NAME,
+      version: 1,
+      partialize: (s) => ({ entries: s.entries }),
+    }),
+  ),
+);
 
-  isStarred: (messageId) => get().entries.some(e => e.messageId === messageId),
-
-  countForChat: (chatId) => get().entries.filter(e => e.chatId === chatId).length,
-}));
+// Whole message objects plus the chat name they came from. Account-scoped, and
+// hydrated by the session rather than by a `load()` each screen had to remember
+// to call before reading.
+bindAccountStore(useStarredMessagesStore, { name: STORE_NAME, empty: () => ({ entries: [] }) });

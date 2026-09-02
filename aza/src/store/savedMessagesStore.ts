@@ -1,7 +1,9 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { persist } from 'zustand/middleware';
 import type { Message } from '../components/chat/chatTypes';
+import { accountPersistOptions, bindAccountStore } from './persistence';
+
+const STORE_NAME = 'aza_saved_messages';
 
 type SavedMessagesState = {
   messages: Message[];
@@ -18,6 +20,14 @@ export const useSavedMessagesStore = create<SavedMessagesState>()(
       deleteMessage: (id) => set((s) => ({ messages: s.messages.filter((m) => m.id !== id) })),
       clearAll: () => set({ messages: [] }),
     }),
-    { name: 'aza_saved_messages_v1', storage: createJSONStorage(() => AsyncStorage) },
+    accountPersistOptions<SavedMessagesState>({
+      name: STORE_NAME,
+      version: 1,
+      partialize: (s) => ({ messages: s.messages }),
+    }),
   ),
 );
+
+// Whole message objects, in plaintext. Account-scoped so they go with the
+// encrypted thread caches on logout instead of outliving them.
+bindAccountStore(useSavedMessagesStore, { name: STORE_NAME, empty: () => ({ messages: [] }) });

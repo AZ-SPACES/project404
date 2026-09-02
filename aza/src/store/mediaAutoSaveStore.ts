@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { persist } from 'zustand/middleware';
+import { devicePersistOptions } from './persistence';
 
 type MediaAutoSaveState = {
   settings: Record<string, boolean>;
@@ -16,6 +16,13 @@ export const useMediaAutoSaveStore = create<MediaAutoSaveState>()(
       setEnabled: (chatId, enabled) =>
         set((s) => ({ settings: { ...s.settings, [chatId]: enabled } })),
     }),
-    { name: 'aza_media_auto_save_v1', storage: createJSONStorage(() => AsyncStorage) }
-  )
+    // Device-scoped: whether media lands in this phone's gallery is a property
+    // of the phone, not of whoever is signed in. Key name kept so the setting
+    // survives the upgrade.
+    devicePersistOptions<MediaAutoSaveState>({
+      name: 'aza_media_auto_save_v1',
+      version: 1,
+      partialize: (s) => ({ settings: s.settings }),
+    }),
+  ),
 );

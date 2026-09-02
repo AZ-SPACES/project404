@@ -19,6 +19,7 @@ import { RTCView } from '../../../native/webrtc';
 import { RootStackParamList } from '../../../navigation/types';
 import { CloseButton } from '../../../components/ui/CloseButton';
 import { useCallStore } from '../../../store/callStore';
+import { useShallow } from 'zustand/react/shallow';
 
 const { width } = Dimensions.get('window');
 const PIP_WIDTH = 100;
@@ -41,8 +42,21 @@ export default function VideoCallScreen() {
     toggleSpeaker,
     toggleVideo,
     flipCamera,
-    endCurrentCall
-  } = useCallStore();
+    endCurrentCall,
+  } = useCallStore(
+    useShallow((s) => ({
+      activeCall: s.activeCall,
+      isMuted: s.isMuted,
+      isSpeakerOn: s.isSpeakerOn,
+      isLocalVideoEnabled: s.isLocalVideoEnabled,
+      cameraFacing: s.cameraFacing,
+      toggleMute: s.toggleMute,
+      toggleSpeaker: s.toggleSpeaker,
+      toggleVideo: s.toggleVideo,
+      flipCamera: s.flipCamera,
+      endCurrentCall: s.endCurrentCall,
+    })),
+  );
 
   const [duration, setDuration] = useState(0);
 

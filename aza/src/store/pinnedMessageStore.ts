@@ -1,8 +1,9 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { persist } from 'zustand/middleware';
 import type { Message } from '../components/chat/chatTypes';
+import { accountPersistOptions, bindAccountStore } from './persistence';
 
+const STORE_NAME = 'aza_pinned_messages';
 const MAX_PINS = 3;
 
 type PinnedState = {
@@ -50,6 +51,14 @@ export const usePinnedMessageStore = create<PinnedState>()(
       isPinned: (chatId, messageId) =>
         (get().pinned[chatId] ?? []).some((m) => m.id === messageId),
     }),
-    { name: 'aza_pinned_v2', storage: createJSONStorage(() => AsyncStorage) }
-  )
+    accountPersistOptions<PinnedState>({
+      name: STORE_NAME,
+      version: 1,
+      partialize: (s) => ({ pinned: s.pinned }),
+    }),
+  ),
 );
+
+// Whole message objects, in plaintext. Account-scoped for the same reason as
+// savedMessagesStore.
+bindAccountStore(usePinnedMessageStore, { name: STORE_NAME, empty: () => ({ pinned: {} }) });

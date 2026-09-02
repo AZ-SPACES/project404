@@ -11,6 +11,7 @@ import { useSettledRequestsStore } from '../../store/settledRequestsStore';
 import { extractErrorMessage } from '../../utils/errorUtils';
 import { sendChatPaymentRequest, ChatPaymentRequest } from '../../services/api';
 import Button from '../ui/Button';
+import { useShallow } from 'zustand/react/shallow';
 
 // ----------------------------------------------------------------------------
 // Types
@@ -93,7 +94,16 @@ export const ChatPaymentSheet = memo(function ChatPaymentSheet({
   const requestKindRef = useRef<'chat-request' | 'money-request' | undefined>(undefined);
 
   const { initiateTransfer, confirmTransfer, cancelPendingTransfer, requestMoney, acceptMoneyRequest, pendingTransactionId } =
-    useTransferStore();
+    useTransferStore(
+      useShallow((s) => ({
+        initiateTransfer: s.initiateTransfer,
+        confirmTransfer: s.confirmTransfer,
+        cancelPendingTransfer: s.cancelPendingTransfer,
+        requestMoney: s.requestMoney,
+        acceptMoneyRequest: s.acceptMoneyRequest,
+        pendingTransactionId: s.pendingTransactionId,
+      })),
+    );
 
   const displayAmount = showKeypad ? (parseFloat(keypadInput) || 0) : amount;
   const formattedDisplay = showKeypad ? keypadInput : (amount === 0 ? '0' : String(amount));
@@ -103,6 +113,9 @@ export const ChatPaymentSheet = memo(function ChatPaymentSheet({
   // so it skips the amount step and goes straight to PIN entry.
   useEffect(() => {
     if (!visible) return;
+    // The transfer store is shared with the send/request screens, so clear
+    // anything an abandoned flow left behind before starting this one.
+    useTransferStore.getState().beginFlow();
     if (mode === 'pay') {
       finalAmountRef.current = prefillAmount ?? 0;
       requestIdRef.current = payRequestId;

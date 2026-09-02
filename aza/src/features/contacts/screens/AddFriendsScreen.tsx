@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppTheme, Typography, Spacing, Radius, ThemeColors } from '../../../theme';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../../navigation/types';
-import { useContactStore } from '../../../store/contactStore';
+import { useContactActions, searchGlobal } from '../../../hooks/useContacts';
 import { PublicProfile } from '../types';
 import { BackButton } from '../../../components/ui/BackButton';
 
@@ -26,7 +26,7 @@ export default function AddFriendsScreen({ navigation }: AddFriendsScreenProps) 
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const isDark = Colors.isDark;
 
-  const { searchGlobal, requestContact } = useContactStore();
+  const { requestContact } = useContactActions();
 
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<PublicProfile[]>([]);

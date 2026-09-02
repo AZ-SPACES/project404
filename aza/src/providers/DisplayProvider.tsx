@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect, useRef } from "react";
+import React, { createContext, useCallback, useContext, useState, ReactNode, useEffect, useMemo, useRef } from "react";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useColorScheme, Appearance } from "react-native";
 import { useAuth } from "./AuthProvider";
@@ -304,7 +304,7 @@ export function DisplayProvider({ children }: { children: ReactNode }) {
     }
   }, [profile.language, profile.theme, profile.homeBackground, profile.hubBackground, userToken]);
 
-  const setTheme = (t: ThemeOption) => {
+  const setTheme = useCallback((t: ThemeOption) => {
     setThemeState(t);
     AsyncStorage.setItem('AppTheme', t).catch(() => {});
     if (userToken) {
@@ -312,9 +312,9 @@ export function DisplayProvider({ children }: { children: ReactNode }) {
         .then(() => queryClient.invalidateQueries({ queryKey: queryKeys.profile() }))
         .catch(() => {});
     }
-  };
+  }, [userToken]);
 
-  const setLanguage = (l: LanguageOption) => {
+  const setLanguage = useCallback((l: LanguageOption) => {
     setLanguageState(l);
     AsyncStorage.setItem('AppLanguage', l).catch(() => {});
     if (userToken) {
@@ -322,14 +322,14 @@ export function DisplayProvider({ children }: { children: ReactNode }) {
         .then(() => queryClient.invalidateQueries({ queryKey: queryKeys.profile() }))
         .catch(() => {});
     }
-  };
+  }, [userToken]);
 
-  const setAccentId = (id: string) => {
+  const setAccentId = useCallback((id: string) => {
     setAccentIdState(id);
     AsyncStorage.setItem('AppAccentId', id).catch(() => {});
-  };
+  }, []);
 
-  const setHomeBackground = async (uri: string) => {
+  const setHomeBackground = useCallback(async (uri: string) => {
     setHomeBackgroundState(uri);
     AsyncStorage.setItem('AppHomeBackground', uri).catch(() => {});
     if (userToken) {
@@ -347,9 +347,9 @@ export function DisplayProvider({ children }: { children: ReactNode }) {
         console.error("Failed to sync home background", err);
       }
     }
-  };
+  }, [userToken]);
 
-  const setHubBackground = async (uri: string) => {
+  const setHubBackground = useCallback(async (uri: string) => {
     setHubBackgroundState(uri);
     AsyncStorage.setItem('AppHubBackground', uri).catch(() => {});
     if (userToken) {
@@ -367,65 +367,69 @@ export function DisplayProvider({ children }: { children: ReactNode }) {
         console.error("Failed to sync hub background", err);
       }
     }
-  };
+  }, [userToken]);
 
-  const addHomeCustomBackground = (uri: string) => {
+  const addHomeCustomBackground = useCallback((uri: string) => {
     setHomeCustomBgsState(prev => {
       const updated = [uri, ...prev.filter(b => b !== uri)].slice(0, 3);
       AsyncStorage.setItem('AppHomeCustomBackgrounds', JSON.stringify(updated)).catch(() => {});
       return updated;
     });
-  };
+  }, []);
 
-  const addHubCustomBackground = (uri: string) => {
+  const addHubCustomBackground = useCallback((uri: string) => {
     setHubCustomBgsState(prev => {
       const updated = [uri, ...prev.filter(b => b !== uri)].slice(0, 3);
       AsyncStorage.setItem('AppHubCustomBackgrounds', JSON.stringify(updated)).catch(() => {});
       return updated;
     });
-  };
+  }, []);
 
-  const removeHomeCustomBackground = (uri: string) => {
+  const removeHomeCustomBackground = useCallback((uri: string) => {
     setHomeCustomBgsState(prev => {
       const updated = prev.filter(b => b !== uri);
       AsyncStorage.setItem('AppHomeCustomBackgrounds', JSON.stringify(updated)).catch(() => {});
       return updated;
     });
     if (homeBackground === uri) setHomeBackground("");
-  };
+  }, [homeBackground, setHomeBackground]);
 
-  const removeHubCustomBackground = (uri: string) => {
+  const removeHubCustomBackground = useCallback((uri: string) => {
     setHubCustomBgsState(prev => {
       const updated = prev.filter(b => b !== uri);
       AsyncStorage.setItem('AppHubCustomBackgrounds', JSON.stringify(updated)).catch(() => {});
       return updated;
     });
     if (hubBackground === uri) setHubBackground("");
-  };
+  }, [hubBackground, setHubBackground]);
 
-  const setHomeDim = (v: number) => { setHomeDimState(v); AsyncStorage.setItem('AppHomeDim', String(v)).catch(() => {}); };
-  const setHubDim = (v: number) => { setHubDimState(v); AsyncStorage.setItem('AppHubDim', String(v)).catch(() => {}); };
-  const setHomeBlur = (v: number) => { setHomeBlurState(v); AsyncStorage.setItem('AppHomeBlur', String(v)).catch(() => {}); };
-  const setHubBlur = (v: number) => { setHubBlurState(v); AsyncStorage.setItem('AppHubBlur', String(v)).catch(() => {}); };
+  const setHomeDim = useCallback((v: number) => { setHomeDimState(v); AsyncStorage.setItem('AppHomeDim', String(v)).catch(() => {}); }, []);
+  const setHubDim = useCallback((v: number) => { setHubDimState(v); AsyncStorage.setItem('AppHubDim', String(v)).catch(() => {}); }, []);
+  const setHomeBlur = useCallback((v: number) => { setHomeBlurState(v); AsyncStorage.setItem('AppHomeBlur', String(v)).catch(() => {}); }, []);
+  const setHubBlur = useCallback((v: number) => { setHubBlurState(v); AsyncStorage.setItem('AppHubBlur', String(v)).catch(() => {}); }, []);
 
-  const setHomeBannerGradient = (id: string) => { setHomeBannerGradientState(id); AsyncStorage.setItem('AppHomeBannerGradient', id).catch(() => {}); };
-  const setHubBannerGradient = (id: string) => { setHubBannerGradientState(id); AsyncStorage.setItem('AppHubBannerGradient', id).catch(() => {}); };
+  const setHomeBannerGradient = useCallback((id: string) => { setHomeBannerGradientState(id); AsyncStorage.setItem('AppHomeBannerGradient', id).catch(() => {}); }, []);
+  const setHubBannerGradient = useCallback((id: string) => { setHubBannerGradientState(id); AsyncStorage.setItem('AppHubBannerGradient', id).catch(() => {}); }, []);
 
-  const setBalanceCardStyle = (s: BalanceCardStyle) => { setBalanceCardStyleState(s); AsyncStorage.setItem('AppBalanceCardStyle', s).catch(() => {}); };
-  const setTabBarStyle = (s: TabBarStyle) => { setTabBarStyleState(s); AsyncStorage.setItem('AppTabBarStyle', s).catch(() => {}); };
-  const setTransactionDensity = (d: TransactionDensity) => { setTransactionDensityState(d); AsyncStorage.setItem('AppTransactionDensity', d).catch(() => {}); };
-  const setHomeLayout = (l: HomeLayout) => { setHomeLayoutState(l); AsyncStorage.setItem('AppHomeLayout', l).catch(() => {}); };
-  const setCornerRadiusScale = (s: CornerRadiusScale) => { setCornerRadiusScaleState(s); AsyncStorage.setItem('AppCornerRadiusScale', s).catch(() => {}); };
-  const setTabIconStyle = (s: TabIconStyle) => { setTabIconStyleState(s); AsyncStorage.setItem('AppTabIconStyle', s).catch(() => {}); };
-  const setMainTabNav = (s: MainTabNav) => { setMainTabNavState(s); AsyncStorage.setItem('AppMainTabNav', s).catch(() => {}); };
-  const setBalanceHiddenByDefault = (v: boolean) => { setBalanceHiddenByDefaultState(v); AsyncStorage.setItem('AppBalanceHiddenByDefault', String(v)).catch(() => {}); };
-  const setReducedMotion = (v: boolean) => { setReducedMotionState(v); AsyncStorage.setItem('AppReducedMotion', String(v)).catch(() => {}); };
-  const setQuickActions = (a: QuickActionId[]) => { setQuickActionsState(a); AsyncStorage.setItem('AppQuickActions', JSON.stringify(a)).catch(() => {}); };
-  const setTransactionGrouping = (g: TransactionGrouping) => { setTransactionGroupingState(g); AsyncStorage.setItem('AppTransactionGrouping', g).catch(() => {}); };
-  const setTabOrder = (order: TabId[]) => { setTabOrderState(order); AsyncStorage.setItem('AppTabOrder', JSON.stringify(order)).catch(() => {}); };
+  const setBalanceCardStyle = useCallback((s: BalanceCardStyle) => { setBalanceCardStyleState(s); AsyncStorage.setItem('AppBalanceCardStyle', s).catch(() => {}); }, []);
+  const setTabBarStyle = useCallback((s: TabBarStyle) => { setTabBarStyleState(s); AsyncStorage.setItem('AppTabBarStyle', s).catch(() => {}); }, []);
+  const setTransactionDensity = useCallback((d: TransactionDensity) => { setTransactionDensityState(d); AsyncStorage.setItem('AppTransactionDensity', d).catch(() => {}); }, []);
+  const setHomeLayout = useCallback((l: HomeLayout) => { setHomeLayoutState(l); AsyncStorage.setItem('AppHomeLayout', l).catch(() => {}); }, []);
+  const setCornerRadiusScale = useCallback((s: CornerRadiusScale) => { setCornerRadiusScaleState(s); AsyncStorage.setItem('AppCornerRadiusScale', s).catch(() => {}); }, []);
+  const setTabIconStyle = useCallback((s: TabIconStyle) => { setTabIconStyleState(s); AsyncStorage.setItem('AppTabIconStyle', s).catch(() => {}); }, []);
+  const setMainTabNav = useCallback((s: MainTabNav) => { setMainTabNavState(s); AsyncStorage.setItem('AppMainTabNav', s).catch(() => {}); }, []);
+  const setBalanceHiddenByDefault = useCallback((v: boolean) => { setBalanceHiddenByDefaultState(v); AsyncStorage.setItem('AppBalanceHiddenByDefault', String(v)).catch(() => {}); }, []);
+  const setReducedMotion = useCallback((v: boolean) => { setReducedMotionState(v); AsyncStorage.setItem('AppReducedMotion', String(v)).catch(() => {}); }, []);
+  const setQuickActions = useCallback((a: QuickActionId[]) => { setQuickActionsState(a); AsyncStorage.setItem('AppQuickActions', JSON.stringify(a)).catch(() => {}); }, []);
+  const setTransactionGrouping = useCallback((g: TransactionGrouping) => { setTransactionGroupingState(g); AsyncStorage.setItem('AppTransactionGrouping', g).catch(() => {}); }, []);
+  const setTabOrder = useCallback((order: TabId[]) => { setTabOrderState(order); AsyncStorage.setItem('AppTabOrder', JSON.stringify(order)).catch(() => {}); }, []);
 
-  return (
-    <DisplayContext.Provider value={{
+  // Memoised. This provider sits above the whole app, so an object literal here
+  // re-rendered every consumer on any state change anywhere in it — a blur
+  // slider drag re-rendered the transaction list. Every setter above is a
+  // stable useCallback, so this now changes only when a setting actually does.
+  const value = useMemo<DisplayContextType>(
+    () => ({
       theme, setTheme,
       language, setLanguage,
       accentId, setAccentId,
@@ -454,10 +458,40 @@ export function DisplayProvider({ children }: { children: ReactNode }) {
       transactionGrouping, setTransactionGrouping,
       tabOrder, setTabOrder,
       activeColorScheme,
-    }}>
-      {children}
-    </DisplayContext.Provider>
+    }),
+    [
+      theme, setTheme,
+      language, setLanguage,
+      accentId, setAccentId,
+      homeBackground, setHomeBackground,
+      hubBackground, setHubBackground,
+      homeCustomBackgrounds, hubCustomBackgrounds,
+      addHomeCustomBackground, addHubCustomBackground,
+      removeHomeCustomBackground, removeHubCustomBackground,
+      homeDim, setHomeDim,
+      hubDim, setHubDim,
+      homeBlur, setHomeBlur,
+      hubBlur, setHubBlur,
+      homeBgLuminance,
+      homeBannerGradient, setHomeBannerGradient,
+      hubBannerGradient, setHubBannerGradient,
+      balanceCardStyle, setBalanceCardStyle,
+      tabBarStyle, setTabBarStyle,
+      transactionDensity, setTransactionDensity,
+      homeLayout, setHomeLayout,
+      cornerRadiusScale, setCornerRadiusScale,
+      tabIconStyle, setTabIconStyle,
+      mainTabNav, setMainTabNav,
+      balanceHiddenByDefault, setBalanceHiddenByDefault,
+      reducedMotion, setReducedMotion,
+      quickActions, setQuickActions,
+      transactionGrouping, setTransactionGrouping,
+      tabOrder, setTabOrder,
+      activeColorScheme,
+    ],
   );
+
+  return <DisplayContext.Provider value={value}>{children}</DisplayContext.Provider>;
 }
 
 export function useDisplayContext() {

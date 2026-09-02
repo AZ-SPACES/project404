@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useRef } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef } from 'react';
 import { Platform } from 'react-native';
 import * as Device from 'expo-device';
 import Constants from 'expo-constants';
@@ -329,23 +329,26 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     prevTokenRef.current = userToken;
   }, [userToken]);
 
-  const checkPermissions = async (): Promise<Notifications.PermissionResponse | { status: string }> => {
+  // These are all stable: App.tsx lists `checkPermissions` in an effect's deps,
+  // so a fresh identity each render re-ran the biometrics/notification prompt
+  // check on every render of this provider.
+  const checkPermissions = useCallback(async (): Promise<Notifications.PermissionResponse | { status: string }> => {
     try {
       return await Notifications.getPermissionsAsync();
     } catch {
       return { status: 'undetermined' };
     }
-  };
+  }, []);
 
-  const requestPermissions = async (): Promise<Notifications.PermissionResponse | { status: string }> => {
+  const requestPermissions = useCallback(async (): Promise<Notifications.PermissionResponse | { status: string }> => {
     try {
       return await Notifications.requestPermissionsAsync();
     } catch {
       return { status: 'undetermined' };
     }
-  };
+  }, []);
 
-  const registerForNotifications = async (requestIfNotGranted: boolean = true): Promise<boolean> => {
+  const registerForNotifications = useCallback(async (requestIfNotGranted: boolean = true): Promise<boolean> => {
     // Expo Go has no push credentials of its own to hand out, so asking for a
     // token there fails with an error that reads like a misconfiguration of
     // ours. Local notifications below still work; remote push needs a
@@ -401,9 +404,9 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       console.error('NotificationProvider: Could not register for push notifications', e);
       return false;
     }
-  };
+  }, [checkPermissions, requestPermissions]);
 
-  const sendLocalNotification = async (
+  const sendLocalNotification = useCallback(async (
     title: string,
     body: string,
     data?: Record<string, unknown>,
@@ -418,15 +421,20 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       console.error('Error sending local notification:', error);
       return undefined;
     }
-  };
+  }, []);
 
-  return (
-    <NotificationContext.Provider value={{
+  const value = useMemo(
+    () => ({
       checkPermissions,
       requestPermissions,
       registerForNotifications,
       sendLocalNotification,
-    }}>
+    }),
+    [checkPermissions, requestPermissions, registerForNotifications, sendLocalNotification],
+  );
+
+  return (
+    <NotificationContext.Provider value={value}>
       {children}
     </NotificationContext.Provider>
   );

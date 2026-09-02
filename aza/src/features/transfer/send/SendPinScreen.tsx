@@ -28,6 +28,7 @@ import { usePreventScreenCapture } from "../../../hooks/usePreventScreenCapture"
 import { useTransferStore } from "../../../store/transferStore";
 import { BackButton } from '../../../components/ui/BackButton';
 import { extractErrorMessage } from '../../../utils/errorUtils';
+import { useShallow } from 'zustand/react/shallow';
 
 type SendPinScreenProps = NativeStackScreenProps<RootStackParamList, "SendPin">;
 
@@ -41,8 +42,13 @@ export default function SendPinScreen({
   const { name, amount, id } = route.params;
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
-  const { confirmTransfer, cancelPendingTransfer, pendingTransactionId } =
-    useTransferStore();
+  const { confirmTransfer, cancelPendingTransfer, pendingTransactionId } = useTransferStore(
+    useShallow((s) => ({
+      confirmTransfer: s.confirmTransfer,
+      cancelPendingTransfer: s.cancelPendingTransfer,
+      pendingTransactionId: s.pendingTransactionId,
+    })),
+  );
   usePreventScreenCapture();
 
   const [pin, setPin] = useState<string>("");

@@ -32,7 +32,7 @@ export default function SendSuccessScreen({ navigation, route }: SendSuccessScre
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const isDark = Colors.isDark;
   const { showToast } = useToast();
-  const { reset: resetTransferStore } = useTransferStore();
+  const resetTransferStore = useTransferStore((s) => s.reset);
 
   const receiptRef = useRef<View>(null);
   const [isDownloading, setIsDownloading] = useState(false);

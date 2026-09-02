@@ -45,6 +45,7 @@ import { queryKeys } from "../../../lib/queryKeys";
 import { useTransferStore } from "../../../store/transferStore";
 import { extractErrorMessage } from '../../../utils/errorUtils';
 import { getAdaptiveForeground } from '../../../utils/wallpaperContrast';
+import { useShallow } from 'zustand/react/shallow';
 
 const { height } = Dimensions.get("window");
 
@@ -106,7 +107,9 @@ export default function HomeScreen() {
     return filtered;
   }, [recentTransactions, incompleteTransfer, pendingMoneyRequest]);
 
-  const { acceptMoneyRequest, declineMoneyRequest } = useTransferStore();
+  const { acceptMoneyRequest, declineMoneyRequest } = useTransferStore(
+    useShallow((s) => ({ acceptMoneyRequest: s.acceptMoneyRequest, declineMoneyRequest: s.declineMoneyRequest })),
+  );
   const [actionLoading, setActionLoading] = React.useState<"accept" | "decline" | null>(null);
   const [actionError, setActionError] = React.useState<string | null>(null);
 

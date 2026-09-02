@@ -1,6 +1,8 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { persist } from 'zustand/middleware';
+import { accountPersistOptions, bindAccountStore } from './persistence';
+
+const STORE_NAME = 'aza_mute_duration';
 
 type MuteDurationState = {
   mutedUntil: Record<string, number>;
@@ -33,6 +35,13 @@ export const useMuteDurationStore = create<MuteDurationState>()(
         return baseMuted || !!until;
       },
     }),
-    { name: 'aza_mute_duration_v1', storage: createJSONStorage(() => AsyncStorage) }
-  )
+    accountPersistOptions<MuteDurationState>({
+      name: STORE_NAME,
+      version: 1,
+      partialize: (s) => ({ mutedUntil: s.mutedUntil }),
+    }),
+  ),
 );
+
+// Keyed by chat id, which is meaningless to the next account on this device.
+bindAccountStore(useMuteDurationStore, { name: STORE_NAME, empty: () => ({ mutedUntil: {} }) });

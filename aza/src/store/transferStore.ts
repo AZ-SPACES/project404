@@ -33,6 +33,18 @@ interface TransferState {
 
   cancelPendingTransfer: () => Promise<void>;
 
+  /**
+   * Clear any state left behind by a previous flow. Call this when a send or
+   * request flow *starts*, not only when one finishes.
+   *
+   * This store is a module singleton shared by send, request, chat payments and
+   * QR scan, but its fields describe a single in-flight transfer. Reset only ran
+   * on the success screens, so abandoning a send at the PIN step left
+   * `pendingTransactionId` set — and `SendPinScreen` confirms whatever id it
+   * finds there, which meant a fresh PIN entry could confirm the stale one.
+   */
+  beginFlow: () => void;
+
   requestMoney: (params: {
     fromIdentifier: string;
     amount: number;
@@ -63,7 +75,7 @@ export const useTransferStore = create<TransferState>((set, get) => ({
   error: null,
 
   initiateTransfer: async ({ recipientIdentifier, amount, note, category, recipientType, terminalId }) => {
-    set({ status: 'initiating', error: null });
+    set({ status: 'initiating', error: null, pendingTransactionId: null });
     try {
       const [idempotencyKey, gpsLocation] = await Promise.all([
         Promise.resolve(generateIdempotencyKey()),
@@ -166,6 +178,10 @@ export const useTransferStore = create<TransferState>((set, get) => ({
   },
 
   reset: () => {
+    set({ status: 'idle', pendingTransactionId: null, error: null });
+  },
+
+  beginFlow: () => {
     set({ status: 'idle', pendingTransactionId: null, error: null });
   },
 }));

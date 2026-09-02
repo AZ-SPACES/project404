@@ -37,6 +37,7 @@ import { BackButton } from '../../../components/ui/BackButton';
 import { extractErrorMessage } from '../../../utils/errorUtils';
 import { getWithdrawals, getPayouts } from "../../../services/api";
 import { useQuery } from "@tanstack/react-query";
+import { useShallow } from 'zustand/react/shallow';
 
 export type Transaction = {
   id: string;
@@ -381,7 +382,9 @@ export function TransactionsScreen() {
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
   const [actionLoading, setActionLoading] = useState<"accept" | "decline" | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  const { acceptMoneyRequest, declineMoneyRequest } = useTransferStore();
+  const { acceptMoneyRequest, declineMoneyRequest } = useTransferStore(
+    useShallow((s) => ({ acceptMoneyRequest: s.acceptMoneyRequest, declineMoneyRequest: s.declineMoneyRequest })),
+  );
 
   // PIN state for accepting money requests
   const [pinVisible, setPinVisible] = useState(false);

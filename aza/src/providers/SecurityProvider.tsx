@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import * as LocalAuthentication from 'expo-local-authentication';
@@ -102,11 +102,12 @@ export const SecurityProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (userToken && appLockEnabled) setIsLocked(true);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  return (
-    <SecurityContext.Provider value={{ isLocked, appLockEnabled, setAppLockEnabled, lockTimeoutMs, setLockTimeout, unlock, unlockWithPasscode }}>
-      {children}
-    </SecurityContext.Provider>
+  const value = useMemo(
+    () => ({ isLocked, appLockEnabled, setAppLockEnabled, lockTimeoutMs, setLockTimeout, unlock, unlockWithPasscode }),
+    [isLocked, appLockEnabled, setAppLockEnabled, lockTimeoutMs, setLockTimeout, unlock, unlockWithPasscode],
   );
+
+  return <SecurityContext.Provider value={value}>{children}</SecurityContext.Provider>;
 };
 
 export const useSecurity = () => {

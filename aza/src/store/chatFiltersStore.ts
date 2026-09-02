@@ -1,7 +1,8 @@
 import { create } from 'zustand';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { persist } from 'zustand/middleware';
+import { accountPersistOptions, bindAccountStore } from './persistence';
 
-const KEY = 'aza_chat_filters_v1';
+const STORE_NAME = 'aza_chat_filters';
 
 export type ChatFilter = {
   id: string;
@@ -11,75 +12,60 @@ export type ChatFilter = {
 
 type ChatFiltersState = {
   filters: ChatFilter[];
-  loaded: boolean;
-  load: () => Promise<void>;
-  create: (name: string) => Promise<ChatFilter>;
-  rename: (id: string, name: string) => Promise<void>;
-  delete: (id: string) => Promise<void>;
-  addPeer: (filterId: string, peerId: string) => Promise<void>;
-  removePeer: (filterId: string, peerId: string) => Promise<void>;
+  create: (name: string) => ChatFilter;
+  rename: (id: string, name: string) => void;
+  delete: (id: string) => void;
+  addPeer: (filterId: string, peerId: string) => void;
+  removePeer: (filterId: string, peerId: string) => void;
 };
 
-async function persist(filters: ChatFilter[]) {
-  await AsyncStorage.setItem(KEY, JSON.stringify(filters));
-}
+export const useChatFiltersStore = create<ChatFiltersState>()(
+  persist(
+    (set, get) => ({
+      filters: [],
 
-export const useChatFiltersStore = create<ChatFiltersState>((set, get) => ({
-  filters: [],
-  loaded: false,
+      create: (name) => {
+        const filter: ChatFilter = {
+          id: `cf_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+          name: name.trim(),
+          peerIds: [],
+        };
+        set({ filters: [...get().filters, filter] });
+        return filter;
+      },
 
-  load: async () => {
-    try {
-      const raw = await AsyncStorage.getItem(KEY);
-      set({ filters: raw ? JSON.parse(raw) : [], loaded: true });
-    } catch {
-      set({ loaded: true });
-    }
-  },
+      rename: (id, name) =>
+        set((s) => ({
+          filters: s.filters.map((f) => (f.id === id ? { ...f, name: name.trim() } : f)),
+        })),
 
-  create: async (name) => {
-    const filter: ChatFilter = {
-      id: `cf_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-      name: name.trim(),
-      peerIds: [],
-    };
-    const next = [...get().filters, filter];
-    set({ filters: next });
-    await persist(next);
-    return filter;
-  },
+      delete: (id) => set((s) => ({ filters: s.filters.filter((f) => f.id !== id) })),
 
-  rename: async (id, name) => {
-    const next = get().filters.map((f) =>
-      f.id === id ? { ...f, name: name.trim() } : f,
-    );
-    set({ filters: next });
-    await persist(next);
-  },
+      addPeer: (filterId, peerId) =>
+        set((s) => ({
+          filters: s.filters.map((f) =>
+            f.id === filterId && !f.peerIds.includes(peerId)
+              ? { ...f, peerIds: [...f.peerIds, peerId] }
+              : f,
+          ),
+        })),
 
-  delete: async (id) => {
-    const next = get().filters.filter((f) => f.id !== id);
-    set({ filters: next });
-    await persist(next);
-  },
+      removePeer: (filterId, peerId) =>
+        set((s) => ({
+          filters: s.filters.map((f) =>
+            f.id === filterId
+              ? { ...f, peerIds: f.peerIds.filter((id) => id !== peerId) }
+              : f,
+          ),
+        })),
+    }),
+    accountPersistOptions<ChatFiltersState>({
+      name: STORE_NAME,
+      version: 1,
+      partialize: (s) => ({ filters: s.filters }),
+    }),
+  ),
+);
 
-  addPeer: async (filterId, peerId) => {
-    const next = get().filters.map((f) =>
-      f.id === filterId && !f.peerIds.includes(peerId)
-        ? { ...f, peerIds: [...f.peerIds, peerId] }
-        : f,
-    );
-    set({ filters: next });
-    await persist(next);
-  },
-
-  removePeer: async (filterId, peerId) => {
-    const next = get().filters.map((f) =>
-      f.id === filterId
-        ? { ...f, peerIds: f.peerIds.filter((id) => id !== peerId) }
-        : f,
-    );
-    set({ filters: next });
-    await persist(next);
-  },
-}));
+// Filters group peers by id, so they belong to the account that made them.
+bindAccountStore(useChatFiltersStore, { name: STORE_NAME, empty: () => ({ filters: [] }) });

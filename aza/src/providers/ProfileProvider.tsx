@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useCallback } from 'react';
+import React, { createContext, useContext, useCallback, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from './AuthProvider';
@@ -6,7 +6,17 @@ import { getMe, updateMe, uploadProfileImage, api, requestEmailChange as apiRequ
 import { queryClient } from '../lib/queryClient';
 import { queryKeys } from '../lib/queryKeys';
 
-const PROFILE_STORAGE_KEY = 'aza_profile';
+/**
+ * Local cache of the server's notification preferences, used as a fallback when
+ * the profile query hasn't resolved yet.
+ *
+ * Keyed by user id. It used to be keyed by the bearer token, which meant every
+ * token rotation silently orphaned the cache and left a JWT sitting in an
+ * AsyncStorage key name.
+ */
+export function notificationPrefsKey(userId: string): string {
+  return `aza_notification_prefs_${userId}`;
+}
 
 type ProfileData = {
   displayName: string;
@@ -197,7 +207,7 @@ function invalidateProfile() {
 }
 
 export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { userToken } = useAuth();
+  const { userToken, userId } = useAuth();
 
   const { data: profile = INITIAL_PROFILE } = useQuery({
     queryKey: queryKeys.profile(),
@@ -206,22 +216,23 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const userData = data.data;
       const mapped = mapUserData(userData);
 
-      // Persist to AsyncStorage as seed for next cold launch
-      AsyncStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(mapped)).catch(() => {});
-
-      // Sync notification preferences
-      if (userData.notificationPreferences && userToken) {
-        AsyncStorage.setItem(`@notification_prefs_${userToken}`, userData.notificationPreferences).catch(() => {});
+      // Cache the notification preferences for the settings screen to fall back
+      // on. Written as JSON, matching how the mutation below writes them and how
+      // the screen parses them — the two writers previously disagreed, so a
+      // reader got a double-encoded value or a plain one depending on which
+      // path had run last.
+      if (userData.notificationPreferences && userId) {
+        const prefs =
+          typeof userData.notificationPreferences === 'string'
+            ? userData.notificationPreferences
+            : JSON.stringify(userData.notificationPreferences);
+        AsyncStorage.setItem(notificationPrefsKey(userId), prefs).catch(() => {});
       }
 
       return mapped;
     },
     enabled: !!userToken,
     staleTime: 60_000,
-    placeholderData: () => {
-      // Seed from AsyncStorage on first load (synchronous-looking via placeholderData)
-      return INITIAL_PROFILE;
-    },
   });
 
   const fetchProfile = useCallback(() => {
@@ -361,15 +372,15 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const updateNotificationPreferencesInProvider = useCallback(async (prefs: Record<string, boolean>) => {
     try {
       await api.put("/api/v1/users/me/notifications", prefs);
-      if (userToken) {
-        await AsyncStorage.setItem(`@notification_prefs_${userToken}`, JSON.stringify(prefs));
+      if (userId) {
+        await AsyncStorage.setItem(notificationPrefsKey(userId), JSON.stringify(prefs));
       }
       invalidateProfile();
     } catch (e) {
       console.error('Failed to update notification preferences', e);
       throw e;
     }
-  }, [userToken]);
+  }, [userId]);
 
   const updateSilentHoursInProvider = useCallback(async (payload: SilentHoursPayload) => {
     await apiUpdateSilentHours(payload);
@@ -408,8 +419,11 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, []);
 
-  return (
-    <ProfileContext.Provider value={{
+  // Memoised: `useProfile` has ~24 call sites and this value spreads the whole
+  // profile, so an unmemoised literal re-rendered every consumer on every
+  // render of this provider. Every action below is a stable useCallback.
+  const value = useMemo(
+    () => ({
       ...profile,
       setUsername,
       setProfileImage,
@@ -428,10 +442,30 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
       updateNotificationPreferences: updateNotificationPreferencesInProvider,
       updateSilentHours: updateSilentHoursInProvider,
       fetchProfile,
-    }}>
-      {children}
-    </ProfileContext.Provider>
+    }),
+    [
+      profile,
+      setUsername,
+      setProfileImage,
+      setAvatarUrl,
+      requestEmailChangeAction,
+      verifyEmailChangeAction,
+      requestPhoneChangeAction,
+      verifyPhoneChangeAction,
+      setHandle,
+      setSyncContacts,
+      setBillForwardingEnabled,
+      toggleApp2fa,
+      toggleSms2fa,
+      togglePasskeys,
+      updateProfile,
+      updateNotificationPreferencesInProvider,
+      updateSilentHoursInProvider,
+      fetchProfile,
+    ],
   );
+
+  return <ProfileContext.Provider value={value}>{children}</ProfileContext.Provider>;
 };
 
 export function useProfile(): ProfileContextType {

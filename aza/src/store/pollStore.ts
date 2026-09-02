@@ -1,7 +1,8 @@
 import { create } from 'zustand';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { persist } from 'zustand/middleware';
+import { accountPersistOptions, bindAccountStore } from './persistence';
 
-const STORAGE_KEY = 'aza_poll_votes_v1';
+const STORE_NAME = 'aza_poll_votes';
 
 interface PollState {
   votes: Record<string, number>;
@@ -9,25 +10,26 @@ interface PollState {
   getVote: (messageId: string) => number | null;
 }
 
-export const usePollStore = create<PollState>((set, get) => ({
-  votes: {},
+export const usePollStore = create<PollState>()(
+  persist(
+    (set, get) => ({
+      votes: {},
 
-  vote: (messageId, optionIndex) => {
-    const next = { ...get().votes, [messageId]: optionIndex };
-    set({ votes: next });
-    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => {});
-  },
+      vote: (messageId, optionIndex) =>
+        set((s) => ({ votes: { ...s.votes, [messageId]: optionIndex } })),
 
-  getVote: (messageId) => {
-    const v = get().votes[messageId];
-    return v !== undefined ? v : null;
-  },
-}));
+      getVote: (messageId) => {
+        const v = get().votes[messageId];
+        return v !== undefined ? v : null;
+      },
+    }),
+    accountPersistOptions<PollState>({
+      name: STORE_NAME,
+      version: 1,
+      partialize: (s) => ({ votes: s.votes }),
+    }),
+  ),
+);
 
-AsyncStorage.getItem(STORAGE_KEY).then((v) => {
-  if (v) {
-    try {
-      usePollStore.setState({ votes: JSON.parse(v) });
-    } catch {}
-  }
-}).catch(() => {});
+// "Which option did I pick" is answered per account, not per device.
+bindAccountStore(usePollStore, { name: STORE_NAME, empty: () => ({ votes: {} }) });

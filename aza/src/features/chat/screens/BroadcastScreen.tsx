@@ -18,7 +18,7 @@ import { Feather } from '@react-native-vector-icons/feather';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp, NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
-import { useContactStore } from '../../../store/contactStore';
+import { useContacts } from '../../../hooks/useContacts';
 import { Contact } from '../../../features/contacts/types';
 import type { RootStackParamList } from '../../../navigation/types';
 
@@ -33,7 +33,7 @@ export default function BroadcastScreen() {
 
   const preselected = route.params?.preselected ?? [];
 
-  const { contacts } = useContactStore();
+  const { contacts } = useContacts();
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set(preselected));
   const [searchQuery, setSearchQuery] = useState('');

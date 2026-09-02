@@ -24,7 +24,7 @@ import { AKYEDE_OCCASION_ART as OCCASIONS, akyedeArt } from '../../../utils/akye
 import { extractErrorMessage } from '../../../utils/errorUtils';
 import { useToast } from '../../../providers/ToastProvider';
 import { useChatStore } from '../../../store/chatStore';
-import { useContactStore } from '../../../store/contactStore';
+import { useContacts, searchGlobal } from '../../../hooks/useContacts';
 import type { Contact } from '../../contacts/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CreateAkyede'>;
@@ -279,7 +279,7 @@ function RecipientPicker({
   Colors: ThemeColors;
   styles: ReturnType<typeof createStyles>;
 }) {
-  const { contacts, fetchContacts, searchGlobal } = useContactStore();
+  const { contacts, refetch: fetchContacts } = useContacts();
   const [query, setQuery] = useState('');
   const [found, setFound] = useState<Contact[]>([]);
   const [searching, setSearching] = useState(false);

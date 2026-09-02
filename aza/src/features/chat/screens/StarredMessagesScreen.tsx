@@ -18,14 +18,9 @@ export default function StarredMessagesScreen() {
   const styles = useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
-  const load = useStarredMessagesStore(s => s.load);
   const entries = useStarredMessagesStore(s => s.entries);
   const unstar = useStarredMessagesStore(s => s.unstar);
   const chats = useChatStore(s => s.chats);
-
-  useEffect(() => {
-    load();
-  }, [load]);
 
   const handleJumpToChat = useCallback((entry: StarredEntry) => {
     const chat = chats[entry.chatId];
@@ -39,7 +34,7 @@ export default function StarredMessagesScreen() {
   }, [chats, navigation]);
 
   const handleUnstar = useCallback((messageId: string) => {
-    unstar(messageId).catch(() => {});
+    unstar(messageId);
   }, [unstar]);
 
   const renderItem = ({ item }: { item: StarredEntry }) => {

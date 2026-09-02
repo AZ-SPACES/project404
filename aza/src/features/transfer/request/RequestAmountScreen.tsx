@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
     View,
     Text,
@@ -23,6 +23,7 @@ import type { RootStackParamList } from '../../../navigation/types';
 import { useTransferStore } from '../../../store/transferStore';
 import { BackButton } from '../../../components/ui/BackButton';
 import { extractErrorMessage } from '../../../utils/errorUtils';
+import { useShallow } from 'zustand/react/shallow';
 
 type RequestAmountScreenProps = NativeStackScreenProps<RootStackParamList, 'RequestAmount'>;
 
@@ -30,11 +31,19 @@ export default function RequestAmountScreen({ navigation, route }: RequestAmount
     const { name, username, avatar, identifier } = route.params;
     const { colors: Colors } = useAppTheme();
     const styles = React.useMemo(() => createStyles(Colors), [Colors]);
+    // Entering a send/request flow clears whatever the last, possibly
+    // abandoned, flow left in the shared transfer store.
+    useEffect(() => {
+      useTransferStore.getState().beginFlow();
+    }, []);
+
     const isDark = Colors.isDark;
     const [amount, setAmount] = useState('0.00');
     const [note, setNote] = useState('');
     const [apiError, setApiError] = useState<string | null>(null);
-    const { requestMoney, status: requestStatus, reset: resetStore } = useTransferStore();
+    const { requestMoney, requestStatus, resetStore } = useTransferStore(
+      useShallow((s) => ({ requestMoney: s.requestMoney, requestStatus: s.status, resetStore: s.reset })),
+    );
     const amountInputRef = useRef<TextInput>(null);
 
     const [isSuccessModalVisible, setSuccessModalVisible] = useState(false);

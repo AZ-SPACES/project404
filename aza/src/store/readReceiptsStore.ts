@@ -1,6 +1,8 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { persist } from 'zustand/middleware';
+import { accountPersistOptions, bindAccountStore } from './persistence';
+
+const STORE_NAME = 'aza_read_receipts';
 
 type ReadReceiptsState = {
   enabled: Record<string, boolean>;
@@ -16,6 +18,13 @@ export const useReadReceiptsStore = create<ReadReceiptsState>()(
       setEnabled: (chatId, val) =>
         set((s) => ({ enabled: { ...s.enabled, [chatId]: val } })),
     }),
-    { name: 'aza_read_receipts_v1', storage: createJSONStorage(() => AsyncStorage) }
-  )
+    accountPersistOptions<ReadReceiptsState>({
+      name: STORE_NAME,
+      version: 1,
+      partialize: (s) => ({ enabled: s.enabled }),
+    }),
+  ),
 );
+
+// A per-chat privacy setting, so it follows the account rather than the phone.
+bindAccountStore(useReadReceiptsStore, { name: STORE_NAME, empty: () => ({ enabled: {} }) });

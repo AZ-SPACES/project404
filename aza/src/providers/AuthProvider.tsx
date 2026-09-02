@@ -4,6 +4,7 @@ import React, {
   useState,
   useEffect,
   useCallback,
+  useMemo,
   useRef,
 } from "react";
 import { Alert } from "react-native";
@@ -11,9 +12,17 @@ import * as SecureStore from "expo-secure-store";
 import { setForceLogoutHandler, getKycStatus, logout as apiLogout } from "../services/api";
 import { emitAuthEvent } from "./authEvents";
 import { queryClient } from "../lib/queryClient";
+import { beginAccountSession, endAccountSession } from "../store/accountSession";
+import { purgeLegacyGlobalStorage } from "../store/legacyStorageCleanup";
 
 type AuthState = {
   userToken: string | null;
+  /**
+   * The signed-in user's id, once known. Persisted alongside the token so a
+   * cold launch can open the account session — and hydrate account-scoped
+   * stores like drafts — without waiting on a network round trip.
+   */
+  userId: string | null;
   isKYCVerified: boolean;
   hasPasscode: boolean;
   isBiometricsEnabled: boolean;
@@ -26,6 +35,7 @@ type AuthState = {
 /** Named-parameter bag for the login() action. All fields except `token` are optional. */
 export type LoginSession = {
   token: string;
+  userId?: string | null;
   hasPasscode?: boolean;
   isKYCVerified?: boolean;
   forcePasswordReset?: boolean;
@@ -39,6 +49,12 @@ type PinLockoutResult = { isLocked: boolean; secondsRemaining: number };
 type AuthContextType = AuthState & {
   login: (session: LoginSession) => void;
   logout: () => void;
+  /**
+   * Record the signed-in user's id once resolved, and open the account session
+   * so account-scoped stores hydrate. Called by E2EEProvider, which resolves it
+   * during identity bootstrap.
+   */
+  setUserId: (userId: string) => void;
   completeKYC: () => void;
   setPasscode: () => void;
   toggleBiometrics: (enabled: boolean) => void;
@@ -64,6 +80,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [authState, setAuthState] = useState<AuthState>({
     userToken: null,
+    userId: null,
     isKYCVerified: false,
     hasPasscode: false,
     isBiometricsEnabled: false,
@@ -86,6 +103,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   useEffect(() => {
     const bootstrapAsync = async () => {
+      // Erase the pre-account-scoping AsyncStorage keys — including the ones
+      // that held plaintext message content device-globally — before anything
+      // reads storage. Guarded internally, so this is a no-op after the first
+      // launch on this install.
+      await purgeLegacyGlobalStorage();
+
       let stateFromStorage: AuthState | null = null;
       try {
         const storedState = await SecureStore.getItemAsync(AUTH_STATE_KEY);
@@ -115,8 +138,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         } catch (_) {}
       }
 
+      // Open the account session before rendering, so account-scoped stores
+      // hydrate from the right namespace rather than starting empty and
+      // popping in. A launch with a token but no stored id (upgraded from a
+      // build that predates it) waits for E2EEProvider to resolve one.
+      if (stateFromStorage?.userToken && stateFromStorage?.userId) {
+        await beginAccountSession(stateFromStorage.userId);
+      }
+
       applyState({
         userToken: stateFromStorage?.userToken || null,
+        userId: stateFromStorage?.userId || null,
         isKYCVerified: isKYCVerifiedResolved,
         hasPasscode: hasPasscodeResolved,
         isBiometricsEnabled: stateFromStorage?.isBiometricsEnabled || false,
@@ -154,6 +186,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const login = useCallback(({
     token,
+    userId = null,
     hasPasscode = false,
     isKYCVerified = false,
     forcePasswordReset = false,
@@ -161,8 +194,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     isBiometricsEnabled = false,
     scheduledDeletionAt = null,
   }: LoginSession) => {
+    if (userId) void beginAccountSession(userId);
     saveState({
       userToken: token,
+      userId,
       hasPasscode,
       isKYCVerified,
       forcePasswordReset,
@@ -172,10 +207,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     });
   }, [saveState]);
 
+  const setUserId = useCallback((userId: string) => {
+    if (stateRef.current.userId === userId) return;
+    void beginAccountSession(userId);
+    saveState({ userId });
+  }, [saveState]);
+
   const logout = useCallback(() => {
     // Reset in-memory state immediately so navigation reacts at once
     applyState({
       userToken: null,
+      userId: null,
       isKYCVerified: false,
       hasPasscode: false,
       isBiometricsEnabled: false,
@@ -184,6 +226,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       scheduledDeletionAt: null,
       isLoading: false,
     });
+    // Close the account session before anything else. This nulls the account
+    // id that `accountStorage` keys off, so from here on no account-scoped
+    // store can read or write disk — a screen still mounted during teardown
+    // can't write the outgoing user's data back after the wipe — and then
+    // erases every account-scoped slice.
+    void endAccountSession();
     // Wipe all server-state cache so stale data never bleeds into the next session
     queryClient.clear();
     // Fan out to providers that hold sensitive in-memory state (E2EE identity,
@@ -281,7 +329,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, []);
 
-  const toggleBiometrics = async (enabled: boolean) => {
+  const toggleBiometrics = useCallback(async (enabled: boolean) => {
     saveState({ isBiometricsEnabled: enabled });
     try {
       const { updatePrivacySettings } = await import("../services/api");
@@ -289,28 +337,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     } catch (e) {
       console.error("Failed to sync biometrics setting to backend", e);
     }
-  };
+  }, [saveState]);
 
-  return (
-    <AuthContext.Provider
-      value={{
-        ...authState,
-        login,
-        logout,
-        completeKYC,
-        setPasscode,
-        toggleBiometrics,
-        savePasscodeValue,
-        getPasscodeValue,
-        verifyPasscode,
-        checkPinLockout,
-        recordPinFailure,
-        resetPinAttempts,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
+  // Memoised: this provider wraps the whole app and `useAuth` has ~29 call
+  // sites, so handing out a fresh object each render re-rendered all of them
+  // whenever anything above changed. Every action below is a stable
+  // useCallback, so this only changes when auth state actually does.
+  const value = useMemo<AuthContextType>(
+    () => ({
+      ...authState,
+      login,
+      logout,
+      setUserId,
+      completeKYC,
+      setPasscode,
+      toggleBiometrics,
+      savePasscodeValue,
+      getPasscodeValue,
+      verifyPasscode,
+      checkPinLockout,
+      recordPinFailure,
+      resetPinAttempts,
+    }),
+    [
+      authState,
+      login,
+      logout,
+      setUserId,
+      completeKYC,
+      setPasscode,
+      toggleBiometrics,
+      savePasscodeValue,
+      getPasscodeValue,
+      verifyPasscode,
+      checkPinLockout,
+      recordPinFailure,
+      resetPinAttempts,
+    ],
   );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => {

@@ -213,28 +213,15 @@ export function useChatScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [replyTo, setReplyTo] = useState<ReplyInfo | null>(null);
 
-  const loadStarred = useStarredMessagesStore(s => s.load);
+  // Starred messages and chat themes are account-scoped stores, hydrated once
+  // by the session on login — the load-once refs each consumer used to carry
+  // are gone with them.
   const starredEntries = useStarredMessagesStore(s => s.entries);
-  const starLoadedRef = useRef(false);
-  useEffect(() => {
-    if (!starLoadedRef.current) {
-      starLoadedRef.current = true;
-      loadStarred();
-    }
-  }, [loadStarred]);
 
-  const loadTheme = useChatThemeStore(s => s.load);
   const getBubbleColor = useChatThemeStore(s => s.getBubbleColor);
   const getWallpaper = useChatThemeStore(s => s.getWallpaper);
   const getFontSize = useChatThemeStore(s => s.getFontSize);
   const getPattern = useChatThemeStore(s => s.getPattern);
-  const themeLoadedRef = useRef(false);
-  useEffect(() => {
-    if (!themeLoadedRef.current) {
-      themeLoadedRef.current = true;
-      loadTheme();
-    }
-  }, [loadTheme]);
   const chatBubbleColor = chatId ? getBubbleColor(chatId) : '';
   const chatWallpaper = chatId ? getWallpaper(chatId) : null;
   const hasWallpaper = !!(chatWallpaper && chatWallpaper.type !== 'none');
@@ -673,7 +660,7 @@ export function useChatScreen() {
   const handleBulkStar = useCallback(() => {
     const { star } = useStarredMessagesStore.getState();
     const toStar = filteredMessages.filter((m) => selectedMsgIds.includes(m.id));
-    toStar.forEach((m) => star(m, chatId ?? id, name).catch(() => {}));
+    toStar.forEach((m) => star(m, chatId ?? id, name));
     setToastMessage(`Starred ${toStar.length} message${toStar.length > 1 ? 's' : ''}`);
     setTimeout(() => setToastMessage(null), 3000);
     handleExitSelectMode();
@@ -824,9 +811,9 @@ export function useChatScreen() {
     if (!selectedMessage) return;
     const { isStarred, star, unstar } = useStarredMessagesStore.getState();
     if (isStarred(selectedMessage.id)) {
-      unstar(selectedMessage.id).catch(() => {});
+      unstar(selectedMessage.id);
     } else {
-      star(selectedMessage, chatId ?? id, name).catch(() => {});
+      star(selectedMessage, chatId ?? id, name);
     }
     setSelectedMessage(null);
   }, [selectedMessage, chatId, id, name]);

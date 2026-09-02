@@ -1,6 +1,8 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { persist } from 'zustand/middleware';
+import { accountPersistOptions, bindAccountStore } from './persistence';
+
+const STORE_NAME = 'aza_reactions';
 
 export type EmojiReaction = { emoji: string; count: number; byMe: boolean };
 
@@ -52,6 +54,14 @@ export const useReactionStore = create<ReactionState>()(
         });
       },
     }),
-    { name: 'aza_reactions_v1', storage: createJSONStorage(() => AsyncStorage) }
-  )
+    accountPersistOptions<ReactionState>({
+      name: STORE_NAME,
+      version: 1,
+      partialize: (s) => ({ reactions: s.reactions }),
+    }),
+  ),
 );
+
+// `byMe` makes every entry a claim about the signed-in user, so these cannot
+// carry across a logout without mislabelling the next account's reactions.
+bindAccountStore(useReactionStore, { name: STORE_NAME, empty: () => ({ reactions: {} }) });

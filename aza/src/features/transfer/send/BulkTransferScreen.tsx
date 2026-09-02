@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -22,6 +22,7 @@ import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../
 import { BackButton } from '../../../components/ui/BackButton';
 import Button from '../../../components/ui/Button';
 import { bulkTransfer } from '../../../services/api';
+import { useTransferStore } from '../../../store/transferStore';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'BulkTransfer'>;
 
@@ -47,6 +48,12 @@ export default function BulkTransferScreen() {
   const { colors: Colors } = useAppTheme();
   const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
+  // Entering a send/request flow clears whatever the last, possibly
+  // abandoned, flow left in the shared transfer store.
+  useEffect(() => {
+    useTransferStore.getState().beginFlow();
+  }, []);
+
   const navigation = useNavigation<NavigationProp>();
 
   const [rows, setRows] = useState<RecipientRow[]>([createRow(), createRow()]);

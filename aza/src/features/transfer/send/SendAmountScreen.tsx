@@ -31,6 +31,7 @@ import { useFocusEffect } from '@react-navigation/native';
 const { height } = Dimensions.get('window');
 
 import { CATEGORIES, CategoryKey } from '../../../utils/categories';
+import { useTransferStore } from '../../../store/transferStore';
 
 type SendAmountScreenProps = NativeStackScreenProps<RootStackParamList, 'SendAmount'>;
 
@@ -38,6 +39,12 @@ export default function SendAmountScreen({ navigation, route }: SendAmountScreen
     const { name, username, avatar, identifier, amount: initialAmount, note: initialNote, merchantVerified, terminalId } = route.params;
     const { colors: Colors } = useAppTheme();
     const styles = React.useMemo(() => createStyles(Colors), [Colors]);
+    // Entering a send/request flow clears whatever the last, possibly
+    // abandoned, flow left in the shared transfer store.
+    useEffect(() => {
+      useTransferStore.getState().beginFlow();
+    }, []);
+
     const isDark = Colors.isDark;
     const [amount, setAmount] = useState(initialAmount != null && initialAmount > 0 ? initialAmount.toFixed(2) : '0.00');
     const [note, setNote] = useState(initialNote ?? '');

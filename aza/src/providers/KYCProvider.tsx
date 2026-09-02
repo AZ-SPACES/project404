@@ -2,6 +2,7 @@ import React, {
   createContext,
   useCallback,
   useContext,
+  useMemo,
   useState,
 } from 'react';
 import * as api from '../services/api';
@@ -368,16 +369,22 @@ export function KYCProvider({ children }: { children: React.ReactNode }) {
     }
   }, [update]);
 
-  return (
-    <KYCContext.Provider value={{
+  const value = useMemo(
+    () => ({
       data, update, submit, reset, isSubmitting,
       resubmit, recordConsent, submitFundsSource, submitIdentity,
       submitSelfie, submitPepStatus, submitPepDetails, submitProofOfWealth,
-      refreshStatus
-    }}>
-      {children}
-    </KYCContext.Provider>
+      refreshStatus,
+    }),
+    [
+      data, update, submit, reset, isSubmitting,
+      resubmit, recordConsent, submitFundsSource, submitIdentity,
+      submitSelfie, submitPepStatus, submitPepDetails, submitProofOfWealth,
+      refreshStatus,
+    ],
   );
+
+  return <KYCContext.Provider value={value}>{children}</KYCContext.Provider>;
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────

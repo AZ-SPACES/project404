@@ -37,7 +37,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 
 import Button from "../../../components/ui/Button";
-import { useContactStore } from "../../../store/contactStore";
+import { useContacts, useContactRequests, useBlockedUsers, useContactActions } from "../../../hooks/useContacts";
 import { usePresenceStore } from "../../../store/presenceStore";
 import { usePresenceSeed } from "../../../hooks/usePresenceSeed";
 
@@ -70,23 +70,15 @@ export default function ContactsScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
-  const {
-    contacts: backendContacts,
-    fetchContacts,
-    isLoading,
-    blockedUsers,
-    fetchBlockedUsers,
-    unblockUser,
-    contactRequests,
-    fetchContactRequests,
-    approveContactRequest,
-    rejectContactRequest
-  } = useContactStore();
+  const { contacts: backendContacts, isLoading, refetch: fetchContacts } = useContacts();
+  const { contactRequests, refetch: fetchContactRequests } = useContactRequests();
+  const { blockedUsers, refetch: fetchBlockedUsers } = useBlockedUsers();
+  const { unblockUser, approveContactRequest, rejectContactRequest } = useContactActions();
 
   useFocusEffect(
     React.useCallback(() => {
-      fetchContacts();
-      fetchContactRequests();
+      void fetchContacts();
+      void fetchContactRequests();
     }, [fetchContacts, fetchContactRequests])
   );
 

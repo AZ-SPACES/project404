@@ -12,6 +12,11 @@ import { useChatStore } from '../../../store/chatStore';
 import type { LocalMessage } from '../../../store/chatTypes';
 import type { RootStackParamList } from '../../../navigation/types';
 
+// Stable empty reference. Zustand v5 compares selector output by identity
+// (useSyncExternalStore), so returning a fresh `[]` re-renders on every store
+// change and, with no chatId, never reaches a stable snapshot.
+const NO_MESSAGES: LocalMessage[] = [];
+
 const { width } = Dimensions.get('window');
 const COLUMN_COUNT = 3;
 const ITEM_SIZE = (width - 2) / COLUMN_COUNT; // 2px for gap between columns
@@ -39,7 +44,7 @@ export default function SharedMediaScreen() {
 
   const [activeTab, setActiveTab] = useState<Tab>('media');
 
-  const allMessages = useChatStore(s => chatId ? (s.messagesByChat[chatId] ?? []) : []);
+  const allMessages = useChatStore(s => (chatId ? s.messagesByChat[chatId] : undefined) ?? NO_MESSAGES);
 
   const { mediaMessages, docMessages, linkItems } = useMemo(() => {
     const active = allMessages.filter(m => !m.isDeleted);

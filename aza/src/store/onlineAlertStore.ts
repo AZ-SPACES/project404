@@ -1,6 +1,8 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { persist } from 'zustand/middleware';
+import { accountPersistOptions, bindAccountStore } from './persistence';
+
+const STORE_NAME = 'aza_online_alerts';
 
 type OnlineAlertState = {
   alerts: Record<string, boolean>;
@@ -16,6 +18,14 @@ export const useOnlineAlertStore = create<OnlineAlertState>()(
       setEnabled: (userId, enabled) =>
         set((s) => ({ alerts: { ...s.alerts, [userId]: enabled } })),
     }),
-    { name: 'aza_online_alerts_v1', storage: createJSONStorage(() => AsyncStorage) }
-  )
+    accountPersistOptions<OnlineAlertState>({
+      name: STORE_NAME,
+      version: 1,
+      partialize: (s) => ({ alerts: s.alerts }),
+    }),
+  ),
 );
+
+// "Alert me when this person comes online" is a watch list the signed-in user
+// built, and telling the next account who was on it would leak it.
+bindAccountStore(useOnlineAlertStore, { name: STORE_NAME, empty: () => ({ alerts: {} }) });

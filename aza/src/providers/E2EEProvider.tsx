@@ -63,7 +63,7 @@ const OTPK_REPLENISH_THRESHOLD = 10;
 const OTPK_REPLENISH_BATCH = 25;
 
 export const E2EEProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { userToken } = useAuth();
+  const { userToken, setUserId } = useAuth();
   const [identity, setIdentity] = useState<Identity | null>(null);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -88,6 +88,12 @@ export const E2EEProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const userId: string | undefined = meRes.data?.data?.id ?? meRes.data?.id;
         if (!userId) throw new Error('Could not resolve current user id');
         if (cancelled) return;
+
+        // First point in the app where the signed-in user id is known. Handing
+        // it to AuthProvider persists it (so the next cold launch doesn't need
+        // this round trip) and opens the account session, which hydrates
+        // account-scoped stores — drafts, starred messages, per-chat settings.
+        setUserId(userId);
 
         const deviceId = await getDeviceId();
         const bootstrapKey = `${userId}:${deviceId}`;
@@ -166,7 +172,7 @@ export const E2EEProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     run();
     return () => { cancelled = true; };
-  }, [userToken, bootstrapNonce]);
+  }, [userToken, bootstrapNonce, setUserId]);
 
   const computeSafetyNumber = useCallback(
     (peerPublicKey: Uint8Array) => {

@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppTheme, Typography, Spacing, Radius, ThemeColors } from '../../../theme';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../../navigation/types';
-import { useContactStore } from '../../../store/contactStore';
+import { useContactRequests, useSentContactRequests, useContactActions } from '../../../hooks/useContacts';
 import { ContactRequest, SentContactRequest } from '../types';
 import { BackButton } from '../../../components/ui/BackButton';
 
@@ -28,15 +28,9 @@ export default function RequestPendingScreen({ navigation }: RequestPendingScree
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const isDark = Colors.isDark;
 
-  const {
-    contactRequests,
-    sentContactRequests,
-    fetchContactRequests,
-    fetchSentContactRequests,
-    approveContactRequest,
-    rejectContactRequest,
-    isLoading,
-  } = useContactStore();
+  const { contactRequests, isLoading, refetch: fetchContactRequests } = useContactRequests();
+  const { sentContactRequests, refetch: fetchSentContactRequests } = useSentContactRequests();
+  const { approveContactRequest, rejectContactRequest } = useContactActions();
 
   const [activeTab, setActiveTab] = useState<Tab>('received');
   const [refreshing, setRefreshing] = useState(false);

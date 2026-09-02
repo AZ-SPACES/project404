@@ -13,7 +13,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../navigation/types';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
 import { useToast } from '../../../providers/ToastProvider';
-import { useProfile } from '../../../providers/ProfileProvider';
+import { useProfile, notificationPrefsKey } from '../../../providers/ProfileProvider';
 import { BackButton } from '../../../components/ui/BackButton';
 import Button from '../../../components/ui/Button';
 
@@ -134,7 +134,7 @@ export default function NotificationSettingsScreen() {
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const { checkPermissions, requestPermissions } = useNotifications();
-  const { userToken } = useAuth();
+  const { userId } = useAuth();
   const { showToast } = useToast();
   const {
     notificationPreferences,
@@ -145,7 +145,7 @@ export default function NotificationSettingsScreen() {
     silentHoursPaymentThreshold: savedThreshold,
     updateSilentHours,
   } = useProfile();
-  const prefsKey = userToken ? `@notification_prefs_${userToken}` : '@notification_prefs';
+  const prefsKey = userId ? notificationPrefsKey(userId) : null;
 
   const scrollY = useRef(new Animated.Value(0)).current;
 
@@ -212,7 +212,7 @@ export default function NotificationSettingsScreen() {
             causesEmail: notificationPreferences.causesEmail ?? false,
             causesPush: notificationPreferences.causesPush ?? false,
           });
-        } else {
+        } else if (prefsKey) {
           const stored = await AsyncStorage.getItem(prefsKey);
           if (stored) {
             const parsed = JSON.parse(stored);
@@ -237,7 +237,7 @@ export default function NotificationSettingsScreen() {
     
     const savePreferences = async () => {
       try {
-        await AsyncStorage.setItem(prefsKey, JSON.stringify(preferences));
+        if (prefsKey) await AsyncStorage.setItem(prefsKey, JSON.stringify(preferences));
         
         try {
           await updateNotificationPreferences(preferences);

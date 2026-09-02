@@ -17,7 +17,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
-import { useContactStore } from "../../../store/contactStore";
+import { useContactActions } from "../../../hooks/useContacts";
 import { getContactDetails, getUserByHandle } from "../../../services/api";
 import { useQuery } from "@tanstack/react-query";
 import { queryClient } from "../../../lib/queryClient";
@@ -50,7 +50,7 @@ export default function ContactsProfileScreen() {
   const { id, name = "User", username = "", avatar } = route.params || {};
   const cleanHandle = username.startsWith('@') ? username.slice(1) : username;
 
-  const { blockUser, toggleFavorite } = useContactStore();
+  const { blockUser, toggleFavorite, requestContact } = useContactActions();
 
   const { data: contact, isLoading: contactLoading } = useQuery({
     queryKey: queryKeys.contactDetails(id!),
@@ -210,7 +210,7 @@ export default function ContactsProfileScreen() {
               style={[styles.addContactButton, { backgroundColor: Colors.primary }]} 
               onPress={async () => {
                 try {
-                  await useContactStore.getState().requestContact(targetUserId);
+                  await requestContact(targetUserId);
                   Alert.alert("Success", "Contact request sent.");
                 } catch (error: unknown) {
                   Alert.alert("Error", extractErrorMessage(error, "Failed to send contact request."));

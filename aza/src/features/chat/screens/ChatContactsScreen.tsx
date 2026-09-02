@@ -25,7 +25,7 @@ import { Feather } from "@react-native-vector-icons/feather";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
-import { useContactStore } from "../../../store/contactStore";
+import { useContacts } from "../../../hooks/useContacts";
 import { useChatStore } from "../../../store/chatStore";
 import { usePresenceStore } from "../../../store/presenceStore";
 import { usePresenceSeed } from "../../../hooks/usePresenceSeed";
@@ -37,6 +37,7 @@ import { useSavedMessagesStore } from "../../../store/savedMessagesStore";
 import { Contact } from "../../../features/contacts/types";
 import { ChatMoreModal } from "../../../components/chat/ChatMoreModal";
 import type { MoreAction, MenuAnchor } from "../../../components/chat/chatTypes";
+import { useShallow } from 'zustand/react/shallow';
 import {
   useAppTheme,
   ThemeColors,
@@ -312,7 +313,7 @@ export default function ChatContactsScreen() {
   const [showCreateFilter, setShowCreateFilter] = useState<boolean | string>(false);
   const [newFilterName, setNewFilterName] = useState("");
 
-  const { contacts, isLoading, fetchContacts } = useContactStore();
+  const { contacts, isLoading, refetch: fetchContacts } = useContacts();
   const chats = useChatStore((s) => s.chats);
   const fetchChats = useChatStore((s) => s.fetchChats);
   const markRead = useChatStore((s) => s.markRead);
@@ -328,16 +329,20 @@ export default function ChatContactsScreen() {
   );
   usePresenceSeed(peerIds);
 
-  const { pinnedIds, load: loadPins, pin, unpin, isPinned } = usePinnedStore();
-  const {
-    filters: customFilters,
-    load: loadFilters,
-    create: createFilter,
-    rename: renameFilter,
-    delete: deleteFilter,
-    addPeer,
-    removePeer,
-  } = useChatFiltersStore();
+  const { pinnedIds, pin, unpin, isPinned } = usePinnedStore(
+    useShallow((s) => ({ pinnedIds: s.pinnedIds, pin: s.pin, unpin: s.unpin, isPinned: s.isPinned })),
+  );
+  const { customFilters, createFilter, renameFilter, deleteFilter, addPeer, removePeer } =
+    useChatFiltersStore(
+      useShallow((s) => ({
+        customFilters: s.filters,
+        createFilter: s.create,
+        renameFilter: s.rename,
+        deleteFilter: s.delete,
+        addPeer: s.addPeer,
+        removePeer: s.removePeer,
+      })),
+    );
 
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const getDraft = useDraftStore(s => s.getDraft);
@@ -347,8 +352,8 @@ export default function ChatContactsScreen() {
   useEffect(() => {
     fetchContacts();
     fetchChats().catch(() => {});
-    loadPins();
-    loadFilters();
+    // Pins and filters are account-scoped stores, hydrated by the session on
+    // login — no per-screen load() to remember any more.
   }, []);
 
   // peerId → ChatSummary
@@ -1239,7 +1244,7 @@ export default function ChatContactsScreen() {
                 if (typeof showCreateFilter === "string") {
                   renameFilter(showCreateFilter, newFilterName.trim());
                 } else {
-                  createFilter(newFilterName.trim()).then((f) => setActiveFilter(f.id));
+                  setActiveFilter(createFilter(newFilterName.trim()).id);
                 }
                 setShowCreateFilter(false);
               }}
@@ -1256,7 +1261,7 @@ export default function ChatContactsScreen() {
                 if (typeof showCreateFilter === "string") {
                   renameFilter(showCreateFilter, newFilterName.trim());
                 } else {
-                  createFilter(newFilterName.trim()).then((f) => setActiveFilter(f.id));
+                  setActiveFilter(createFilter(newFilterName.trim()).id);
                 }
                 setShowCreateFilter(false);
               }}
