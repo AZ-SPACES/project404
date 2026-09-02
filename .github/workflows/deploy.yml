@@ -38,8 +38,15 @@ jobs:
             # correct here; the overlay only trims what gets built.
             COMPOSE="docker compose -f docker-compose.yml -f docker-compose.backend.yml"
 
-            echo "→ Pulling latest code..."
-            git pull origin main
+            echo "→ Pulling latest code (as $(whoami) in $(pwd))..."
+            # project404 is a public repo, so the pull needs no credentials at
+            # all — but git will still try to use any it can find, and a stale
+            # stored token makes GitHub answer 401 instead of serving the repo
+            # anonymously. Git then asks for a username, finds no TTY, and the
+            # deploy dies on its first command with "could not read Username".
+            # Empty out the credential helper chain for this one command and set
+            # GIT_TERMINAL_PROMPT=0 so it can never hang waiting on input again.
+            GIT_TERMINAL_PROMPT=0 git -c credential.helper= pull origin main
 
             echo "→ Rebuilding and restarting services..."
             SENTRY_RELEASE=$(git rev-parse --short HEAD) \
