@@ -1439,8 +1439,8 @@ export const notifyChatScreenshot = (chatId: string) =>
 export const markChatMediaViewed = (messageId: string) =>
   api.post(`/api/v1/chats/messages/${messageId}/viewed`);
 
-export const editChatMessage = (messageId: string, ciphertext: string) =>
-  api.put(`/api/v1/chats/messages/${messageId}`, { ciphertext });
+export const editChatMessage = (messageId: string, content: string) =>
+  api.put(`/api/v1/chats/messages/${messageId}`, { content });
 
 export const uploadChatMedia = (file: RNFile, chatId: string, type: string, encrypted = false) => {
   const formData = new FormData();

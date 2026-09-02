@@ -222,7 +222,8 @@ public class ChatController {
             @PathVariable UUID messageId,
             @Valid @RequestBody EditMessageRequest request) {
         return ResponseEntity.ok(ApiResponse.success(
-                chatService.editMessage(user, messageId, request.getCiphertext())));
+                chatService.editMessage(user, messageId,
+                        request.getCiphertext(), request.getContent())));
     }
 
     /**

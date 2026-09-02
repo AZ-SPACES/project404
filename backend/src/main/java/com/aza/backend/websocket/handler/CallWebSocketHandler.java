@@ -9,10 +9,22 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.stereotype.Controller;
 
+import java.security.Principal;
 
+/**
+ * WebRTC signaling over STOMP.
+ *
+ * <p>The caller is read off the STOMP {@link Principal} rather than with
+ * {@code @AuthenticationPrincipal}: that annotation needs the argument resolver
+ * from {@code spring-security-messaging}, which is not a dependency of this
+ * service, so with it absent every frame on these mappings died before reaching
+ * {@link CallService} and the catch blocks hid it — no offer, answer, ICE
+ * candidate or hangup was ever relayed. {@code WebSocketAuthInterceptor} puts
+ * the full {@link User} on the session principal, so read it from there.
+ */
 @Controller
 @RequiredArgsConstructor
 @Slf4j
@@ -23,7 +35,12 @@ public class CallWebSocketHandler {
     @MessageMapping("/call.sdp-offer")
     public void handleSdpOffer(
             @Payload @Valid CallSignalRequest request,
-            @AuthenticationPrincipal User user) {
+            Principal principal) {
+        User user = extractUser(principal);
+        if (user == null) {
+            log.warn("Dropping call.sdp-offer from an unauthenticated STOMP session");
+            return;
+        }
         try {
             callService.relaySdpOffer(user, request);
         } catch (Exception e) {
@@ -34,7 +51,12 @@ public class CallWebSocketHandler {
     @MessageMapping("/call.sdp-answer")
     public void handleSdpAnswer(
             @Payload @Valid CallSignalRequest request,
-            @AuthenticationPrincipal User user) {
+            Principal principal) {
+        User user = extractUser(principal);
+        if (user == null) {
+            log.warn("Dropping call.sdp-answer from an unauthenticated STOMP session");
+            return;
+        }
         try {
             callService.relaySdpAnswer(user, request);
         } catch (Exception e) {
@@ -45,7 +67,12 @@ public class CallWebSocketHandler {
     @MessageMapping("/call.ice")
     public void handleIceCandidate(
             @Payload @Valid CallSignalRequest request,
-            @AuthenticationPrincipal User user) {
+            Principal principal) {
+        User user = extractUser(principal);
+        if (user == null) {
+            log.warn("Dropping call.ice from an unauthenticated STOMP session");
+            return;
+        }
         try {
             callService.relayIceCandidate(user, request);
         } catch (Exception e) {
@@ -56,11 +83,24 @@ public class CallWebSocketHandler {
     @MessageMapping("/call.end")
     public void handleCallEnd(
             @Payload @Valid CallIdRequest request,
-            @AuthenticationPrincipal User user) {
+            Principal principal) {
+        User user = extractUser(principal);
+        if (user == null) {
+            log.warn("Dropping call.end from an unauthenticated STOMP session");
+            return;
+        }
         try {
             callService.endCall(user, request.getCallId());
         } catch (Exception e) {
             log.error("Call end failed for user {}: {}", user.getId(), e.getMessage());
         }
+    }
+
+    private User extractUser(Principal principal) {
+        if (principal instanceof UsernamePasswordAuthenticationToken auth
+                && auth.getPrincipal() instanceof User user) {
+            return user;
+        }
+        return null;
     }
 }

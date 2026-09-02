@@ -52,6 +52,7 @@ public class ChatService {
     private final RateLimitService rateLimitService;
     private final BlockedUserRepository blockedUserRepository;
     private final PaymentRequestRepository paymentRequestRepository;
+    private final MessageContentCipher contentCipher;
 
     private static final int MESSAGE_EDIT_WINDOW_MINUTES = 15;
 
@@ -163,9 +164,13 @@ public class ChatService {
                 .viewOnce(request.isViewOnce())
                 .expiresAt(expiresAt);
 
-        if (chat.isSupport()) {
-            messageBuilder.content(request.getContent());
-        } else {
+        // The body is stored server-readable (encrypted at rest) for every chat, not
+        // just support, so that a device logging in for the first time can be handed
+        // the whole history. Clients that still send E2EE envelopes keep having them
+        // persisted alongside, so a build that predates this change goes on working.
+        messageBuilder.content(contentCipher.encrypt(request.getContent()));
+
+        if (!chat.isSupport()) {
             // Keep top-level fields populated for legacy single-device clients that
             // send only the old fields (no deviceCiphertexts map).
             messageBuilder.ciphertext(request.getCiphertext())
@@ -382,6 +387,9 @@ public class ChatService {
 
         message.setIsDeleted(true);
         message.setCiphertext("[deleted]");
+        // The server-readable body has to go too — leaving it behind would keep a
+        // deleted message legible to any device that reloads history.
+        message.setContent(null);
         message.setEphemeralKey(null);
         message.setPreKeyId(null);
         message.setSenderIdentityPublicKey(null);
@@ -500,6 +508,8 @@ public class ChatService {
         for (ChatMessage msg : expired) {
             msg.setIsDeleted(true);
             msg.setCiphertext("[expired]");
+            // Disappearing messages must not survive in the server-readable body.
+            msg.setContent(null);
             msg.setEphemeralKey(null);
             msg.setPreKeyId(null);
             msg.setSenderIdentityPublicKey(null);
@@ -564,7 +574,12 @@ public class ChatService {
     // ==================== MESSAGE EDITING ====================
 
     @Transactional
-    public MessageResponse editMessage(User editor, UUID messageId, String newCiphertext) {
+    public MessageResponse editMessage(User editor, UUID messageId,
+                                       String newCiphertext, String newContent) {
+        if ((newCiphertext == null || newCiphertext.isBlank())
+                && (newContent == null || newContent.isBlank())) {
+            throw new AppException("An edited message needs a new body");
+        }
         ChatMessage message = chatMessageRepository.findById(messageId)
                 .orElseThrow(() -> new AppException("Message not found"));
 
@@ -584,7 +599,12 @@ public class ChatService {
                     "Messages can only be edited within " + MESSAGE_EDIT_WINDOW_MINUTES + " minutes of sending");
         }
 
-        message.setCiphertext(newCiphertext);
+        if (newCiphertext != null && !newCiphertext.isBlank()) {
+            message.setCiphertext(newCiphertext);
+        }
+        if (newContent != null && !newContent.isBlank()) {
+            message.setContent(contentCipher.encrypt(newContent));
+        }
         message.setEditedAt(LocalDateTime.now());
         chatMessageRepository.save(message);
 
@@ -833,7 +853,8 @@ public class ChatService {
                 .clientId(message.getClientId())
                 .ciphertext(Boolean.TRUE.equals(message.getIsDeleted())
                         ? null : message.getCiphertext())
-                .content(message.getContent())
+                .content(Boolean.TRUE.equals(message.getIsDeleted())
+                        ? null : contentCipher.decrypt(message.getContent()))
                 .ephemeralKey(message.getEphemeralKey())
                 .preKeyId(message.getPreKeyId())
                 .senderIdentityPublicKey(message.getSenderIdentityPublicKey())

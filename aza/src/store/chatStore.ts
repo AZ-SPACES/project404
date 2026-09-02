@@ -936,34 +936,19 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
     });
 
     try {
-      const selfIdentityPub = get().selfIdentityPublic;
-      const selfIdentityPriv = get().selfIdentityPrivate;
-      if (!selfIdentityPub || !selfIdentityPriv) throw new Error('Identity not ready');
-
-      const envelopes = await encryptForAllDevices({
-        plaintext: text,
-        chatId,
-        otherUserId: chat.otherUserId,
-        selfUserId,
-        selfDeviceId,
-        selfIdentityPub,
-        selfIdentityPriv,
-        ensurePeerKeys: get().ensurePeerKeys,
-      });
-
+      // The body travels in the clear and is stored server-readable (encrypted
+      // at rest) so that history belongs to the account, not to one device: a
+      // phone linked long after this message was sent still gets it. That is
+      // the Telegram/Instagram model, and it is a deliberate trade of
+      // end-to-end encryption for cross-device history.
+      //
+      // It also removes the two key-bundle round trips the per-device fan-out
+      // needed on a cold send, which were the slowest step in the send path.
       const payload: SendMessagePayload = {
         chatId,
         type: 'TEXT',
         clientId,
-        ...(Object.keys(envelopes.deviceCiphertexts).length > 0
-          ? { deviceCiphertexts: envelopes.deviceCiphertexts }
-          : {}),
-        ...(envelopes.ciphertext ? { ciphertext: envelopes.ciphertext } : {}),
-        ...(envelopes.ephemeralKey ? { ephemeralKey: envelopes.ephemeralKey } : {}),
-        ...(envelopes.senderIdentityPublicKey
-          ? { senderIdentityPublicKey: envelopes.senderIdentityPublicKey }
-          : {}),
-        ...(envelopes.preKeyId ? { preKeyId: envelopes.preKeyId } : {}),
+        content: text,
       };
 
       // Prefer WebSocket — the connection is already live so there is no HTTP
@@ -976,9 +961,6 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
         stompClient.publish({
           destination: '/app/chat.send',
           body: JSON.stringify(payload),
-        });
-        hasSessionWithPeer(selfUserId, chat.otherUserId).then((established) => {
-          if (!established) markSessionEstablished(selfUserId, chat.otherUserId).catch(() => {});
         });
         const uid = get().selfUserId;
         if (uid) scheduleThreadSave(uid, chatId, () => get().messagesByChat[chatId] ?? []);
@@ -1081,42 +1063,21 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
     });
 
     try {
-      const selfIdentityPub = get().selfIdentityPublic;
-      const selfIdentityPriv = get().selfIdentityPrivate;
-      if (!selfIdentityPub || !selfIdentityPriv) throw new Error('Identity not ready');
-
-      // For E2EE media, the per-file key rides inside the encrypted envelope as a
-      // versioned JSON payload `{ v: 2, k, c }`; the recipient parses it back out.
-      // Legacy/no-key sends keep the plain caption (or a placeholder) as before.
-      const plaintextForEncryption = fileKeyB64
+      // The per-file key rides in the body as the same versioned JSON payload
+      // `{ v: 2, k, c }` it always did — decryptServerMessage unwraps it from
+      // `content` exactly as it did from a decrypted envelope, so every device
+      // on the account can open the media, not just the ones linked at send
+      // time. Legacy/no-key sends keep the plain caption (or a placeholder).
+      const body = fileKeyB64
         ? JSON.stringify({ v: 2, k: fileKeyB64, c: caption })
         : caption.trim() || ' ';
-
-      const envelopes = await encryptForAllDevices({
-        plaintext: plaintextForEncryption,
-        chatId,
-        otherUserId: chat.otherUserId,
-        selfUserId,
-        selfDeviceId,
-        selfIdentityPub,
-        selfIdentityPriv,
-        ensurePeerKeys: get().ensurePeerKeys,
-      });
 
       const payload: SendMessagePayload = {
         chatId,
         type: mediaType,
         mediaKey,
         clientId,
-        ...(Object.keys(envelopes.deviceCiphertexts).length > 0
-          ? { deviceCiphertexts: envelopes.deviceCiphertexts }
-          : {}),
-        ...(envelopes.ciphertext ? { ciphertext: envelopes.ciphertext } : {}),
-        ...(envelopes.ephemeralKey ? { ephemeralKey: envelopes.ephemeralKey } : {}),
-        ...(envelopes.senderIdentityPublicKey
-          ? { senderIdentityPublicKey: envelopes.senderIdentityPublicKey }
-          : {}),
-        ...(envelopes.preKeyId ? { preKeyId: envelopes.preKeyId } : {}),
+        content: body,
       };
 
       const stompClient = get().stompClient;
