@@ -130,6 +130,18 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    # Without this the deploy gate could only assert the container was running, which a
+    # process that booted and then wedged still satisfies. /actuator/health aggregates the
+    # datasource and Redis, so "healthy" means the app is actually able to serve, not just
+    # that the JVM is alive. The JRE image is Alpine and has no curl; busybox wget is there.
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:8080/actuator/health | grep -q '\"status\":\"UP\"'"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      # Flyway runs every pending migration before the port opens, so the first probe must
+      # not start counting failures until the app has had time to boot.
+      start_period: 120s
     networks:
       - aza-network
 

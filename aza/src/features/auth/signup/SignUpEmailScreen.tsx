@@ -9,7 +9,7 @@ import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { isValidEmail, sanitizeEmail } from "../../../utils/validation";
-import { getErrorStatus } from "../../../utils/errorUtils";
+import { getErrorStatus, rateLimitMessage } from "../../../utils/errorUtils";
 import { useSignUp } from "../../../providers/SignUpProvider";
 import { validateEmail, EmailCheck } from "../../../services/api";
 import { BackButton } from '../../../components/ui/BackButton';
@@ -71,9 +71,15 @@ export default function SignUpEmailScreen() {
         const result = response.data?.data;
         if (result) applyCheck(email, result);
       } catch (err: unknown) {
-        // A failed check shouldn't block the user — the server validates again at
-        // signup, so leave the field neutral and let them continue.
-        console.error("Email check failed", err);
+        if (getErrorStatus(err) === 429 && pendingEmail.current === email) {
+          // Retrying immediately only digs the hole deeper — say how long to wait,
+          // the same way the phone screen does.
+          setError(rateLimitMessage(err));
+        } else {
+          // Any other failure shouldn't block the user: the server validates again
+          // at signup, so leave the field neutral and let them continue.
+          console.error("Email check failed", err);
+        }
       } finally {
         if (pendingEmail.current === email) setIsValidating(false);
       }
@@ -109,6 +115,8 @@ export default function SignUpEmailScreen() {
       if (getErrorStatus(err) === 409) {
         setCheck({ valid: true, available: false, reason: "ALREADY_REGISTERED" });
         setError(REJECTION_COPY.ALREADY_REGISTERED);
+      } else if (getErrorStatus(err) === 429) {
+        setError(rateLimitMessage(err));
       } else {
         console.error("Email check failed", err);
         setError("Unable to verify email. Please try again.");

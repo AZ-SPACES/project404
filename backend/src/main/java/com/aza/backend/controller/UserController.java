@@ -41,6 +41,32 @@ public class UserController {
     private final ObjectMapper objectMapper;
     private final com.aza.backend.service.SystemSettingService settingService;
     private final RateLimitService rateLimitService;
+    private final com.aza.backend.security.fingerprint.RequestFingerprintService fingerprinter;
+
+    /**
+     * Budget for the identifier-availability endpoints, per device rather than per
+     * address. The per-address limits below stop one address being probed repeatedly;
+     * they do nothing about sweeping a list, because every new address gets a fresh
+     * bucket. These endpoints answer "does this person have an AZA account?", so a
+     * sweep is worth money to whoever is phishing Ghanaian wallet holders.
+     *
+     * Keyed on the device, not the IP: CGNAT would otherwise pool a whole carrier into
+     * one budget. Real signups spend well under this — a handful of checks across the
+     * phone, email and handle screens.
+     */
+    private static final int IDENTIFIER_CHECK_LIMIT = 60;
+    private static final Duration IDENTIFIER_CHECK_WINDOW = Duration.ofMinutes(10);
+
+    /**
+     * An attacker can rotate X-Device-ID to get a fresh budget; that path is what the
+     * behavioural detection and CAPTCHA challenge in RateLimitFilter are for. This
+     * raises the cost of the cheap version without throttling anyone real.
+     */
+    private void enforceIdentifierCheckBudget(HttpServletRequest request) {
+        rateLimitService.enforceRateLimit(
+                "check:device:" + fingerprinter.getDeviceFingerprint(request),
+                IDENTIFIER_CHECK_LIMIT, IDENTIFIER_CHECK_WINDOW);
+    }
 
     // ==================== CURRENT USER ====================
 
@@ -269,13 +295,17 @@ public class UserController {
     // ==================== HANDLES (PUBLIC) ====================
 
     @GetMapping("/check-handle")
-    public ResponseEntity<ApiResponse<Boolean>> checkHandle(@RequestParam String handle) {
+    public ResponseEntity<ApiResponse<Boolean>> checkHandle(
+            @RequestParam String handle, HttpServletRequest request) {
+        enforceIdentifierCheckBudget(request);
         rateLimitService.enforceRateLimit("check:handle:" + handle.toLowerCase(), 5, Duration.ofMinutes(10));
         return ResponseEntity.ok(ApiResponse.success(userService.isUsernameAvailable(handle)));
     }
 
     @GetMapping("/check-email")
-    public ResponseEntity<ApiResponse<Boolean>> checkEmail(@RequestParam String email) {
+    public ResponseEntity<ApiResponse<Boolean>> checkEmail(
+            @RequestParam String email, HttpServletRequest request) {
+        enforceIdentifierCheckBudget(request);
         // 15/10min: enough for signup typo-and-retry loops, still blocks bulk
         // enumeration of a single address (IP/fingerprint limits cap volume).
         rateLimitService.enforceRateLimit("check:email:" + email.toLowerCase().trim(), 15, Duration.ofMinutes(10));
@@ -287,13 +317,17 @@ public class UserController {
      * which stays as-is so app builds already in the wild keep working.
      */
     @GetMapping("/validate-email")
-    public ResponseEntity<ApiResponse<EmailCheckResponse>> validateEmail(@RequestParam String email) {
+    public ResponseEntity<ApiResponse<EmailCheckResponse>> validateEmail(
+            @RequestParam String email, HttpServletRequest request) {
+        enforceIdentifierCheckBudget(request);
         rateLimitService.enforceRateLimit("check:email:" + email.toLowerCase().trim(), 15, Duration.ofMinutes(10));
         return ResponseEntity.ok(ApiResponse.success(userService.checkEmail(email)));
     }
 
     @GetMapping("/check-phone")
-    public ResponseEntity<ApiResponse<Boolean>> checkPhone(@RequestParam String phone) {
+    public ResponseEntity<ApiResponse<Boolean>> checkPhone(
+            @RequestParam String phone, HttpServletRequest request) {
+        enforceIdentifierCheckBudget(request);
         // Key on the canonical E.164 form so "024…" and "+23324…" share one budget.
         // 15/10min: the signup screen fires a check per typing pause, so 5 locked
         // legitimate users out mid-signup; enumeration is still bounded by the

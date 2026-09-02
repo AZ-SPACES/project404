@@ -77,3 +77,27 @@ export function getErrorStatus(err: unknown): number | undefined {
   const code = status?.status;
   return typeof code === 'number' ? code : undefined;
 }
+
+/**
+ * Seconds to wait after a 429, from the metadata the API response interceptor
+ * attaches. Falls back to 60s when the server sent no Retry-After.
+ */
+export function getRetryAfterSeconds(err: unknown, fallback = 60): number {
+  if (!err || typeof err !== 'object') return fallback;
+  const value = (err as Record<string, unknown>).retryAfterSeconds;
+  return typeof value === 'number' && value > 0 ? value : fallback;
+}
+
+/** "45s" / "3m" — human-readable Retry-After for rate-limit messages. */
+export function formatWait(seconds: number): string {
+  if (seconds < 60) return `${Math.max(1, Math.round(seconds))}s`;
+  return `${Math.ceil(seconds / 60)}m`;
+}
+
+/**
+ * Shared copy for a rate-limited availability check. The signup screens all hit
+ * the same throttles, so they should say the same thing when they trip one.
+ */
+export function rateLimitMessage(err: unknown): string {
+  return `Too many attempts. Please wait ${formatWait(getRetryAfterSeconds(err))} and try again.`;
+}

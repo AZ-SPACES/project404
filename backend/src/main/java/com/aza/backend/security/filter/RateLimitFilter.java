@@ -32,22 +32,26 @@ import java.time.Duration;
  * Actor scoping — this is the key design principle:
  *   - Authenticated requests  → tracked and blocked PER USER.
  *     A user's burst/block never spills onto other users at the same IP.
- *   - Unauthenticated requests → tracked and blocked PER IP / PER FINGERPRINT.
- *     Auth endpoints always use IP-level limits to resist credential stuffing.
+ *   - Unauthenticated requests WITH X-Device-ID → tracked and blocked PER DEVICE,
+ *     with a loose per-IP backstop. Required by CGNAT: Ghanaian carriers front
+ *     hundreds of real users with one public IP, so an IP-keyed limit throttles
+ *     strangers together and an IP-keyed auto-block takes out the whole carrier.
+ *   - Unauthenticated requests WITHOUT one → tracked and blocked PER IP, strictly.
+ *     A caller that presents no device identity is the credential-stuffing shape.
  *
  * Check order (cheapest → most expensive):
  *   1. IP reputation (persistent block set by admin)         → 403
  *   2. Geo-block via CF-IPCountry header                     → 403
  *   -- global kill switch (admin) short-circuits 3–11 --
  *   3. User behavioral block (authenticated only)            → 429  [before bypass]
- *   4. IP behavioral block (unauthenticated only)            → 429
+ *   4. IP behavioral block (unauthenticated, no device id)   → 429
  *   5. Fingerprint behavioral block                          → 429
  *   6. Bypass token check (client completed CAPTCHA)         → skip 7–10
- *   7. Auth-path IP rate limit (always per-IP on /auth/**)   → 429
- *   8. IP rate limit (unauthenticated non-auth requests)     → 429
+ *   7. Auth-path limit: per-device + loose IP, else per-IP   → 429
+ *   8. Unauthenticated non-auth limit: same split            → 429
  *   9. Fingerprint rate limit                                → 429
  *  10. User rate limit (authenticated requests)              → 429
- *  11. Burst detection (user actor if authed, IP otherwise)  → 429 if auto-blocked
+ *  11. Burst detection (user → device → IP, first available) → 429 if auto-blocked
  */
 @Component
 @RequiredArgsConstructor
@@ -73,6 +77,19 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private int authIpLimit;
     @Value("${app.ratelimit.ip.auth-window-seconds:900}")
     private int authIpWindowSeconds;
+
+    // Applied per device instead of per IP when the caller sends X-Device-ID. Tighter
+    // than the IP limit it replaces, because it now covers one install rather than a
+    // whole carrier: a real signup or login is a handful of calls, not sixty.
+    @Value("${app.ratelimit.device.auth-limit:60}")
+    private int authDeviceLimit;
+
+    // Coarse backstop kept over the shared IP so one host flooding auth endpoints is
+    // still capped. Sized for a carrier NAT fronting many real users, not for one user.
+    @Value("${app.ratelimit.ip.shared-auth-limit:2000}")
+    private int sharedAuthIpLimit;
+    @Value("${app.ratelimit.ip.shared-limit:1500}")
+    private int sharedIpLimit;
 
     @Value("${app.ratelimit.fingerprint.limit:300}")
     private int fingerprintLimit;
@@ -122,6 +139,15 @@ public class RateLimitFilter extends OncePerRequestFilter {
         String ipActorKey = "ip:" + ip;
         String fpActorKey = "fp:" + fingerprint;
 
+        // Ghanaian carriers run CGNAT: hundreds of unrelated users share one public IP.
+        // Keying an unauthenticated limit on that IP therefore pools strangers into one
+        // bucket — the whole carrier trips a limit that no single user came close to, and
+        // burst detection can block every AZA user on that network at once. When the
+        // caller sends X-Device-ID we have a per-install key that does not collide, so it
+        // becomes the actor and the IP keeps only a loose backstop.
+        boolean stableDevice = fingerprinter.hasStableDeviceId(request);
+        String unauthActorKey = stableDevice ? fpActorKey : ipActorKey;
+
         // Resolve the authenticated user — JwtAuthenticationFilter already ran.
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         User authenticatedUser = (auth != null && auth.getPrincipal() instanceof User u) ? u : null;
@@ -163,7 +189,11 @@ public class RateLimitFilter extends OncePerRequestFilter {
         // Authenticated users have valid JWTs and are bounded by their own per-user
         // limits (steps 10–11). Applying an IP block to them would cause collateral
         // damage to every user behind a shared NAT (corporate, mobile carrier, etc.).
-        if (authenticatedUser == null && behavioralDetection.isBlocked(ipActorKey)) {
+        // Only when the IP is genuinely this caller's actor. For a client with its own
+        // device identity the block belongs on the fingerprint (step 5) — an automatic
+        // block on a CGNAT address would take out every AZA user on that carrier.
+        // Deliberate blocks are unaffected: admin IP reputation is step 1.
+        if (authenticatedUser == null && !stableDevice && behavioralDetection.isBlocked(ipActorKey)) {
             long ttl = behavioralDetection.getBlockTtlSeconds(ipActorKey);
             rejectRateLimit(response, "Too many suspicious requests. Try again later.", ttl);
             return;
@@ -187,10 +217,22 @@ public class RateLimitFilter extends OncePerRequestFilter {
             // regardless of whether the caller has a JWT.
             if (isAuthPath) {
                 try {
-                    rateLimitService.enforceRateLimit(
-                            "ip_auth:" + ip, authIpLimit, Duration.ofSeconds(authIpWindowSeconds));
+                    if (stableDevice) {
+                        rateLimitService.enforceRateLimit(
+                                "auth_device:" + fingerprint, authDeviceLimit,
+                                Duration.ofSeconds(authIpWindowSeconds));
+                        rateLimitService.enforceRateLimit(
+                                "ip_auth_shared:" + ip, sharedAuthIpLimit,
+                                Duration.ofSeconds(authIpWindowSeconds));
+                    } else {
+                        // No device identity to bind to — fall back to the strict per-IP
+                        // limit, which is what resists credential stuffing from scripts.
+                        rateLimitService.enforceRateLimit(
+                                "ip_auth:" + ip, authIpLimit, Duration.ofSeconds(authIpWindowSeconds));
+                    }
                 } catch (RateLimitExceededException e) {
-                    escalateSuspicion(ipActorKey, 10, ip, "auth IP rate limit exceeded");
+                    escalateSuspicion(unauthActorKey, 10,
+                            stableDevice ? fingerprint : ip, "auth rate limit exceeded");
                     rejectRateLimit(response, e.getMessage(), e.getRetryAfterSeconds());
                     return;
                 }
@@ -202,10 +244,18 @@ public class RateLimitFilter extends OncePerRequestFilter {
             // account from consuming IP quota shared by other accounts.
             if (!isAuthPath && authenticatedUser == null) {
                 try {
-                    rateLimitService.enforceRateLimit(
-                            "ip:" + ip, ipLimit, Duration.ofSeconds(ipWindowSeconds));
+                    if (stableDevice) {
+                        // Per-device volume is already bounded by step 9; the IP keeps only
+                        // a backstop so a NAT full of real users is not throttled as one.
+                        rateLimitService.enforceRateLimit(
+                                "ip_shared:" + ip, sharedIpLimit, Duration.ofSeconds(ipWindowSeconds));
+                    } else {
+                        rateLimitService.enforceRateLimit(
+                                "ip:" + ip, ipLimit, Duration.ofSeconds(ipWindowSeconds));
+                    }
                 } catch (RateLimitExceededException e) {
-                    escalateSuspicion(ipActorKey, 10, ip, "IP rate limit exceeded");
+                    escalateSuspicion(unauthActorKey, 10,
+                            stableDevice ? fingerprint : ip, "IP rate limit exceeded");
                     rejectRateLimit(response, e.getMessage(), e.getRetryAfterSeconds());
                     return;
                 }
@@ -234,10 +284,11 @@ public class RateLimitFilter extends OncePerRequestFilter {
             }
 
             // ── 11. Burst detection ───────────────────────────────────────────
-            // Track against the user when authenticated; against the IP otherwise.
-            // This is the fix for the "shared IP" problem: one user's burst now only
-            // affects that user, not every other account behind the same NAT.
-            String burstActorKey = userActorKey != null ? userActorKey : ipActorKey;
+            // Track against the user when authenticated, the device when the caller has
+            // an identity, and only then the IP. That ordering is the "shared IP" fix:
+            // a burst is attributed to whoever actually made it, so it never blocks
+            // every other account or install behind the same carrier NAT.
+            String burstActorKey = userActorKey != null ? userActorKey : unauthActorKey;
             long burstCount = behavioralDetection.trackRequest(burstActorKey);
             if (burstCount > burstThreshold) {
                 boolean nowBlocked = behavioralDetection.reportSuspiciousEvent(burstActorKey, 5);
@@ -256,6 +307,11 @@ public class RateLimitFilter extends OncePerRequestFilter {
                     userActorKey, userLimit, Duration.ofSeconds(userWindowSeconds));
             response.setHeader("X-RateLimit-Limit", String.valueOf(userLimit));
             response.setHeader("X-RateLimit-Remaining", String.valueOf(remaining));
+        } else if (stableDevice) {
+            long remaining = rateLimitService.getRemainingCount(
+                    fpActorKey, fingerprintLimit, Duration.ofSeconds(fingerprintWindowSeconds));
+            response.setHeader("X-RateLimit-Limit", String.valueOf(fingerprintLimit));
+            response.setHeader("X-RateLimit-Remaining", String.valueOf(remaining));
         } else {
             long remaining = rateLimitService.getRemainingCount(
                     "ip:" + ip, ipLimit, Duration.ofSeconds(ipWindowSeconds));
@@ -265,14 +321,18 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
         chain.doFilter(request, response);
 
-        // Post-response: record auth failures for behavioral scoring.
-        // Always scored against the IP because failed logins have no authenticated user.
+        // Post-response: record auth failures for behavioral scoring. A failed login has
+        // no authenticated user, so it is scored against the device when the caller has
+        // one and the IP otherwise. Scoring every failure to the IP was the sharpest edge
+        // of the CGNAT problem on this path: mistyped passwords are ordinary, ten of them
+        // across a carrier is an afternoon, and the resulting auto-block would lock every
+        // AZA user on that network out of logging in.
         int status = response.getStatus();
         if (isAuthPath && (status == 401 || status == 400)) {
-            long failures = behavioralDetection.recordFailure(ipActorKey);
+            long failures = behavioralDetection.recordFailure(unauthActorKey);
             if (failures >= 10) {
-                behavioralDetection.reportSuspiciousEvent(ipActorKey, 20);
-                log.warn("High auth failure rate from IP {} ({}x in window)", ip, failures);
+                behavioralDetection.reportSuspiciousEvent(unauthActorKey, 20);
+                log.warn("High auth failure rate from {} ({}x in window)", unauthActorKey, failures);
             }
         }
     }

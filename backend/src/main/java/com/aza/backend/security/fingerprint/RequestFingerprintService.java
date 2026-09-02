@@ -95,6 +95,25 @@ public class RequestFingerprintService {
     }
 
     /**
+     * True when the caller supplied its own stable device identity rather than
+     * falling back to a header-derived hash.
+     *
+     * The distinction matters for rate limiting. A derived fingerprint is
+     * User-Agent + language + encoding + platform, which every install of the same
+     * app build shares — useless as an actor key. A client-sent X-Device-ID is
+     * unique per install, so it can carry limits that per-IP keys cannot: Ghanaian
+     * carriers put hundreds of real users behind one CGNAT address, and an IP-keyed
+     * limit throttles all of them together.
+     *
+     * It is client-supplied and therefore rotatable by an attacker. That is what the
+     * behavioural detection and CAPTCHA challenge exist to catch; the value here is
+     * that honest traffic stops colliding.
+     */
+    public boolean hasStableDeviceId(HttpServletRequest request) {
+        return !nvl(request.getHeader("X-Device-ID")).isBlank();
+    }
+
+    /**
      * Returns CF-IPCountry header value, or null if not behind Cloudflare.
      */
     public String getCountryCode(HttpServletRequest request) {

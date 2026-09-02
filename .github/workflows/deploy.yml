@@ -45,8 +45,37 @@ jobs:
             SENTRY_RELEASE=$(git rev-parse --short HEAD) \
             $COMPOSE up --build -d --remove-orphans
 
-            echo "→ Waiting for services to settle..."
-            sleep 20
+            # Blindly sleeping asserted nothing about the backend: the old gate accepted
+            # health=n/a, and now that the container has a healthcheck it would accept
+            # health=starting just as happily. Wait for the probe to actually pass, so a
+            # backend that boots and then wedges — or dies on a failed migration — fails
+            # the deploy here instead of being discovered by a user.
+            echo "→ Waiting for backend to report healthy..."
+            BACKEND_CID=$($COMPOSE ps -q backend)
+            if [ -z "$BACKEND_CID" ]; then
+              echo "  ✗ backend has no container after up"
+              exit 1
+            fi
+            DEADLINE=$(( $(date +%s) + 180 ))
+            while :; do
+              B_STATE=$(docker inspect -f '{{.State.Status}}' "$BACKEND_CID" 2>/dev/null || echo unknown)
+              B_HEALTH=$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}n/a{{end}}' "$BACKEND_CID" 2>/dev/null || echo unknown)
+              if [ "$B_HEALTH" = "healthy" ]; then
+                echo "  backend healthy"
+                break
+              fi
+              if [ "$B_STATE" != "running" ]; then
+                echo "  ✗ backend is $B_STATE before becoming healthy"
+                $COMPOSE logs --tail=60 backend 2>&1 || true
+                exit 1
+              fi
+              if [ "$(date +%s)" -ge "$DEADLINE" ]; then
+                echo "  ✗ backend never became healthy (state=$B_STATE health=$B_HEALTH)"
+                $COMPOSE logs --tail=60 backend 2>&1 || true
+                exit 1
+              fi
+              sleep 5
+            done
 
             echo "→ Current containers:"
             $COMPOSE ps

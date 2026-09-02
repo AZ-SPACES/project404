@@ -22,6 +22,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { useSignUp } from "../../../providers/SignUpProvider";
 import { checkHandleAvailability, suggestHandles } from "../../../services/api";
+import { getErrorStatus, rateLimitMessage } from "../../../utils/errorUtils";
 import { debounce } from "lodash";
 import { BackButton } from '../../../components/ui/BackButton';
 import SignUpProgressBar from '../../../components/ui/SignUpProgressBar';
@@ -58,6 +59,10 @@ export default function SignUpHandleScreen() {
   const dataRef = useRef(data);
   dataRef.current = data;
 
+  // The handle the user last typed. These checks are debounced and network-bound,
+  // so a slow early one can land after a fast later one and label the wrong handle.
+  const pendingHandle = useRef("");
+
   const validateHandle = useCallback(
     debounce(async (text: string) => {
       if (text.length < 3) {
@@ -68,6 +73,7 @@ export default function SignUpHandleScreen() {
 
       try {
         const response = await checkHandleAvailability(text);
+        if (pendingHandle.current !== text) return;
         setIsAvailable(response.data.data);
         if (!response.data.data) {
           setError("This username is already taken");
@@ -82,9 +88,15 @@ export default function SignUpHandleScreen() {
           setError(null);
         }
       } catch (err) {
-        console.error("Error checking username:", err);
+        if (pendingHandle.current !== text) {
+          // Stale response — a newer handle is already being checked.
+        } else if (getErrorStatus(err) === 429) {
+          setError(rateLimitMessage(err));
+        } else {
+          console.error("Error checking username:", err);
+        }
       } finally {
-        setIsValidating(false);
+        if (pendingHandle.current === text) setIsValidating(false);
       }
     }, 500),
     []
@@ -93,6 +105,7 @@ export default function SignUpHandleScreen() {
   useEffect(() => () => validateHandle.cancel(), [validateHandle]);
 
   useEffect(() => {
+    pendingHandle.current = handle;
     if (handle.length >= 3) {
       setIsValidating(true);
       validateHandle(handle);
