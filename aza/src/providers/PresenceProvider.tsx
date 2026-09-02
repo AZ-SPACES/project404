@@ -21,7 +21,7 @@ export function PresenceProvider({ children }: { children: React.ReactNode }) {
     if (!userToken) {
       // Disconnect when logged out
       if (clientRef.current) {
-        clientRef.current.deactivate();
+        clientRef.current.deactivate({ force: true }).catch(() => {});
         clientRef.current = null;
       }
       if (heartbeatRef.current) {
@@ -102,7 +102,7 @@ export function PresenceProvider({ children }: { children: React.ReactNode }) {
         heartbeatRef.current = null;
       }
       if (clientRef.current) {
-        clientRef.current.deactivate();
+        clientRef.current.deactivate({ force: true }).catch(() => {});
         clientRef.current = null;
       }
     };
@@ -117,15 +117,25 @@ export function PresenceProvider({ children }: { children: React.ReactNode }) {
       const client = clientRef.current;
       if (!client) return;
       if (state === 'active') {
-        if (!client.active) {
-          client.activate();
-        } else if (client.connected) {
+        if (client.connected) {
           client.publish({ destination: '/app/heartbeat' });
+        } else {
+          // Not `!client.active`: a socket the OS tore down while we were
+          // suspended can linger half-open with no close event, which leaves
+          // the client either ACTIVE-but-dead or wedged mid-deactivation.
+          // Discard whatever is left before reconnecting.
+          client
+            .deactivate({ force: true })
+            .catch(() => {})
+            .then(() => client.activate());
         }
       } else if (state === 'background') {
         // 'inactive' (iOS control centre, Face ID, etc.) is transient — only
         // a real background transition should end the presence session.
-        client.deactivate().catch(() => {});
+        // force: true so we don't wait on a DISCONNECT receipt the OS will
+        // never let us receive — an unresolved deactivation wedges the client
+        // in DEACTIVATING and it never reconnects for the rest of the run.
+        client.deactivate({ force: true }).catch(() => {});
       }
     });
     return () => sub.remove();
@@ -141,7 +151,7 @@ export function PresenceProvider({ children }: { children: React.ReactNode }) {
       const c = clientRef.current;
       if (!c) return;
       clientRef.current = null;
-      c.deactivate().catch(() => {});
+      c.deactivate({ force: true }).catch(() => {});
       // The outer effect will re-run on the next state change and rebuild
       // a client; presence's heartbeat cadence is generous enough to absorb
       // the brief gap.

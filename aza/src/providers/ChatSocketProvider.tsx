@@ -72,6 +72,11 @@ export function ChatSocketProvider({ children }: { children: React.ReactNode }) 
         });
         // Reset retry visuals on each reconnect by replaying any pending sends.
         useChatStore.getState().retryFailedSends().catch(() => {});
+        // Nothing replays the events published while we were disconnected, so
+        // pull the open thread back from the server — otherwise a message sent
+        // during a backgrounded stretch or a network blip stays invisible
+        // until the chat screen is remounted.
+        useChatStore.getState().resyncActiveThread().catch(() => {});
       },
       onStompError: (frame) => {
         console.warn('[chat-ws] STOMP error', frame.headers['message'], frame.body);
@@ -89,7 +94,10 @@ export function ChatSocketProvider({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     if (!userToken || !ready || !identity) {
       if (clientRef.current) {
-        clientRef.current.deactivate();
+        // Forced everywhere we're discarding the client: a graceful teardown
+        // can hang forever on a socket that is already gone, and the pending
+        // deactivation blocks any later activate() on that client.
+        clientRef.current.deactivate({ force: true }).catch(() => {});
         clientRef.current = null;
       }
       return;
@@ -97,7 +105,7 @@ export function ChatSocketProvider({ children }: { children: React.ReactNode }) 
     connect();
     return () => {
       if (clientRef.current) {
-        clientRef.current.deactivate();
+        clientRef.current.deactivate({ force: true }).catch(() => {});
         clientRef.current = null;
       }
       useChatStore.getState().setStompClient(null);
@@ -112,12 +120,28 @@ export function ChatSocketProvider({ children }: { children: React.ReactNode }) 
       const client = clientRef.current;
       if (!client) return;
       if (state === 'active') {
-        if (!client.active) client.activate();
+        // Not `!client.active`: a socket the OS killed while we were suspended
+        // can linger half-open with no close event, leaving the client stuck
+        // ACTIVE-but-dead or (see below) mid-deactivation. Reconnect on
+        // anything that isn't a live session.
+        if (!client.connected) {
+          client
+            .deactivate({ force: true })
+            .catch(() => {})
+            .then(() => client.activate());
+        }
       } else if (state === 'background') {
         // Sends don't wait on the session-root write, so make sure the
         // ratchet is durable before the OS is free to kill us.
         flushSessionRoots().catch(() => {});
-        client.deactivate().catch(() => {});
+        // force: true discards the socket immediately. A graceful deactivate()
+        // sends DISCONNECT and then waits for the broker's receipt and the
+        // socket's close event — neither of which arrives, because the OS
+        // suspends us first. The client is then wedged in DEACTIVATING for the
+        // rest of the process: activate() on the next foreground just awaits
+        // that same deactivation, so the socket never comes back and every
+        // chat event silently stops arriving.
+        client.deactivate({ force: true }).catch(() => {});
       }
     });
     return () => sub.remove();
@@ -134,7 +158,7 @@ export function ChatSocketProvider({ children }: { children: React.ReactNode }) 
       const old = clientRef.current;
       clientRef.current = null;
       if (old) {
-        try { await old.deactivate(); } catch { /* ignore */ }
+        try { await old.deactivate({ force: true }); } catch { /* ignore */ }
       }
       // Only reconnect if E2EE is still ready (i.e., we're still logged in).
       if (useChatStore.getState().selfUserId) {

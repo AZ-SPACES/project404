@@ -148,6 +148,15 @@ export function useChat(otherUserId: string | undefined): UseChatResult {
     };
   }, [otherUserId, e2eeReady, openChatWithUser, loadHistory, prewarmSend]);
 
+  // Tell the store which thread is on screen, so a socket reconnect knows what
+  // to re-pull: events published while we were disconnected are never replayed.
+  const setActiveChat = useChatStore((s) => s.setActiveChat);
+  useEffect(() => {
+    if (!chatId) return;
+    setActiveChat(chatId);
+    return () => setActiveChat(null);
+  }, [chatId, setActiveChat]);
+
   // Pull store state for THIS chat only (selectors keep re-renders tight).
   const thread = useChatStore((s) => (chatId ? s.messagesByChat[chatId] : undefined));
   const isOtherTyping = useChatStore((s) => (chatId ? !!s.typingByChat[chatId] : false));

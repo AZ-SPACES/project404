@@ -135,6 +135,8 @@ type ChatStoreState = {
   /** Latest screenshot notification per chatId: { ts, senderName }. UI reads this to show a toast. */
   lastScreenshotByChatId: Record<string, { ts: number; senderName: string }>;
   peerKeys: Record<string, PeerKeys>; // keyed by otherUserId
+  /** Chat currently on screen — the one a reconnect resyncs. */
+  activeChatId: string | null;
 
   // Lifecycle helpers
   setStompClient: (c: StompClient | null) => void;
@@ -150,6 +152,10 @@ type ChatStoreState = {
   fetchChats: () => Promise<void>;
   openChatWithUser: (otherUserId: string) => Promise<ChatSummary>;
   loadHistory: (chatId: string) => Promise<void>;
+  /** Mark which chat is on screen; pass null when the screen unmounts. */
+  setActiveChat: (chatId: string | null) => void;
+  /** Re-pull the open thread from the server (called on every socket reconnect). */
+  resyncActiveThread: () => Promise<void>;
   /** `retryClientId` re-sends an existing failed message in place rather than adding a new one. */
   sendText: (chatId: string, plaintext: string, retryClientId?: string) => Promise<void>;
   sendMedia: (chatId: string, mediaKey: string, mediaType: 'IMAGE' | 'VIDEO' | 'DOCUMENT' | 'VOICE_NOTE', caption?: string, fileKeyB64?: string) => Promise<void>;
@@ -601,6 +607,7 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
   typingByChat: {},
   lastScreenshotByChatId: {},
   peerKeys: {},
+  activeChatId: null,
 
   setStompClient: (c) => set({ stompClient: c }),
   setSelfIdentity: (userId, deviceId, publicKey, privateKey) =>
@@ -640,6 +647,7 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
       typingByChat: {},
       lastScreenshotByChatId: {},
       peerKeys: {},
+      activeChatId: null,
     });
   },
 
@@ -730,52 +738,46 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
 
     // 2) Pull recent server history and merge in any messages we haven't decrypted yet.
     try {
-      const { data } = await getChatMessages(chatId, 0, 50);
-      const page = data?.data;
-      const items: any[] = (page?.content ?? []).slice().reverse(); // oldest first
-      // Index what we already hold decrypted so the loop can skip re-decrypting
-      // messages that haven't changed — the common case when reopening a chat.
-      const cachedById = new Map<string, LocalMessage>();
-      for (const cm of cached) if (cm.serverId) cachedById.set(cm.serverId, cm);
-      const decrypted: LocalMessage[] = [];
-      for (const m of items) {
-        const local = await decryptServerMessage(m, chatId, selfUserId, selfDeviceId, selfIdentityPrivate, cachedById);
-        if (local) decrypted.push(local);
-      }
-      const next = decrypted.reduce<LocalMessage[]>(
-        (acc, m) => mergeMessage(acc, m),
-        cached,
-      );
-      set((s) => ({ messagesByChat: { ...s.messagesByChat, [chatId]: next } }));
-      // Only re-encrypt + rewrite the whole thread when the server actually
-      // brought something new or changed — reopening an unchanged chat shouldn't
-      // pay for a full-thread AES re-encrypt and disk write.
-      const changed = next.length !== cached.length || decrypted.some((d) => {
-        const c = d.serverId ? cachedById.get(d.serverId) : undefined;
-        return !c || c.text !== d.text || c.status !== d.status
-          || c.isDeleted !== d.isDeleted || (c.editedAt ?? null) !== (d.editedAt ?? null);
-      });
-      if (changed) await saveCachedThread(selfUserId, chatId, next);
-      const lastMsg = lastVisibleMessage(next);
-      if (lastMsg) {
-        set((s) => {
-          const c = s.chats[chatId];
-          if (!c) return s;
-          return {
-            chats: {
-              ...s.chats,
-              [chatId]: {
-                ...c,
-                lastMessagePreview: derivePreview(lastMsg),
-                lastMessageIsSelf: lastMsg.isSelf,
-                lastMessageStatus: lastMsg.isSelf ? lastMsg.status : undefined,
-              } as ChatSummary,
-            },
-          };
-        });
-      }
+      await mergeServerHistory(chatId, cached, selfUserId, selfDeviceId, selfIdentityPrivate);
     } catch (e) {
       console.warn('[chat] history load failed', e);
+    }
+  },
+
+  setActiveChat: (chatId) => set({ activeChatId: chatId }),
+
+  /**
+   * Re-fetch the open thread from the server. Nothing replays a WebSocket
+   * event that was published while we were disconnected — backgrounding the
+   * app tears the socket down, and a network blip does the same — so every
+   * message sent during that window is invisible until something pulls
+   * history again. ChatSocketProvider calls this on every (re)connect.
+   *
+   * Merges onto what is already on screen rather than onto the on-disk cache,
+   * so an optimistic send that hasn't been persisted yet survives the resync.
+   */
+  resyncActiveThread: async () => {
+    const { activeChatId, selfUserId, selfDeviceId, selfIdentityPrivate } = get();
+    if (!activeChatId || !selfUserId || !selfDeviceId || !selfIdentityPrivate) return;
+    const before = get().messagesByChat[activeChatId] ?? [];
+    try {
+      await mergeServerHistory(
+        activeChatId,
+        before,
+        selfUserId,
+        selfDeviceId,
+        selfIdentityPrivate,
+      );
+    } catch (e) {
+      console.warn('[chat] thread resync failed', e);
+      return;
+    }
+    // The screen is open, so anything the resync pulled in has been seen —
+    // the focus listener that normally sends the receipt doesn't re-fire when
+    // the app comes back to an already-mounted chat.
+    const after = get().messagesByChat[activeChatId] ?? [];
+    if (after.length > before.length && after.some((m) => !m.isSelf)) {
+      get().markRead(activeChatId).catch(() => {});
     }
   },
 
@@ -1505,6 +1507,63 @@ function bumpChat(
       lastMessageStatus: local.isSelf ? local.status : undefined,
     } as ChatSummary,
   };
+}
+
+/**
+ * Fetch the most recent server page for a chat, decrypt anything we don't
+ * already hold, and merge it onto `base`. Shared by the initial open (base =
+ * the on-disk cache) and by the reconnect resync (base = the in-memory
+ * thread), which is why the base thread is a parameter rather than read from
+ * the store here.
+ */
+async function mergeServerHistory(
+  chatId: string,
+  base: LocalMessage[],
+  selfUserId: string,
+  selfDeviceId: string,
+  selfIdentityPrivate: Uint8Array,
+): Promise<void> {
+  const { data } = await getChatMessages(chatId, 0, 50);
+  const page = data?.data;
+  const items: any[] = (page?.content ?? []).slice().reverse(); // oldest first
+  // Index what we already hold decrypted so the loop can skip re-decrypting
+  // messages that haven't changed — the common case when reopening a chat.
+  const baseById = new Map<string, LocalMessage>();
+  for (const cm of base) if (cm.serverId) baseById.set(cm.serverId, cm);
+  const decrypted: LocalMessage[] = [];
+  for (const m of items) {
+    const local = await decryptServerMessage(m, chatId, selfUserId, selfDeviceId, selfIdentityPrivate, baseById);
+    if (local) decrypted.push(local);
+  }
+  const next = decrypted.reduce<LocalMessage[]>((acc, m) => mergeMessage(acc, m), base);
+  useChatStore.setState((s) => ({ messagesByChat: { ...s.messagesByChat, [chatId]: next } }));
+  // Only re-encrypt + rewrite the whole thread when the server actually
+  // brought something new or changed — reopening an unchanged chat shouldn't
+  // pay for a full-thread AES re-encrypt and disk write.
+  const changed = next.length !== base.length || decrypted.some((d) => {
+    const c = d.serverId ? baseById.get(d.serverId) : undefined;
+    return !c || c.text !== d.text || c.status !== d.status
+      || c.isDeleted !== d.isDeleted || (c.editedAt ?? null) !== (d.editedAt ?? null);
+  });
+  if (changed) await saveCachedThread(selfUserId, chatId, next);
+  const lastMsg = lastVisibleMessage(next);
+  if (lastMsg) {
+    useChatStore.setState((s) => {
+      const c = s.chats[chatId];
+      if (!c) return s;
+      return {
+        chats: {
+          ...s.chats,
+          [chatId]: {
+            ...c,
+            lastMessagePreview: derivePreview(lastMsg),
+            lastMessageIsSelf: lastMsg.isSelf,
+            lastMessageStatus: lastMsg.isSelf ? lastMsg.status : undefined,
+          } as ChatSummary,
+        },
+      };
+    });
+  }
 }
 
 /**

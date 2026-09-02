@@ -59,7 +59,7 @@ export function CallSocketProvider({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     if (!userToken) {
       if (clientRef.current) {
-        clientRef.current.deactivate();
+        clientRef.current.deactivate({ force: true }).catch(() => {});
         clientRef.current = null;
       }
       return;
@@ -69,7 +69,7 @@ export function CallSocketProvider({ children }: { children: React.ReactNode }) 
 
     return () => {
       if (clientRef.current) {
-        clientRef.current.deactivate();
+        clientRef.current.deactivate({ force: true }).catch(() => {});
         clientRef.current = null;
       }
     };
@@ -83,10 +83,21 @@ export function CallSocketProvider({ children }: { children: React.ReactNode }) 
       const client = clientRef.current;
       if (!client) return;
       if (state === 'active') {
-        if (!client.active) client.activate();
+        // Not `!client.active`: a socket the OS tore down while we were
+        // suspended can linger half-open with no close event, which leaves the
+        // client either ACTIVE-but-dead or wedged mid-deactivation.
+        if (!client.connected) {
+          client
+            .deactivate({ force: true })
+            .catch(() => {})
+            .then(() => client.activate());
+        }
       } else if (state === 'background') {
         if (useCallStore.getState().activeCall) return;
-        client.deactivate().catch(() => {});
+        // force: true — a graceful deactivate waits for a DISCONNECT receipt
+        // the OS suspends us before we can receive, and the client would stay
+        // stuck in DEACTIVATING (never reconnecting) for the rest of the run.
+        client.deactivate({ force: true }).catch(() => {});
       }
     });
     return () => sub.remove();
@@ -103,7 +114,7 @@ export function CallSocketProvider({ children }: { children: React.ReactNode }) 
       const old = clientRef.current;
       clientRef.current = null;
       if (old) {
-        try { await old.deactivate(); } catch { /* ignore */ }
+        try { await old.deactivate({ force: true }); } catch { /* ignore */ }
       }
       connect().catch((err) =>
         console.warn('[call-ws] reconnect after token rotation failed', err),
