@@ -243,7 +243,7 @@ describe('chatStore.sendMedia', () => {
     expect(mockSendChatMessage).not.toHaveBeenCalled();
   });
 
-  it('includes encrypted ciphertext and ephemeralKey in the payload', async () => {
+  it('sends the caption in the clear, with no per-device envelopes', async () => {
     mockSendChatMessage.mockResolvedValue({
       data: { data: { id: 'srv-1', sentAt: new Date().toISOString() } },
     });
@@ -255,11 +255,34 @@ describe('chatStore.sendMedia', () => {
       'Nice photo',
     );
 
-    expect(mockSendChatMessage).toHaveBeenCalledWith(
-      expect.objectContaining({
-        ciphertext: expect.any(String),
-        ephemeralKey: expect.any(String),
-      }),
+    const payload = mockSendChatMessage.mock.calls[0]![0];
+    expect(payload.content).toBe('Nice photo');
+    expect(payload.ciphertext).toBeUndefined();
+    expect(payload.deviceCiphertexts).toBeUndefined();
+  });
+
+  it('carries the per-file key in the body so any device can open the media', async () => {
+    mockSendChatMessage.mockResolvedValue({
+      data: { data: { id: 'srv-1', sentAt: new Date().toISOString() } },
+    });
+
+    await useChatStore.getState().sendMedia(
+      CHAT_ID,
+      'https://cdn.example.com/photo.jpg',
+      'IMAGE',
+      'Nice photo',
+      'ZmlsZS1rZXktYjY0',
     );
+
+    // The `{ v: 2, k, c }` envelope used to ride inside the ciphertext, where
+    // only devices linked at send time could reach it. It now rides in the body
+    // instead — same shape, so decryptServerMessage unwraps it unchanged — which
+    // is what lets a phone linked next week decrypt this image.
+    const payload = mockSendChatMessage.mock.calls[0]![0];
+    expect(JSON.parse(payload.content)).toEqual({
+      v: 2,
+      k: 'ZmlsZS1rZXktYjY0',
+      c: 'Nice photo',
+    });
   });
 });

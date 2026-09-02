@@ -4,9 +4,14 @@
  *
  * The delivery path used to await three HTTP round trips one after another
  * (recipient device bundles, own device bundles, peer key material) plus two
- * SecureStore round trips, all before the STOMP publish. These tests pin the
- * properties that fixed it: the fetches overlap, they share one request, and a
- * warm chat publishes without touching the network first.
+ * SecureStore round trips, all before the STOMP publish. Overlapping them cut
+ * that down; moving message bodies to server-readable storage removed the
+ * reason for them entirely, because there is no longer anything to encrypt to.
+ *
+ * These tests pin what is left: the bubble and the frame both leave in the
+ * first tick, sending touches no key endpoint at all, and the published body is
+ * the plaintext the server needs in order to hand this message to a device that
+ * logs in tomorrow.
  */
 
 import 'react-native-get-random-values';
@@ -191,7 +196,7 @@ afterEach(async () => {
 });
 
 describe('sendText — pre-publish work', () => {
-  it('shows the message immediately, without waiting on encryption or network', () => {
+  it('shows the message and publishes it in the same tick', () => {
     const client = fakeStompClient();
     useChatStore.getState().setStompClient(client as any);
     void useChatStore.getState().sendText(CHAT_ID, 'hello');
@@ -201,36 +206,25 @@ describe('sendText — pre-publish work', () => {
     expect(thread).toHaveLength(1);
     expect(thread[0]!.text).toBe('hello');
     expect(thread[0]!.status).toBe('pending');
-    // Nothing has been encrypted or published yet — the key fetches have only
-    // just been kicked off.
-    expect(client.publish).not.toHaveBeenCalled();
+
+    // And so is the frame. There is nothing left to await before publishing —
+    // no encryption, no key lookup — so the send no longer slips a microtask
+    // (previously a whole chain of HTTP round trips) behind the render.
+    expect(client.publish).toHaveBeenCalledTimes(1);
   });
 
-  it('fetches recipient and own key bundles concurrently, not one after the other', async () => {
+  it('fetches no key material at all before publishing', async () => {
     useChatStore.getState().setStompClient(fakeStompClient() as any);
     await useChatStore.getState().sendText(CHAT_ID, 'hello');
 
-    expect(recipientTrace.started).toHaveLength(1);
-    expect(ownTrace).toHaveProperty('started', expect.arrayContaining([expect.any(Number)]));
-
-    // Concurrency: both requests were in flight at the same time, i.e. each
-    // one started before the other had finished.
-    const recipientStart = recipientTrace.started[0]!;
-    const recipientEnd = recipientTrace.finished[0]!;
-    const ownStart = ownTrace.started[0]!;
-    const ownEnd = ownTrace.finished[0]!;
-    expect(ownStart).toBeLessThan(recipientEnd);
-    expect(recipientStart).toBeLessThan(ownEnd);
-  });
-
-  it('shares one /key-bundles request between the fan-out and the X3DH session', async () => {
-    useChatStore.getState().setStompClient(fakeStompClient() as any);
-    await useChatStore.getState().sendText(CHAT_ID, 'hello');
-
-    // Both the per-device fan-out and ensurePeerKeys need this endpoint, and it
-    // pops a one-time prekey per call — so it must be hit once, not twice.
-    expect(mockFetchUserKeyBundles).toHaveBeenCalledTimes(1);
-    expect(useChatStore.getState().peerKeys[PEER_ID]).toBeDefined();
+    // Bodies are stored server-readable now, so there is no per-device fan-out
+    // and nothing to encrypt to. The two key-bundle round trips that used to
+    // sit in front of every cold send are simply gone — this is the assertion
+    // that keeps them from creeping back.
+    expect(mockFetchUserKeyBundles).not.toHaveBeenCalled();
+    expect(mockFetchOwnKeyBundles).not.toHaveBeenCalled();
+    expect(recipientTrace.started).toHaveLength(0);
+    expect(ownTrace.started).toHaveLength(0);
   });
 
   it('publishes a warm chat over the socket with no network round trip first', async () => {
@@ -248,7 +242,7 @@ describe('sendText — pre-publish work', () => {
     expect(client.publish.mock.calls[0]![0].destination).toBe('/app/chat.send');
   });
 
-  it('encrypts one envelope per recipient device and publishes it', async () => {
+  it('publishes the body in the clear, with no per-device envelopes', async () => {
     const client = fakeStompClient();
     useChatStore.getState().setStompClient(client as any);
 
@@ -258,7 +252,11 @@ describe('sendText — pre-publish work', () => {
     expect(body.chatId).toBe(CHAT_ID);
     expect(body.type).toBe('TEXT');
     expect(body.clientId).toEqual(expect.any(String));
-    expect(Object.keys(body.deviceCiphertexts)).toContain('peer-device-1');
+    // The server has to be able to read this to hand it to a device that logs
+    // in later — that is the whole point of the trade.
+    expect(body.content).toBe('hello');
+    expect(body.deviceCiphertexts).toBeUndefined();
+    expect(body.ciphertext).toBeUndefined();
   });
 
   it('falls back to REST when the socket is down', async () => {
