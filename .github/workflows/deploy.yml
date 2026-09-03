@@ -20,6 +20,9 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       github.event.workflow_run.conclusion == 'success'
 
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
     steps:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
@@ -28,6 +31,10 @@ jobs:
           username: ${{ secrets.DEPLOY_USER }}
           password: ${{ secrets.DEPLOY_PASSWORD }}
           port: ${{ secrets.DEPLOY_PORT || '22' }}
+          # Forwarded into the remote shell so the pull below can authenticate.
+          # GITHUB_TOKEN is minted per run and dies with it, so nothing durable
+          # is left sitting on the droplet.
+          envs: GH_TOKEN
           script: |
             set -e
             cd ${{ secrets.DEPLOY_PATH }}
@@ -39,14 +46,36 @@ jobs:
             COMPOSE="docker compose -f docker-compose.yml -f docker-compose.backend.yml"
 
             echo "→ Pulling latest code (as $(whoami) in $(pwd))..."
-            # project404 is a public repo, so the pull needs no credentials at
-            # all — but git will still try to use any it can find, and a stale
-            # stored token makes GitHub answer 401 instead of serving the repo
-            # anonymously. Git then asks for a username, finds no TTY, and the
-            # deploy dies on its first command with "could not read Username".
-            # Empty out the credential helper chain for this one command and set
-            # GIT_TERMINAL_PROMPT=0 so it can never hang waiting on input again.
-            GIT_TERMINAL_PROMPT=0 git -c credential.helper= pull origin main
+            # Two failure modes have bitten this pull, and they pull in opposite
+            # directions:
+            #
+            #   1. A stale credential stored on the droplet made GitHub answer
+            #      401 rather than serving this public repo anonymously. Git then
+            #      prompted for a username, found no TTY, and the deploy died on
+            #      its first command with "could not read Username".
+            #   2. Forcing the pull anonymous to dodge (1) ran headlong into
+            #      GitHub rate-limiting unauthenticated downloads: "GitHub is
+            #      temporarily limiting some unauthenticated downloads".
+            #
+            # So: empty the credential helper chain to keep whatever is stored on
+            # the box out of it, and supply this run's own GITHUB_TOKEN instead.
+            # It is scoped to this repo, expires with the run, and is passed as a
+            # header rather than in the remote URL so it never lands in the
+            # reflog or in .git/config. GIT_TERMINAL_PROMPT=0 keeps git from ever
+            # blocking on input again whatever happens.
+            AUTH="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 | tr -d '\n')"
+            for attempt in 1 2 3; do
+              if GIT_TERMINAL_PROMPT=0 git -c credential.helper= \
+                   -c http.extraheader="$AUTH" pull origin main; then
+                break
+              fi
+              if [ "$attempt" = 3 ]; then
+                echo "  ✗ git pull failed after 3 attempts"
+                exit 1
+              fi
+              echo "  pull attempt $attempt failed — retrying in $((attempt * 5))s"
+              sleep $((attempt * 5))
+            done
 
             echo "→ Rebuilding and restarting services..."
             SENTRY_RELEASE=$(git rev-parse --short HEAD) \
