@@ -315,7 +315,24 @@ export const useCallStore = create<CallState>((set, get) => ({
 
     switch (type) {
       case 'call.initiate':
-        if (!activeCall) {
+        // Reaching here means the server considers us free: it checks for an
+        // active call first and answers call.waiting instead when it finds one.
+        // So an activeCall still sitting in the store at this point is stale —
+        // the frame that should have cleared it (call.end / call.decline /
+        // call.missed) was lost, most likely along with the socket that was
+        // meant to carry it. Honouring it would silently swallow this call and
+        // every call after it until the app is restarted, which is the worst
+        // possible way to fail. Clear the stale one and ring.
+        if (activeCall && activeCall.callId !== payload.callId) {
+          console.warn('[call] replacing a stale activeCall to ring an incoming one');
+          callAudioService.stop();
+          webrtcService.teardown(activeCall.peerConnection, activeCall.localStream);
+          webrtcService.teardown(null, activeCall.remoteStream);
+          resetIceBuffer(null);
+        }
+        // A repeat of the call we are already ringing for is a duplicate frame,
+        // not a new call — re-running setIncomingCall would restart the ringtone.
+        if (!activeCall || activeCall.callId !== payload.callId) {
           get().setIncomingCall(payload);
         }
         break;

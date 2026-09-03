@@ -8,10 +8,20 @@ import { useAuth } from './AuthProvider';
 import { subscribeAuthEvents } from './authEvents';
 import { useCallStore } from '../store/callStore';
 
+/**
+ * How long a foreground heartbeat has to come back before we treat the socket
+ * as dead. Generous next to a measured p99 round trip of about 1.2s, so a slow
+ * network is never mistaken for a dead connection.
+ */
+const HEARTBEAT_ACK_TIMEOUT_MS = 4_000;
+
 export function CallSocketProvider({ children }: { children: React.ReactNode }) {
   const { userToken } = useAuth();
   const clientRef = useRef<Client | null>(null);
   const overrideTokenRef = useRef<string | null>(null);
+  // Timestamp of the last /user/queue/heartbeat ack, used to tell a live socket
+  // from one that only claims to be live. See the AppState effect below.
+  const heartbeatAckRef = useRef(0);
 
   // Keep the latest store handler on a ref so the STOMP onConnect closure
   // doesn't go stale across re-renders.
@@ -45,6 +55,12 @@ export function CallSocketProvider({ children }: { children: React.ReactNode }) 
           } catch (err) {
             console.error('Error parsing call socket message:', err);
           }
+        });
+        // The server answers every /app/heartbeat here. Nothing needs the
+        // contents — the arrival is the point, because it is proof the round
+        // trip works. See the AppState effect below.
+        client.subscribe('/user/queue/heartbeat', () => {
+          heartbeatAckRef.current = Date.now();
         });
       },
       onStompError: (error) => {
@@ -83,6 +99,9 @@ export function CallSocketProvider({ children }: { children: React.ReactNode }) 
       const client = clientRef.current;
       if (!client) return;
       if (state === 'active') {
+        // Never disturb a call in progress: this socket is carrying its
+        // signaling, and a reconnect mid-call drops hangup and renegotiation.
+        if (useCallStore.getState().activeCall) return;
         // Not `!client.active`: a socket the OS tore down while we were
         // suspended can linger half-open with no close event, which leaves the
         // client either ACTIVE-but-dead or wedged mid-deactivation.
@@ -91,7 +110,34 @@ export function CallSocketProvider({ children }: { children: React.ReactNode }) 
             .deactivate({ force: true })
             .catch(() => {})
             .then(() => client.activate());
+          return;
         }
+        // `connected` is set from the CONNECTED frame and cleared by a close
+        // event, so a socket the OS killed while we were suspended keeps
+        // reporting a live session until an incoming heartbeat is finally
+        // missed. Chat survives that window because its events are durable and
+        // replayed on reconnect; call frames are neither, so a call arriving
+        // in it is lost outright rather than late.
+        //
+        // Probe rather than trust. /app/heartbeat is acknowledged on
+        // /user/queue/heartbeat, so a reply proves the round trip and silence
+        // means the socket is dead however healthy it claims to be. The probe
+        // also refreshes the server's presence key, which matters on its own:
+        // an incoming call reaches a callee the server believes is offline as
+        // a push notification and nothing else.
+        const probedAt = Date.now();
+        client.publish({ destination: '/app/heartbeat' });
+        setTimeout(() => {
+          if (clientRef.current !== client) return;
+          if (heartbeatAckRef.current >= probedAt) return;
+          // A call that started while we were waiting is proof enough.
+          if (useCallStore.getState().activeCall) return;
+          console.warn('[call-ws] heartbeat unacknowledged — rebuilding the socket');
+          client
+            .deactivate({ force: true })
+            .catch(() => {})
+            .then(() => client.activate());
+        }, HEARTBEAT_ACK_TIMEOUT_MS);
       } else if (state === 'background') {
         if (useCallStore.getState().activeCall) return;
         // force: true — a graceful deactivate waits for a DISCONNECT receipt
