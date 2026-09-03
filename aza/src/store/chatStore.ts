@@ -1468,7 +1468,11 @@ async function decryptServerMessage(
   cachedById?: Map<string, LocalMessage>,
 ): Promise<LocalMessage | null> {
   if (!m?.id) return null;
-  const isSelf = m.isSelf === true || m.senderId === selfUserId;
+  // senderId is authoritative: it says who wrote the message, whoever the
+  // payload was built for. The server's isSelf is viewer-relative and a shared
+  // broadcast copy can carry the wrong one, so it is only a fallback for a
+  // payload that omits the sender.
+  const isSelf = m.senderId ? m.senderId === selfUserId : m.isSelf === true;
   const ts = parseDateTime(m.sentAt) ?? Date.now();
   const expiresAt = parseDateTime(m.expiresAt);
   const viewedAt = parseDateTime(m.viewedAt);

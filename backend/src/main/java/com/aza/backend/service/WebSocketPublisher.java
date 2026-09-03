@@ -12,6 +12,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
+import java.util.function.Function;
 
 @Service
 @RequiredArgsConstructor
@@ -64,6 +65,28 @@ public class WebSocketPublisher {
                 DEST_CHAT, type, payload);
         publish(participantTwo, RedisPubSubConfig.CHAT_USER_CHANNEL_PREFIX + participantTwo,
                 DEST_CHAT, type, payload);
+    }
+
+    /**
+     * Fan a chat event out to both participants, building the payload separately
+     * for each one.
+     *
+     * <p>Message payloads carry viewer-relative fields — {@code isSelf} above all
+     * — so one shared object cannot be correct for both sides. Broadcasting the
+     * sender's copy told the recipient the message was their own, which put the
+     * bubble on the wrong side of their thread, suppressed their unread badge,
+     * and stopped them from returning a delivery receipt, leaving the sender on
+     * a single tick forever. Prefer this overload for anything derived from a
+     * message; the {@code Object} one is only safe for viewer-independent
+     * payloads such as a deletion notice.
+     */
+    public void publishToChatRoom(UUID participantOne, UUID participantTwo,
+                                   WebSocketEventType type,
+                                   Function<UUID, Object> payloadForRecipient) {
+        publish(participantOne, RedisPubSubConfig.CHAT_USER_CHANNEL_PREFIX + participantOne,
+                DEST_CHAT, type, payloadForRecipient.apply(participantOne));
+        publish(participantTwo, RedisPubSubConfig.CHAT_USER_CHANNEL_PREFIX + participantTwo,
+                DEST_CHAT, type, payloadForRecipient.apply(participantTwo));
     }
 
     /**

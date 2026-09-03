@@ -221,7 +221,11 @@ public class ChatService {
         final String senderAvatar = sender.getProfileImageUrl();
         final UUID senderId = sender.getId();
         runAfterCommit(() -> {
-            webSocketPublisher.publishToChatRoom(p1, p2, WebSocketEventType.CHAT_MESSAGE, response);
+            // isSelf is viewer-relative, so each participant gets its own copy.
+            // Sharing the sender's payload put incoming messages on the wrong
+            // side of the recipient's thread and stopped their delivery receipt.
+            webSocketPublisher.publishToChatRoom(p1, p2, WebSocketEventType.CHAT_MESSAGE,
+                    recipient -> response.toBuilder().isSelf(senderId.equals(recipient)).build());
             try {
                 notificationService.sendNewMessageNotification(
                         recipientId, senderName, senderId, chatId.toString(), senderAvatar);
@@ -612,9 +616,13 @@ public class ChatService {
 
         Chat chat = chatRepository.findById(message.getChatId())
                 .orElseThrow(() -> new AppException("Chat not found"));
+        // Same viewer-relative rule as a new message: isSelf tracks who wrote the
+        // message, not who is receiving this frame.
+        final UUID authorId = message.getSenderId();
         webSocketPublisher.publishToChatRoom(
                 chat.getParticipantOneId(), chat.getParticipantTwoId(),
-                WebSocketEventType.CHAT_MESSAGE_EDITED, response);
+                WebSocketEventType.CHAT_MESSAGE_EDITED,
+                recipient -> response.toBuilder().isSelf(authorId.equals(recipient)).build());
 
         log.debug("Message {} edited by {}", messageId, editor.getId());
         return response;
