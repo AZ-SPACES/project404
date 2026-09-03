@@ -70,12 +70,40 @@ export function toError(err: unknown): Error {
   return new Error(extractErrorMessage(err));
 }
 
-/** Extract the HTTP response status code from an Axios error, or undefined if not available. */
+/**
+ * Extract the HTTP response status code from an Axios error, or undefined if not
+ * available — which is itself meaningful: no status means the request never got an
+ * answer (offline, timeout, server unreachable), so the outcome is unknown rather
+ * than known-failed.
+ *
+ * Falls back to a `status` property on the error itself, so a store that re-throws a
+ * flattened Error (see `withErrorMeta`) stays classifiable by its callers.
+ */
 export function getErrorStatus(err: unknown): number | undefined {
   if (!err || typeof err !== 'object') return undefined;
   const status = (err as Record<string, unknown>).response as Record<string, unknown> | undefined;
   const code = status?.status;
-  return typeof code === 'number' ? code : undefined;
+  if (typeof code === 'number') return code;
+  const own = (err as Record<string, unknown>).status;
+  return typeof own === 'number' ? own : undefined;
+}
+
+/** An Error carrying the backend's machine-readable code and HTTP status. */
+export type ErrorWithMeta = Error & { code?: string | undefined; status?: number | undefined };
+
+/**
+ * Flatten a thrown value into an Error that still knows what kind of failure it was.
+ *
+ * A store that catches an Axios error and re-throws `new Error(message)` destroys the
+ * code and the status along with it, leaving screens to guess the failure type by
+ * matching on user-facing copy. That is how a raw Postgres message ended up rendered
+ * as if it were a wrong-PIN hint. Keep the metadata attached.
+ */
+export function withErrorMeta(err: unknown, fallback?: string): ErrorWithMeta {
+  const error = new Error(extractErrorMessage(err, fallback)) as ErrorWithMeta;
+  error.code = getErrorCode(err);
+  error.status = getErrorStatus(err);
+  return error;
 }
 
 /**
@@ -112,5 +140,8 @@ export function getErrorCode(err: unknown): string | undefined {
   const data = ((err as Record<string, unknown>).response as Record<string, unknown> | undefined)
     ?.data as Record<string, unknown> | undefined;
   const error = data?.error as Record<string, unknown> | undefined;
-  return typeof error?.code === 'string' ? error.code : undefined;
+  if (typeof error?.code === 'string') return error.code;
+  // A re-thrown Error carrying the code directly — see withErrorMeta.
+  const own = (err as Record<string, unknown>).code;
+  return typeof own === 'string' ? own : undefined;
 }

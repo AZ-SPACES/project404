@@ -83,6 +83,9 @@ export const ChatPaymentSheet = memo(function ChatPaymentSheet({
   const [pin, setPin] = useState('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  // Confirmation can settle as a fraud hold. That is not a payment, and it must not be
+  // announced in the thread as one.
+  const [held, setHeld] = useState(false);
   const pinInputRef = useRef<TextInput>(null);
   const scaleAnims = useRef(PIN_ARRAY.map(() => new Animated.Value(1))).current;
   const shakeAnim = useRef(new Animated.Value(0)).current;
@@ -130,6 +133,7 @@ export const ChatPaymentSheet = memo(function ChatPaymentSheet({
     setPin('');
     setErrorMsg(null);
     setIsLoading(false);
+    setHeld(false);
   }, [visible, mode, prefillAmount, payRequestId]);
 
   // Focus PIN input when step becomes 'pin'
@@ -148,15 +152,24 @@ export const ChatPaymentSheet = memo(function ChatPaymentSheet({
       setIsLoading(true);
       setErrorMsg(null);
       try {
+        let txStatus: string | undefined;
         if (paying) {
-          await acceptMoneyRequest(payRequestId!, pin);
+          txStatus = await acceptMoneyRequest(payRequestId!, pin);
           // Record locally right away — if the chat receipt fails to send,
           // this card must never offer "Pay" again (the server has settled it).
-          useSettledRequestsStore.getState().markPaid(payRequestId!);
+          if (txStatus !== 'HELD_FOR_REVIEW') {
+            useSettledRequestsStore.getState().markPaid(payRequestId!);
+          }
         } else {
-          await confirmTransfer(pendingTransactionId!, pin);
+          txStatus = await confirmTransfer(pendingTransactionId!, pin);
         }
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        const isHeld = txStatus === 'HELD_FOR_REVIEW';
+        setHeld(isHeld);
+        Haptics.notificationAsync(
+          isHeld
+            ? Haptics.NotificationFeedbackType.Warning
+            : Haptics.NotificationFeedbackType.Success,
+        );
         setStep('success');
       } catch (err) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -176,17 +189,23 @@ export const ChatPaymentSheet = memo(function ChatPaymentSheet({
     return () => clearTimeout(t);
   }, [pin, step, isLoading, mode, payRequestId, pendingTransactionId, confirmTransfer, acceptMoneyRequest, shakeAnim]);
 
-  // Auto-close 2 s after success and fire callback
+  // Auto-close after success and fire callback
   useEffect(() => {
     if (step !== 'success') return;
     const t = setTimeout(() => {
-      onSuccess?.(finalAmountRef.current, mode, requestIdRef.current, requestKindRef.current);
+      // onSuccess posts a payment receipt card into the thread. A held transfer has moved
+      // no money, so firing it would tell the recipient — in writing, in their chat — that
+      // they had been paid. The sender still sees the hold here; the thread stays silent
+      // until COMPLIANCE releases it.
+      if (!held) {
+        onSuccess?.(finalAmountRef.current, mode, requestIdRef.current, requestKindRef.current);
+      }
       onClose();
-    }, 2000);
+    }, held ? 4000 : 2000);
     return () => clearTimeout(t);
   // intentionally exclude onSuccess/onClose/mode from deps — they never change mid-flight
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step]);
+  }, [step, held]);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
@@ -305,7 +324,9 @@ export const ChatPaymentSheet = memo(function ChatPaymentSheet({
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose} statusBarTranslucent>
-      <Pressable style={styles.overlay} onPress={step !== 'success' ? handleClose : undefined} />
+      {/* The held message is longer than a "sent" confirmation and matters more, so it
+          stays dismissible rather than only timing out. */}
+      <Pressable style={styles.overlay} onPress={step !== 'success' || held ? handleClose : undefined} />
       <View style={styles.sheet}>
         <View style={styles.handle} />
 
@@ -475,14 +496,22 @@ export const ChatPaymentSheet = memo(function ChatPaymentSheet({
         {/* ── SUCCESS ─────────────────────────────────────────────── */}
         {step === 'success' && (
           <View style={styles.successContent}>
-            <View style={[styles.successIcon, { borderColor: Colors.primary }]}>
-              <Feather name="check" size={36} color={Colors.primary} />
+            <View style={[styles.successIcon, { borderColor: held ? '#EA7C28' : Colors.primary }]}>
+              <Feather
+                name={held ? 'shield' : 'check'}
+                size={36}
+                color={held ? '#EA7C28' : Colors.primary}
+              />
             </View>
             <Text style={styles.successTitle}>
-              {mode === 'request' ? 'Request Sent!' : 'Payment Sent!'}
+              {held
+                ? 'Under Review'
+                : mode === 'request' ? 'Request Sent!' : 'Payment Sent!'}
             </Text>
             <Text style={styles.successSubtitle}>
-              {mode === 'request'
+              {held
+                ? `GH¢ ${finalAmountRef.current.toFixed(2)} to ${recipientName} is being reviewed for your security. No money has left your wallet — we'll notify you once it's cleared.`
+                : mode === 'request'
                 ? `Requested GH¢ ${finalAmountRef.current.toFixed(2)} from ${recipientName}`
                 : `GH¢ ${finalAmountRef.current.toFixed(2)} sent to ${recipientName}`}
             </Text>

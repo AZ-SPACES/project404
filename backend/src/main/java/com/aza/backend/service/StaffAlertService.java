@@ -8,6 +8,7 @@ import com.aza.backend.repository.UserRepository;
 import com.aza.backend.util.EmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 
 import java.util.HashSet;
@@ -35,6 +36,13 @@ public class StaffAlertService {
             for (UUID userId : recipientsFor(role)) {
                 deliver(userId, subject, message);
             }
+        } catch (DataAccessException e) {
+            // Postgres has already aborted the caller's transaction; swallowing this
+            // only hides the cause behind whatever statement runs next. See
+            // RiskEngineService for the same rule.
+            log.error("Staff alert '{}' hit a database error — the transaction is now aborted: {}",
+                    subject, e.getMessage());
+            throw e;
         } catch (Exception e) {
             log.error("Failed to deliver staff alert '{}': {}", subject, e.getMessage());
         }
@@ -56,6 +64,8 @@ public class StaffAlertService {
         try {
             notificationService.sendNotification(userId, Notification.NotificationType.SECURITY_ALERT,
                     subject, message, null, null);
+        } catch (DataAccessException e) {
+            throw e; // aborts the whole transaction — never per-recipient recoverable
         } catch (Exception e) {
             log.warn("Staff alert notification to {} failed: {}", userId, e.getMessage());
         }

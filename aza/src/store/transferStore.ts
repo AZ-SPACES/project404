@@ -9,7 +9,7 @@ import {
 } from '../services/api';
 import { queryClient } from '../lib/queryClient';
 import { queryKeys } from '../lib/queryKeys';
-import { extractErrorMessage } from '../utils/errorUtils';
+import { extractErrorMessage, withErrorMeta } from '../utils/errorUtils';
 import { getDeviceLocation } from '../utils/deviceLocation';
 
 type TransferStatus = 'idle' | 'initiating' | 'confirming' | 'requesting' | 'success' | 'error';
@@ -29,7 +29,12 @@ interface TransferState {
     terminalId?: string;
   }) => Promise<string>;
 
-  confirmTransfer: (txId: string, passcode: string) => Promise<void>;
+  /**
+   * Resolves with the confirmed transaction's status. Confirmation does not always
+   * mean the money moved — fraud review parks it as HELD_FOR_REVIEW — so the caller
+   * needs the status to know which outcome screen to show.
+   */
+  confirmTransfer: (txId: string, passcode: string) => Promise<string | undefined>;
 
   cancelPendingTransfer: () => Promise<void>;
 
@@ -51,7 +56,8 @@ interface TransferState {
     note: string;
   }) => Promise<string>;
 
-  acceptMoneyRequest: (txId: string, passcode: string) => Promise<void>;
+  /** Resolves with the settled status — HELD_FOR_REVIEW when fraud review parks it. */
+  acceptMoneyRequest: (txId: string, passcode: string) => Promise<string | undefined>;
 
   declineMoneyRequest: (txId: string) => Promise<void>;
 
@@ -105,15 +111,19 @@ export const useTransferStore = create<TransferState>((set, get) => ({
   confirmTransfer: async (txId, passcode) => {
     set({ status: 'confirming', error: null });
     try {
-      await confirmTransferApi(txId, passcode);
+      const res = await confirmTransferApi(txId, passcode);
+      const txStatus: string | undefined = res?.data?.data?.status ?? res?.data?.status;
       set({ status: 'success', pendingTransactionId: null });
       queryClient.invalidateQueries({ queryKey: queryKeys.wallet() });
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: queryKeys.spendingYearly() });
+      return txStatus;
     } catch (err) {
-      const msg = extractErrorMessage(err);
-      set({ status: 'error', error: msg });
-      throw new Error(msg);
+      set({ status: 'error', error: extractErrorMessage(err) });
+      // Re-thrown with the code and status still attached: the PIN screen has to tell a
+      // wrong PIN (re-enter it) from a server failure (re-entering it changes nothing),
+      // and it cannot do that from the message alone.
+      throw withErrorMeta(err);
     }
   },
 
@@ -149,15 +159,16 @@ export const useTransferStore = create<TransferState>((set, get) => ({
   acceptMoneyRequest: async (txId, passcode) => {
     set({ status: 'confirming', error: null });
     try {
-      await acceptMoneyRequestApi(txId, passcode);
+      const res = await acceptMoneyRequestApi(txId, passcode);
+      const txStatus: string | undefined = res?.data?.data?.status ?? res?.data?.status;
       set({ status: 'success' });
       queryClient.invalidateQueries({ queryKey: queryKeys.wallet() });
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: queryKeys.spendingYearly() });
+      return txStatus;
     } catch (err) {
-      const msg = extractErrorMessage(err);
-      set({ status: 'error', error: msg });
-      throw new Error(msg);
+      set({ status: 'error', error: extractErrorMessage(err) });
+      throw withErrorMeta(err);
     }
   },
 

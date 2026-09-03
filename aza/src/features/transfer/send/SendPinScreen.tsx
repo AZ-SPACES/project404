@@ -27,7 +27,8 @@ import type { RootStackParamList } from "../../../navigation/types";
 import { usePreventScreenCapture } from "../../../hooks/usePreventScreenCapture";
 import { useTransferStore } from "../../../store/transferStore";
 import { BackButton } from '../../../components/ui/BackButton';
-import { extractErrorMessage } from '../../../utils/errorUtils';
+import { classifyFailure, failureCopy, type Failure } from './transferFailure';
+import Button from '../../../components/ui/Button';
 import { useShallow } from 'zustand/react/shallow';
 
 type SendPinScreenProps = NativeStackScreenProps<RootStackParamList, "SendPin">;
@@ -53,6 +54,8 @@ export default function SendPinScreen({
 
   const [pin, setPin] = useState<string>("");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  // Set only for failures the keypad cannot fix — see classifyFailure.
+  const [failure, setFailure] = useState<Failure | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
   const inputRef = useRef<TextInput>(null);
   const scaleAnims = useRef(PIN_ARRAY.map(() => new Animated.Value(1))).current;
@@ -97,22 +100,33 @@ export default function SendPinScreen({
       setIsVerifying(true);
       setErrorMsg(null);
       try {
-        await confirmTransfer(pendingTransactionId, enteredPin);
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        navigation.replace("SendSuccess", { ...route.params, transactionId: pendingTransactionId });
+        const txStatus = await confirmTransfer(pendingTransactionId, enteredPin);
+        // A held transfer is not a completed one: warn rather than celebrate, and hand
+        // the status to the outcome screen so it opens as "Under Review" instead of
+        // flashing "Payment Sent" until the receipt query catches up.
+        const held = txStatus === "HELD_FOR_REVIEW";
+        Haptics.notificationAsync(
+          held
+            ? Haptics.NotificationFeedbackType.Warning
+            : Haptics.NotificationFeedbackType.Success,
+        );
+        navigation.replace("SendSuccess", {
+          ...route.params,
+          transactionId: pendingTransactionId,
+          ...(txStatus ? { status: txStatus } : {}),
+        });
       } catch (err: unknown) {
         startShake();
         setPin("");
-        // Distinguish wrong PIN from network errors
-        const msg: string = extractErrorMessage(err, "Transfer failed. Please try again.");
-        const isWrongPin =
-          msg.toLowerCase().includes("passcode") ||
-          msg.toLowerCase().includes("pin") ||
-          msg.toLowerCase().includes("incorrect") ||
-          msg.toLowerCase().includes("invalid");
-        setErrorMsg(
-          isWrongPin ? "Incorrect PIN. Try again." : msg,
-        );
+        const classified = classifyFailure(err);
+        if (classified.kind === "pin") {
+          setFailure(null);
+          setErrorMsg("Incorrect PIN. Try again.");
+        } else {
+          // Nothing the keypad can do about these, so stop pretending otherwise.
+          setErrorMsg(null);
+          setFailure(classified);
+        }
       } finally {
         setIsVerifying(false);
       }
@@ -152,6 +166,18 @@ export default function SendPinScreen({
     cancelPendingTransfer();
     navigation.goBack();
   }, [cancelPendingTransfer, navigation]);
+
+  /**
+   * Back to the keypad with a clean slate. The pending transaction is deliberately left
+   * alone: confirming it again is how the retry works, and the server returns the
+   * existing outcome rather than sending a second time.
+   */
+  const handleRetry = useCallback(() => {
+    setFailure(null);
+    setErrorMsg(null);
+    setPin("");
+    inputRef.current?.focus();
+  }, []);
 
   const renderSquares = () => (
     <View>
@@ -208,26 +234,65 @@ export default function SendPinScreen({
             <BackButton onPress={handleBack} />
           </View>
 
-          <View style={styles.content}>
-            <Image
-              source={require("../../../assets/aza-z.png")}
-              style={styles.logo}
-              resizeMode="contain"
-            />
-            <Text style={styles.title}>Enter your PIN</Text>
-            <Text style={styles.subtitle}>
-              To send <Text style={styles.amountText}>GH¢ {displayAmount}</Text>{" "}
-              to {name}
-            </Text>
+          {failure ? (
+            <View style={styles.content}>
+              <View style={styles.failureIcon}>
+                <Feather
+                  name={failure.kind === "offline" ? "wifi-off" : "alert-triangle"}
+                  size={26}
+                  color={Colors.error}
+                />
+              </View>
+              <Text style={styles.title}>{failureCopy(failure).title}</Text>
+              <Text style={styles.failureBody}>{failureCopy(failure).body}</Text>
+              {failureCopy(failure).note ? (
+                <Text style={styles.failureNote}>{failureCopy(failure).note}</Text>
+              ) : null}
 
-            {renderSquares()}
+              <View style={styles.failureActions}>
+                <Button
+                  title="Try again"
+                  onPress={handleRetry}
+                  backgroundColor={Colors.primary}
+                  textColor="#FFFFFF"
+                  borderRadius={12}
+                  paddingVertical={14}
+                  fontWeight="600"
+                  activeOpacity={0.85}
+                />
+                <Button
+                  title="Not now"
+                  onPress={handleBack}
+                  backgroundColor="transparent"
+                  paddingVertical={Spacing.md}
+                  fontWeight="600"
+                  textStyle={{ color: Colors.textSecondary }}
+                  activeOpacity={0.7}
+                />
+              </View>
+            </View>
+          ) : (
+            <View style={styles.content}>
+              <Image
+                source={require("../../../assets/aza-z.png")}
+                style={styles.logo}
+                resizeMode="contain"
+              />
+              <Text style={styles.title}>Enter your PIN</Text>
+              <Text style={styles.subtitle}>
+                To send <Text style={styles.amountText}>GH¢ {displayAmount}</Text>{" "}
+                to {name}
+              </Text>
 
-            {isVerifying ? (
-              <Text style={styles.verifyingText}>Verifying…</Text>
-            ) : errorMsg ? (
-              <Text style={styles.errorText}>{errorMsg}</Text>
-            ) : null}
-          </View>
+              {renderSquares()}
+
+              {isVerifying ? (
+                <Text style={styles.verifyingText}>Verifying…</Text>
+              ) : errorMsg ? (
+                <Text style={styles.errorText}>{errorMsg}</Text>
+              ) : null}
+            </View>
+          )}
         </KeyboardAvoidingView>
       </TouchableWithoutFeedback>
     </SafeAreaView>
@@ -302,5 +367,31 @@ function createStyles(Colors: ThemeColors) {
     dot: { width: 12, height: 12, borderRadius: 6, backgroundColor: Colors.textPrimary },
     verifyingText: { marginTop: 20, fontSize: 14, color: Colors.textSecondary, textAlign: "center" },
     errorText: { marginTop: 20, fontSize: 14, color: Colors.error, textAlign: "center" },
+    failureIcon: {
+      width: 64,
+      height: 64,
+      borderRadius: 32,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: Colors.error + (isDark ? "26" : "1A"),
+      marginBottom: Spacing.md,
+    },
+    failureBody: {
+      ...Typography.body,
+      color: Colors.textSecondary,
+      textAlign: "center",
+      marginTop: Spacing.xs,
+    },
+    failureNote: {
+      ...Typography.caption,
+      color: Colors.textSecondary,
+      textAlign: "center",
+      marginTop: Spacing.sm,
+    },
+    failureActions: {
+      alignSelf: "stretch",
+      marginTop: Spacing.xl,
+      gap: Spacing.xs,
+    },
   });
 }

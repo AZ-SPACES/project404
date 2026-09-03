@@ -99,6 +99,33 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Every other database failure: a broken statement, a dead connection, a transaction
+     * Postgres has already aborted, a commit that could not complete.
+     *
+     * <p>Must be caught BEFORE RuntimeException for the same reason as the handler above —
+     * these carry the raw JDBC message, which is SQL and schema, not something a user can
+     * act on. A sender confirming a transfer was shown "could not execute statement
+     * [ERROR: current transaction is aborted...] [insert into notifications
+     * (body,created_at,data,image_url,...)]" on the PIN screen, which is both a leak and
+     * a dead end. The detail belongs in the log, where someone can chase it.
+     *
+     * <p>TransactionException is included because a failure at commit — after the last
+     * service call has returned — arrives wrapped as one rather than as a
+     * DataAccessException, and leaks exactly the same way.
+     */
+    @ExceptionHandler({
+            org.springframework.dao.DataAccessException.class,
+            org.springframework.transaction.TransactionException.class
+    })
+    public ResponseEntity<ApiResponse<Void>> handleDatabaseFailure(RuntimeException ex) {
+        log.error("Database failure: {}", ex.getMessage(), ex);
+        return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiResponse.error("DATABASE_ERROR",
+                        "We couldn't complete that just now. Nothing was charged — please try again."));
+    }
+
+    /**
      * RuntimeException from legacy service code.
      * The message is passed through because existing services rely on it for user feedback.
      * Migrate callers to AppException to gain explicit status control.

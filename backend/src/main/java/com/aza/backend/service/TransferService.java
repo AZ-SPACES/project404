@@ -334,7 +334,14 @@ public class TransferService {
         if (!transaction.getSenderId().equals(sender.getId())) {
             throw new AppException("Not authorized to confirm this transaction");
         }
-        if (transaction.getStatus() == Transaction.TransactionStatus.COMPLETED) {
+        // Confirming the same transfer twice returns the outcome it already has rather
+        // than a second transfer or an error. A retry after a lost response is the normal
+        // case — the client offers one — and HELD_FOR_REVIEW belongs here beside
+        // COMPLETED: it is a settled outcome too, and answering "cannot be confirmed -
+        // status: HELD_FOR_REVIEW" would strand the sender on an error instead of the
+        // review screen that explains where their money is.
+        if (transaction.getStatus() == Transaction.TransactionStatus.COMPLETED
+                || transaction.getStatus() == Transaction.TransactionStatus.HELD_FOR_REVIEW) {
             User recipient = userRepository.findById(transaction.getRecipientId()).orElse(null);
             return buildTransferResponse(transaction, sender, recipient, sender.getId());
         }
@@ -590,15 +597,35 @@ public class TransferService {
     private TransferResponse holdForReview(Transaction transaction, User sender) {
         transaction.setStatus(Transaction.TransactionStatus.HELD_FOR_REVIEW);
         transactionRepository.save(transaction);
-        riskEngineService.evaluateAnomaly(transaction, sender, true);
-        riskEngineService.recordDecisionLog(transaction, sender, true);
-        notificationService.sendNotification(sender.getId(),
+
+        User recipient = userRepository.findById(transaction.getRecipientId()).orElse(null);
+
+        // The hold itself is the outcome; everything below is a side channel — compliance
+        // records, a staff alert, a push to the sender. Unlike the completed-transfer
+        // paths there is no atomicity to preserve here: no money moved, and the review
+        // queue reads transactions.status directly, so a missing flag row cannot hide a
+        // held transfer from COMPLIANCE.
+        //
+        // Run inline, any DB failure in this block poisoned the whole transaction. Once
+        // Postgres reports an error every later statement fails with "current transaction
+        // is aborted" — so the risk engine's own catch blocks did not contain the damage,
+        // they only hid its cause, and the sender got a raw JDBC error on the PIN screen
+        // for a transfer that was never held at all. Past commit, the hold is durable
+        // before any of this runs and a failure can only cost a notification.
+        //
+        // Registered separately so they fail separately: the sender still hears that their
+        // money is under review even if writing the compliance record is what broke.
+        afterCommit.run(() -> {
+            riskEngineService.evaluateAnomaly(transaction, sender, true);
+            riskEngineService.recordDecisionLog(transaction, sender, true);
+        });
+        afterCommit.run(() -> notificationService.sendNotification(sender.getId(),
                 com.aza.backend.entity.Notification.NotificationType.SECURITY_ALERT,
                 "Transfer under review",
                 "Your transfer of GHS " + transaction.getAmount().toPlainString()
                         + " is being reviewed for your security. We'll notify you once it's cleared.",
-                null, null);
-        User recipient = userRepository.findById(transaction.getRecipientId()).orElse(null);
+                null, null));
+
         return buildTransferResponse(transaction, sender, recipient, sender.getId());
     }
 

@@ -139,6 +139,28 @@ describe('confirmTransfer', () => {
     await expect(store().confirmTransfer('txn-abc', '9999')).rejects.toThrow('Wrong passcode');
     expect(store().status).toBe('error');
   });
+
+  it('returns the settled status so a hold can be told from a completed transfer', async () => {
+    mockConfirm.mockResolvedValueOnce({ data: { data: { status: 'HELD_FOR_REVIEW' } } });
+
+    await expect(store().confirmTransfer('txn-abc', '1234')).resolves.toBe('HELD_FOR_REVIEW');
+  });
+
+  it('keeps the error code and status on the re-thrown error', async () => {
+    // Flattening these away is what left the PIN screen guessing at the failure type
+    // from user-facing copy — and rendering a raw database message as a PIN hint.
+    mockConfirm.mockRejectedValueOnce({
+      response: {
+        status: 500,
+        data: { message: 'We couldn\'t complete that just now.', error: { code: 'DATABASE_ERROR' } },
+      },
+    });
+
+    await expect(store().confirmTransfer('txn-abc', '1234')).rejects.toMatchObject({
+      code: 'DATABASE_ERROR',
+      status: 500,
+    });
+  });
 });
 
 // ── cancelPendingTransfer ─────────────────────────────────────────────────────

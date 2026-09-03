@@ -9,6 +9,7 @@ import com.aza.backend.repository.RiskAlertRepository;
 import com.aza.backend.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -19,6 +20,13 @@ import java.time.LocalDateTime;
  * what actually populates the compliance flagged queue and risk alerts the
  * dashboards read — thresholds come from RiskRuleService so COMPLIANCE can tune
  * them live. Evaluation must never fail a transfer.
+ *
+ * <p>That last rule has one exception, and it is not optional. A DataAccessException
+ * means Postgres has already aborted the surrounding transaction: every statement after
+ * it fails with "current transaction is aborted" regardless of what we do here, so
+ * swallowing it does not save the caller — it only buries the real cause under whichever
+ * unrelated statement happens to run next. Those are rethrown so the failure names
+ * itself; everything else is still contained.
  */
 @Service
 @RequiredArgsConstructor
@@ -39,6 +47,8 @@ public class RiskEngineService {
             checkStructuring(tx, sender);
             evaluateAnomaly(tx, sender, false);
             recordDecisionLog(tx, sender, false);
+        } catch (DataAccessException e) {
+            throw rethrowPoisoned("Risk evaluation", tx.getId(), e);
         } catch (Exception e) {
             log.error("Risk evaluation failed for transaction {}: {}", tx.getId(), e.getMessage());
         }
@@ -126,6 +136,8 @@ public class RiskEngineService {
             staffAlertService.alertRole(com.aza.backend.entity.StaffRole.Role.COMPLIANCE,
                     "Possible cash structuring",
                     inBand24h + " sub-threshold " + channel + " by one customer in 24h — review for an STR.");
+        } catch (DataAccessException e) {
+            throw rethrowPoisoned("Cash AML evaluation", tx.getId(), e);
         } catch (Exception e) {
             log.error("Cash AML evaluation failed for transaction {}: {}", tx.getId(), e.getMessage());
         }
@@ -149,6 +161,8 @@ public class RiskEngineService {
                     .riskLevel(level)
                     .held(held)
                     .build());
+        } catch (DataAccessException e) {
+            throw rethrowPoisoned("Risk decision log", tx.getId(), e);
         } catch (Exception e) {
             log.warn("Failed to record risk decision log for {}: {}", tx.getId(), e.getMessage());
         }
@@ -162,6 +176,8 @@ public class RiskEngineService {
                 entry.setDecidedAt(LocalDateTime.now());
                 decisionLogRepository.save(entry);
             });
+        } catch (DataAccessException e) {
+            throw rethrowPoisoned("Held outcome", transactionId, e);
         } catch (Exception e) {
             log.warn("Failed to record held outcome for {}: {}", transactionId, e.getMessage());
         }
@@ -202,6 +218,8 @@ public class RiskEngineService {
                                 + " was held on a high anomaly score (" + score
                                 + "/100). Release or reject it in Fraud Detection.");
             }
+        } catch (DataAccessException e) {
+            throw rethrowPoisoned("Anomaly reporting", tx.getId(), e);
         } catch (Exception e) {
             log.error("Anomaly reporting failed for transaction {}: {}", tx.getId(), e.getMessage());
         }
@@ -248,5 +266,16 @@ public class RiskEngineService {
                 .transactionId(tx.getId())
                 .riskScore((int) Math.min(100, lastHour * 100 / Math.max(1, max * 2L)))
                 .build());
+    }
+
+    /**
+     * The transaction is already unusable — see the class note. Log where it actually
+     * broke, then let it out so the caller fails on the real error instead of on the
+     * next statement to notice.
+     */
+    private DataAccessException rethrowPoisoned(String stage, java.util.UUID id, DataAccessException e) {
+        log.error("{} hit a database error for {} — the transaction is now aborted: {}",
+                stage, id, e.getMessage());
+        return e;
     }
 }

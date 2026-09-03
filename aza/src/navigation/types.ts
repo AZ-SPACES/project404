@@ -71,7 +71,7 @@ export type RootStackParamList = {
   SendAmount: { id?: string; name?: string; username?: string; avatar?: string; identifier: string; amount?: number; note?: string; merchantVerified?: boolean; terminalId?: string };
   SendConfirm: { name: string; username: string; avatar: string; amount: number; note: string; identifier: string; category?: string; merchantVerified?: boolean; terminalId?: string };
   SendPin: { name: string; username?: string; avatar?: string; amount: number; note: string; identifier: string; id?: string; category?: string };
-  SendSuccess: { name: string; username?: string; avatar?: string; amount: number; note: string; identifier: string; category?: string; transactionId?: string };
+  SendSuccess: { name: string; username?: string; avatar?: string; amount: number; note: string; identifier: string; category?: string; transactionId?: string; /** Status from the confirm response, so the screen opens in the right state instead of assuming COMPLETED. */ status?: string };
   RequestAmount: { id?: string; name: string; username: string; avatar: string; identifier: string };
 
   // Akyede — money given to one person as a gift. `chatId` drops the gift card straight

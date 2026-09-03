@@ -27,7 +27,7 @@ import { formatCurrency } from '../../../utils/transactionUtils';
 type SendSuccessScreenProps = NativeStackScreenProps<RootStackParamList, 'SendSuccess'>;
 
 export default function SendSuccessScreen({ navigation, route }: SendSuccessScreenProps) {
-  const { name, username, amount, note, identifier, transactionId, category: routeCategory } = route.params;
+  const { name, username, amount, note, identifier, transactionId, category: routeCategory, status: routeStatus } = route.params;
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const isDark = Colors.isDark;
@@ -40,8 +40,12 @@ export default function SendSuccessScreen({ navigation, route }: SendSuccessScre
 
   useEffect(() => {
     resetTransferStore();
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-  }, [resetTransferStore]);
+    Haptics.notificationAsync(
+      routeStatus === 'HELD_FOR_REVIEW'
+        ? Haptics.NotificationFeedbackType.Warning
+        : Haptics.NotificationFeedbackType.Success,
+    );
+  }, [resetTransferStore, routeStatus]);
 
   // Occasionally ask how sending money felt — frequency-capped + opt-out aware.
   const feedback = useAutoFeedback('TRANSFER', { globalCooldownDays: 14 });
@@ -79,7 +83,10 @@ export default function SendSuccessScreen({ navigation, route }: SendSuccessScre
   // Merge backend data with route params (backend is authoritative when available)
   const txAmount: number  = tx?.amount  ? Number(tx.amount)   : amount;
   const txNote: string    = tx?.note    ?? note ?? '';
-  const txStatus: string  = tx?.status  ?? 'COMPLETED';
+  // The confirm response's status comes through the route so a held transfer opens as
+  // "Under Review". Defaulting to COMPLETED while the receipt query loads made a fraud
+  // hold flash "Payment Sent" first, which is the one thing it must never say.
+  const txStatus: string  = tx?.status  ?? routeStatus ?? 'COMPLETED';
   // Fraud interception: confirmation can park the transfer for compliance review
   const isHeld = txStatus === 'HELD_FOR_REVIEW';
   const txCategory: string | undefined = tx?.category ?? routeCategory;
@@ -357,6 +364,10 @@ export default function SendSuccessScreen({ navigation, route }: SendSuccessScre
 
       {/* Footer actions */}
       <View style={styles.footer}>
+        {/* No receipt while the transfer is held. Downloading or sharing one would hand
+            the sender a document that looks exactly like proof of payment for money that
+            has not moved — and the recipient is the likeliest person to be shown it. */}
+        {isHeld ? null : (
         <View style={styles.actionRow}>
           <Button
             title="Download"
@@ -389,16 +400,20 @@ export default function SendSuccessScreen({ navigation, route }: SendSuccessScre
             activeOpacity={0.75}
           />
         </View>
+        )}
 
+        {/* With the receipt actions gone, this is the only way out of the held screen —
+            so it carries the weight of a primary action rather than a quiet footer link. */}
         <Button
-          title="Return to Dashboard"
+          title={isHeld ? 'Done' : 'Return to Dashboard'}
           onPress={handleDone}
-          backgroundColor="transparent"
+          backgroundColor={isHeld ? Colors.primary : 'transparent'}
+          {...(isHeld ? { textColor: '#FFFFFF', borderRadius: 12 } : {})}
           fontWeight="600"
-          paddingVertical={Spacing.md}
+          paddingVertical={isHeld ? 14 : Spacing.md}
           paddingHorizontal={0}
-          textStyle={{ color: Colors.textSecondary }}
-          activeOpacity={0.7}
+          {...(isHeld ? {} : { textStyle: { color: Colors.textSecondary } })}
+          activeOpacity={0.75}
         />
       </View>
 

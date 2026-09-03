@@ -493,7 +493,76 @@ class TransferServiceTest {
         assertEquals(Transaction.TransactionStatus.HELD_FOR_REVIEW, tx.getStatus());
     }
 
+    /**
+     * The hold is the outcome; the compliance write is a side channel. It used to run
+     * inline, so a database error there aborted the whole transaction and the sender got
+     * a raw JDBC message on the PIN screen for a transfer that was neither sent nor held.
+     */
+    @Test
+    void confirmTransfer_heldTransfer_survivesRiskEngineDatabaseFailure() {
+        User sender = verifiedActiveUser();
+        Transaction tx = Transaction.builder()
+                .id(UUID.randomUUID()).senderId(senderId).recipientId(recipientId)
+                .amount(new BigDecimal("40000.00"))
+                .status(Transaction.TransactionStatus.PENDING)
+                .type(Transaction.TransactionType.TRANSFER)
+                .recipientType(Transaction.RecipientType.USER)
+                .anomalyRiskLevel("HIGH")
+                .build();
+        Wallet senderWallet = walletWithBalance("60000.00");
+        stubP2pHold(tx, senderWallet);
+
+        doThrow(new org.springframework.dao.DataIntegrityViolationException("check constraint"))
+                .when(riskEngineService).evaluateAnomaly(any(), any(), anyBoolean());
+
+        transferService.confirmTransfer(sender, tx.getId(), "1234");
+
+        assertEquals(Transaction.TransactionStatus.HELD_FOR_REVIEW, tx.getStatus());
+        assertEquals(new BigDecimal("60000.00"), senderWallet.getBalance());
+    }
+
+    /** A failed compliance write must not cost the sender the "under review" message. */
+    @Test
+    void confirmTransfer_heldTransfer_stillNotifiesSenderWhenComplianceWriteFails() {
+        User sender = verifiedActiveUser();
+        Transaction tx = Transaction.builder()
+                .id(UUID.randomUUID()).senderId(senderId).recipientId(recipientId)
+                .amount(new BigDecimal("40000.00"))
+                .status(Transaction.TransactionStatus.PENDING)
+                .type(Transaction.TransactionType.TRANSFER)
+                .recipientType(Transaction.RecipientType.USER)
+                .anomalyRiskLevel("HIGH")
+                .build();
+        Wallet senderWallet = walletWithBalance("60000.00");
+        stubP2pHold(tx, senderWallet);
+
+        doThrow(new org.springframework.dao.DataIntegrityViolationException("check constraint"))
+                .when(riskEngineService).evaluateAnomaly(any(), any(), anyBoolean());
+
+        transferService.confirmTransfer(sender, tx.getId(), "1234");
+
+        verify(notificationService).sendNotification(
+                eq(senderId),
+                eq(com.aza.backend.entity.Notification.NotificationType.SECURITY_ALERT),
+                eq("Transfer under review"),
+                contains("40000.00"),
+                isNull(), isNull());
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    /** Wallet locks, limits and lookups for a P2P transfer that will be held. */
+    private void stubP2pHold(Transaction tx, Wallet senderWallet) {
+        when(transactionRepository.findById(tx.getId())).thenReturn(Optional.of(tx));
+        when(walletRepository.findByUserIdForUpdate(senderId)).thenReturn(Optional.of(senderWallet));
+        when(walletRepository.findByUserIdForUpdate(recipientId))
+                .thenReturn(Optional.of(Wallet.builder().userId(recipientId)
+                        .balance(BigDecimal.ZERO).currency("GHS").frozen(false).build()));
+        when(userRepository.findById(recipientId)).thenReturn(Optional.empty());
+        when(transactionRepository.getTotalSentToday(eq(senderId), any(), any(), any()))
+                .thenReturn(BigDecimal.ZERO);
+    }
+
 
     private Merchant posMerchant() {
         return Merchant.builder()
