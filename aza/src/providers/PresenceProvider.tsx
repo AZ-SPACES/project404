@@ -1,7 +1,7 @@
 import 'fast-text-encoding';
 import React, { useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
-import { Client } from '@stomp/stompjs';
+import { Client, ReconnectionTimeMode } from '@stomp/stompjs';
 import * as SecureStore from 'expo-secure-store';
 import { BASE_URL, TOKEN_KEY, getValidAccessToken } from '../services/api';
 import { useAuth } from './AuthProvider';
@@ -10,10 +10,57 @@ import { usePresenceStore } from '../store/presenceStore';
 
 const HEARTBEAT_INTERVAL_MS = 30_000;
 
+/**
+ * How long a heartbeat has to be acknowledged before we treat the socket as
+ * dead. Generous next to a measured p99 round trip of about 1.2s, so a slow
+ * network is never mistaken for a dead connection, and still well inside the
+ * server's 65s presence TTL so a rebuild lands before the key lapses.
+ */
+const HEARTBEAT_ACK_TIMEOUT_MS = 10_000;
+
+/**
+ * Send a heartbeat and make sure it actually arrived.
+ *
+ * `connected` is set from the CONNECTED frame and cleared by a close event, so
+ * a socket the OS or the network killed underneath us keeps reporting a live
+ * session until an incoming STOMP heartbeat is finally missed. Publishing into
+ * that window is silent: the frame goes nowhere, the server's presence key
+ * lapses after 65s, the sweeper flips the user to OFFLINE and fans that out —
+ * and the user sits there using the app, shown offline to everyone, because
+ * nothing ever noticed the socket was dead.
+ *
+ * So probe rather than trust. The server answers every /app/heartbeat on
+ * /user/queue/heartbeat, so a reply proves the round trip and silence means
+ * the socket is dead however healthy it claims to be.
+ */
+function heartbeatAndVerify(
+  client: Client,
+  ackRef: React.MutableRefObject<number>,
+  isCurrent: (candidate: Client) => boolean,
+) {
+  const probedAt = Date.now();
+  client.publish({ destination: '/app/heartbeat' });
+  setTimeout(() => {
+    if (!isCurrent(client)) return;
+    if (ackRef.current >= probedAt) return;
+    // Already closed (backgrounded, or the client noticed on its own) — the
+    // reconnect path owns it from here; re-activating would fight it.
+    if (!client.connected) return;
+    console.warn('[presence-ws] heartbeat unacknowledged — rebuilding the socket');
+    client
+      .deactivate({ force: true })
+      .catch(() => {})
+      .then(() => client.activate());
+  }, HEARTBEAT_ACK_TIMEOUT_MS);
+}
+
 export function PresenceProvider({ children }: { children: React.ReactNode }) {
   const { userToken } = useAuth();
   const clientRef = useRef<Client | null>(null);
   const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Timestamp of the last /user/queue/heartbeat ack, used to tell a live
+  // socket from one that only claims to be live.
+  const heartbeatAckRef = useRef(0);
   const setOnline = usePresenceStore((s) => s.setOnline);
   const setOffline = usePresenceStore((s) => s.setOffline);
 
@@ -44,7 +91,15 @@ export function PresenceProvider({ children }: { children: React.ReactNode }) {
       const client = new Client({
         brokerURL: wsUrl,
         connectHeaders: { Authorization: `Bearer ${token}` },
-        reconnectDelay: 15_000,
+        // The server marks us offline the moment this socket closes — it does
+        // not wait for the TTL — so every second spent backing off is a second
+        // the user is shown offline while sitting in the app. A flat 15s retry
+        // meant a tunnel or a cell handover cost a quarter-minute of that.
+        // Retry almost immediately, and back off exponentially so a genuinely
+        // down server isn't hammered by all three sockets at once.
+        reconnectDelay: 500,
+        reconnectTimeMode: ReconnectionTimeMode.EXPONENTIAL,
+        maxReconnectDelay: 15_000,
         heartbeatIncoming: 10_000,
         heartbeatOutgoing: 10_000,
         forceBinaryWSFrames: true,
@@ -59,7 +114,16 @@ export function PresenceProvider({ children }: { children: React.ReactNode }) {
         },
         onConnect: () => {
           // Send initial heartbeat so the server marks us online immediately.
+          // No ack check on this one: the CONNECTED frame we just received is
+          // itself proof the round trip works.
           client.publish({ destination: '/app/heartbeat' });
+
+          // The server answers every /app/heartbeat here. Nothing needs the
+          // contents — the arrival is the point, because it is the only proof
+          // our heartbeats are still reaching it. See heartbeatAndVerify.
+          client.subscribe('/user/queue/heartbeat', () => {
+            heartbeatAckRef.current = Date.now();
+          });
 
           // Per-user presence queue: the server fans events out only for
           // people we share a chat or contact relationship with.
@@ -85,7 +149,7 @@ export function PresenceProvider({ children }: { children: React.ReactNode }) {
           if (heartbeatRef.current) clearInterval(heartbeatRef.current);
           heartbeatRef.current = setInterval(() => {
             if (client.connected) {
-              client.publish({ destination: '/app/heartbeat' });
+              heartbeatAndVerify(client, heartbeatAckRef, (c) => clientRef.current === c);
             }
           }, HEARTBEAT_INTERVAL_MS);
         },
@@ -129,7 +193,9 @@ export function PresenceProvider({ children }: { children: React.ReactNode }) {
       if (!client) return;
       if (state === 'active') {
         if (client.connected) {
-          client.publish({ destination: '/app/heartbeat' });
+          // A socket suspended with the app is the likeliest one to have died
+          // without a close event, so this heartbeat is verified too.
+          heartbeatAndVerify(client, heartbeatAckRef, (c) => clientRef.current === c);
         } else {
           // Not `!client.active`: a socket the OS tore down while we were
           // suspended can linger half-open with no close event, which leaves

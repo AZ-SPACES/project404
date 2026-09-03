@@ -116,13 +116,24 @@ public class PresenceService {
     }
 
     /** Client heartbeat (~30s) — refreshes user + device presence TTLs. */
-    public void heartbeat(UUID userId, String deviceSessionId) {
+    public void heartbeat(UUID userId, String wsSessionId, String deviceSessionId) {
         try {
             markOnline(userId);
             touchDevice(userId, deviceSessionId);
             touchLastSeen(userId);
             String connsKey = CONNS_KEY_PREFIX + userId;
-            if (Boolean.TRUE.equals(redisTemplate.hasKey(connsKey))) {
+            if (wsSessionId != null) {
+                // Re-assert this socket rather than only refreshing the TTL of
+                // whatever is already there. The set can lose live session ids
+                // — the sweeper deletes it outright when a TTL lapse makes a
+                // user look gone, and Redis can be flushed or restarted under
+                // us. A heartbeating socket that isn't in the set leaves the
+                // count at zero, so the next unrelated socket to close (chat,
+                // calls) reads "last one gone" and marks a user OFFLINE who is
+                // sitting right there heartbeating at us.
+                redisTemplate.opsForSet().add(connsKey, wsSessionId);
+                redisTemplate.expire(connsKey, CONNS_TTL);
+            } else if (Boolean.TRUE.equals(redisTemplate.hasKey(connsKey))) {
                 redisTemplate.expire(connsKey, CONNS_TTL);
             }
         } catch (Exception e) {

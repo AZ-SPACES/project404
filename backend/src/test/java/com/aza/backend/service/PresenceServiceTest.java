@@ -128,7 +128,7 @@ class PresenceServiceTest {
     void heartbeat_afterTtlLapse_recoversOnlineState() {
         when(redisTemplate.hasKey(userKey)).thenReturn(false);
 
-        presenceService.heartbeat(userId, "device-1");
+        presenceService.heartbeat(userId, "ws-1", "device-1");
 
         verify(valueOps).set(eq(userKey), eq("ONLINE"), any(java.time.Duration.class));
         verify(webSocketPublisher).publishPresenceToUser(
@@ -139,12 +139,42 @@ class PresenceServiceTest {
     void heartbeat_whileOnline_justRefreshesTtls() {
         when(redisTemplate.hasKey(userKey)).thenReturn(true);
 
-        presenceService.heartbeat(userId, "device-1");
+        presenceService.heartbeat(userId, "ws-1", "device-1");
 
         verify(valueOps).set(eq(userKey), eq("ONLINE"), any(java.time.Duration.class));
         verify(valueOps).set(eq("presence:device:device-1"), eq(userId.toString()),
                 any(java.time.Duration.class));
         verify(webSocketPublisher, never()).publishPresenceToUser(any(), any(), any());
+    }
+
+    /**
+     * The sweeper deletes the conns set when a TTL lapse makes a user look gone.
+     * If a heartbeat doesn't put the live socket back, the set stays empty and
+     * the next unrelated socket to close marks a heartbeating user OFFLINE.
+     */
+    @Test
+    void heartbeat_reAddsItsSocketToTheConnectionSet() {
+        when(redisTemplate.hasKey(userKey)).thenReturn(true);
+
+        presenceService.heartbeat(userId, "ws-1", "device-1");
+
+        verify(setOps).add(connsKey, "ws-1");
+        verify(redisTemplate).expire(eq(connsKey), any(java.time.Duration.class));
+    }
+
+    @Test
+    void closingAnotherSocket_afterHeartbeatReAdd_keepsUserOnline() {
+        when(redisTemplate.hasKey(userKey)).thenReturn(true);
+        presenceService.heartbeat(userId, "ws-presence", "device-1");
+
+        // The presence socket is back in the set, so the chat socket closing
+        // is no longer "the last one gone".
+        when(setOps.size(connsKey)).thenReturn(1L);
+        presenceService.connectionClosed(userId, "ws-chat", "device-1");
+
+        verify(redisTemplate, never()).delete(userKey);
+        verify(webSocketPublisher, never()).publishPresenceToUser(
+                any(), eq(WebSocketEventType.USER_OFFLINE), any());
     }
 
     // ── Sweeper ────────────────────────────────────────────────────────────

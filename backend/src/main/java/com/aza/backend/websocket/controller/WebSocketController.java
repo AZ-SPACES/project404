@@ -49,7 +49,8 @@ public class WebSocketController {
     public void heartbeat(Principal principal, SimpMessageHeaderAccessor accessor) {
         User user = extractUser(principal);
         if (user != null) {
-            presenceService.heartbeat(user.getId(), deviceSessionId(accessor));
+            presenceService.heartbeat(
+                    user.getId(), accessor.getSessionId(), deviceSessionId(accessor));
             webSocketPublisher.sendToUser(user.getId().toString(), "/queue/heartbeat", "OK");
         }
     }
