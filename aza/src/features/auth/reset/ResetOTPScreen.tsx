@@ -29,6 +29,17 @@ const ResetOTPScreen: React.FC = () => {
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const [otp, setOtp] = useState<string[]>(Array(6).fill(""));
+  // The digits, mirrored synchronously. iOS one-time-code autofill drives
+  // onChangeText on several cells before React re-renders, so a handler that
+  // reads `otp` from its render closure sees an array that is already out of
+  // date and writes back a copy missing every digit but its own — the last
+  // one to land wins and the field ends up holding a single stray digit.
+  // Every read and write of the code goes through this ref instead.
+  const otpRef = useRef<string[]>(otp);
+  const applyOtp = (next: string[]) => {
+    otpRef.current = next;
+    setOtp(next);
+  };
   const inputRefs = useRef<Array<TextInput | null>>([]);
   const [timeLeft, setTimeLeft] = useState(57);
 
@@ -44,13 +55,13 @@ const ResetOTPScreen: React.FC = () => {
     // Support pasting multiple digits
     if (cleanText.length > 1) {
       const chars = cleanText.split("").slice(0, 6);
-      const newOtp = [...otp];
+      const newOtp = [...otpRef.current];
       chars.forEach((char, i) => {
         if (index + i < 6) {
           newOtp[index + i] = char;
         }
       });
-      setOtp(newOtp);
+      applyOtp(newOtp);
       const nextFocus = Math.min(index + chars.length, 5);
       inputRefs.current[nextFocus]?.focus();
       return;
@@ -58,9 +69,9 @@ const ResetOTPScreen: React.FC = () => {
 
     if (!cleanText && text !== "") return;
 
-    const newOtp = [...otp];
+    const newOtp = [...otpRef.current];
     newOtp[index] = cleanText;
-    setOtp(newOtp);
+    applyOtp(newOtp);
 
     // Auto advance focus
     if (cleanText !== "" && index < 5) {
@@ -72,11 +83,11 @@ const ResetOTPScreen: React.FC = () => {
     e: NativeSyntheticEvent<TextInputKeyPressEventData>,
     index: number,
   ) => {
-    if (e.nativeEvent.key === "Backspace" && !otp[index] && index > 0) {
+    if (e.nativeEvent.key === "Backspace" && !otpRef.current[index] && index > 0) {
       inputRefs.current[index - 1]?.focus();
-      const newOtp = [...otp];
+      const newOtp = [...otpRef.current];
       newOtp[index - 1] = "";
-      setOtp(newOtp);
+      applyOtp(newOtp);
     }
   };
 

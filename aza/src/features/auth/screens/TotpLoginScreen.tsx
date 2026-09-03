@@ -13,8 +13,9 @@ import { useAuth } from '../../../providers/AuthProvider';
 import { useToast } from '../../../providers/ToastProvider';
 import { usePreventScreenCapture } from '../../../hooks/usePreventScreenCapture';
 import { BackButton } from '../../../components/ui/BackButton';
-import { api, totpLogin, verify2faOtp, verifyPasskeys2fa, requestApp2faApproval, checkApp2faStatus, getDeviceId, TOKEN_KEY, REFRESH_TOKEN_KEY, BIOMETRIC_TOKEN_KEY, } from '../../../services/api';
+import { totpLogin, verify2faOtp, verifyOtp, verifyPasskeys2fa, requestApp2faApproval, checkApp2faStatus, getDeviceId, TOKEN_KEY, REFRESH_TOKEN_KEY, BIOMETRIC_TOKEN_KEY, } from '../../../services/api';
 import * as LocalAuthentication from 'expo-local-authentication';
+import * as Device from 'expo-device';
 import { extractErrorMessage } from '../../../utils/errorUtils';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'TotpLogin'>;
@@ -38,6 +39,17 @@ const TotpLoginScreen: React.FC = () => {
   const [loginOtpCountdown, setLoginOtpCountdown] = useState(57);
   const [showMethodSelector, setShowMethodSelector] = useState(false);
   const [otp, setOtp] = useState<string[]>(Array(6).fill(''));
+  // The digits, mirrored synchronously. iOS one-time-code autofill drives
+  // onChangeText on several cells before React re-renders, so a handler that
+  // reads `otp` from its render closure sees an array that is already out of
+  // date and writes back a copy missing every digit but its own — the last
+  // one to land wins and the field ends up holding a single stray digit.
+  // Every read and write of the code goes through this ref instead.
+  const otpRef = useRef<string[]>(otp);
+  const applyOtp = (next: string[]) => {
+    otpRef.current = next;
+    setOtp(next);
+  };
   const inputRefs = useRef<Array<TextInput | null>>([]);
   const [isLoading, setIsLoading] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -130,6 +142,18 @@ const TotpLoginScreen: React.FC = () => {
   };
 
   const handleLoginSuccess = async (payload: any) => {
+    // A login OTP on an account that also has 2FA clears only the first step:
+    // the server answers with a preAuthToken rather than tokens. Move to the
+    // 2FA step instead of storing an access token that isn't in the response.
+    if (payload?.preAuthToken) {
+      navigation.replace('TotpLogin', {
+        preAuthToken: payload.preAuthToken,
+        methods: payload.methods,
+        defaultMethod: payload.defaultMethod,
+      });
+      return;
+    }
+
     const { accessToken, refreshToken, user } = payload;
     await SecureStore.setItemAsync(TOKEN_KEY, accessToken);
     await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, refreshToken);
@@ -150,13 +174,13 @@ const TotpLoginScreen: React.FC = () => {
 
     if (cleanText.length > 1) {
       const chars = cleanText.split('').slice(0, 6);
-      const newOtp = [...otp];
+      const newOtp = [...otpRef.current];
       chars.forEach((char, i) => {
         if (index + i < 6) {
           newOtp[index + i] = char;
         }
       });
-      setOtp(newOtp);
+      applyOtp(newOtp);
       const nextFocus = Math.min(index + chars.length, 5);
       inputRefs.current[nextFocus]?.focus();
 
@@ -166,9 +190,9 @@ const TotpLoginScreen: React.FC = () => {
       return;
     }
 
-    const newOtp = [...otp];
+    const newOtp = [...otpRef.current];
     newOtp[index] = cleanText;
-    setOtp(newOtp);
+    applyOtp(newOtp);
 
     if (cleanText !== '' && index < 5) {
       inputRefs.current[index + 1]?.focus();
@@ -180,11 +204,11 @@ const TotpLoginScreen: React.FC = () => {
   };
 
   const handleKeyPress = (e: TextInputKeyPressEvent, index: number) => {
-    if (e.nativeEvent.key === 'Backspace' && !otp[index] && index > 0) {
+    if (e.nativeEvent.key === 'Backspace' && !otpRef.current[index] && index > 0) {
       inputRefs.current[index - 1]?.focus();
-      const newOtp = [...otp];
+      const newOtp = [...otpRef.current];
       newOtp[index - 1] = '';
-      setOtp(newOtp);
+      applyOtp(newOtp);
     }
   };
 
@@ -193,10 +217,21 @@ const TotpLoginScreen: React.FC = () => {
     try {
       let response;
       if (isLoginOtpMode) {
-        response = await api.post('/api/v1/auth/login/verify-otp', {
-          identifier: loginIdentifier,
-          otp: codeToVerify,
-        });
+        // POST /auth/verify-otp with purpose "login" — there is no
+        // /auth/login/verify-otp route, and an unmatched path falls through to
+        // the generic handler as a 500 "An unexpected error occurred", so the
+        // old call could never succeed. The device fields are part of the
+        // contract too: the server records the session they describe, which is
+        // what the device list and per-device presence are keyed on.
+        const deviceId = await getDeviceId();
+        response = await verifyOtp(
+          loginIdentifier!,
+          codeToVerify,
+          'login',
+          Device.modelName ?? undefined,
+          Device.osName ?? undefined,
+          deviceId,
+        );
       } else if (currentMethod === 'TOTP') {
         response = await totpLogin(preAuthToken!, codeToVerify);
       } else {
@@ -213,7 +248,7 @@ const TotpLoginScreen: React.FC = () => {
       } else {
         showToast(extractErrorMessage(error, 'Verification failed. Please try again.'), 'error');
       }
-      setOtp(Array(6).fill(''));
+      applyOtp(Array(6).fill(''));
       inputRefs.current[0]?.focus();
     } finally {
       setIsLoading(false);
@@ -284,7 +319,7 @@ const TotpLoginScreen: React.FC = () => {
               onPress={() => {
                 setCurrentMethod(method as VerificationMethod);
                 setShowMethodSelector(false);
-                setOtp(Array(6).fill(''));
+                applyOtp(Array(6).fill(''));
               }}
             >
               <View style={styles.methodIconBox}>
