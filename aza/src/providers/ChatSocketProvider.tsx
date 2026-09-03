@@ -157,6 +157,21 @@ export function ChatSocketProvider({ children }: { children: React.ReactNode }) 
             .deactivate({ force: true })
             .catch(() => {})
             .then(() => client.activate());
+        } else {
+          // `connected` is set from the CONNECTED frame and cleared on a close
+          // event — so a socket that died while we were suspended still reports
+          // true until an incoming heartbeat is finally missed. In that window
+          // we skip the reconnect above, and because a resync only rides on
+          // onConnect, nothing asks the server what we missed either: messages
+          // stop appearing while the UI looks perfectly healthy.
+          //
+          // Ask on every foreground instead. It is one small frame, and the
+          // server answers from our cursor in the durable event log, so the
+          // usual "nothing missed" case costs a single empty reply rather than
+          // a history fetch. If the socket really is dead the frame goes
+          // nowhere, the missed heartbeat closes it a moment later, and
+          // onConnect resyncs for real.
+          requestResync(client);
         }
       } else if (state === 'background') {
         // Sends don't wait on the session-root write, so make sure the

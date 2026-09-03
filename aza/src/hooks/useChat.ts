@@ -13,6 +13,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState, useCallback, useReducer } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { useChatStore } from '../store/chatStore';
 import { useE2EE } from '../providers/E2EEProvider';
 import type { LocalMessage } from '../store/chatTypes';
@@ -151,11 +152,33 @@ export function useChat(otherUserId: string | undefined): UseChatResult {
   // Tell the store which thread is on screen, so a socket reconnect knows what
   // to re-pull: events published while we were disconnected are never replayed.
   const setActiveChat = useChatStore((s) => s.setActiveChat);
+  const resyncActiveThread = useChatStore((s) => s.resyncActiveThread);
   useEffect(() => {
     if (!chatId) return;
     setActiveChat(chatId);
     return () => setActiveChat(null);
   }, [chatId, setActiveChat]);
+
+  // Reconcile the open thread against the server whenever it comes into view.
+  //
+  // Live delivery is the fast path and the event-log replay covers a clean
+  // disconnect, but neither survives a socket that died without a close event:
+  // the client believes it is connected, so it neither reconnects nor asks for
+  // a replay, and the thread silently stops updating until something else
+  // forces a reload. Opening or returning to a chat is exactly the moment the
+  // user expects it to be current, so settle it once here.
+  //
+  // This is a reconciliation on a user-visible event, not a poll — it fetches
+  // one page on focus and then goes quiet, leaving the socket to do the work.
+  useFocusEffect(
+    useCallback(() => {
+      if (!chatId) return;
+      resyncActiveThread().catch(() => {
+        // Best-effort: the socket is still the primary path, and a failure here
+        // leaves whatever we already have on screen.
+      });
+    }, [chatId, resyncActiveThread]),
+  );
 
   // Pull store state for THIS chat only (selectors keep re-renders tight).
   const thread = useChatStore((s) => (chatId ? s.messagesByChat[chatId] : undefined));
