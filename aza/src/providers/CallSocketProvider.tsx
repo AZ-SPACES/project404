@@ -3,7 +3,7 @@ import React, { useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
 import { Client } from '@stomp/stompjs';
 import * as SecureStore from 'expo-secure-store';
-import { BASE_URL, TOKEN_KEY } from '../services/api';
+import { BASE_URL, TOKEN_KEY, getValidAccessToken } from '../services/api';
 import { useAuth } from './AuthProvider';
 import { subscribeAuthEvents } from './authEvents';
 import { useCallStore } from '../store/callStore';
@@ -47,6 +47,13 @@ export function CallSocketProvider({ children }: { children: React.ReactNode }) 
       heartbeatOutgoing: 10_000,
       forceBinaryWSFrames: true,
       appendMissingNULLonIncoming: true,
+      // Re-read the bearer before every connect attempt, refreshing it if it
+      // has lapsed — a retry loop pinned to the token captured at client
+      // creation can never succeed once that token expires.
+      beforeConnect: async () => {
+        const fresh = await getValidAccessToken();
+        if (fresh) client.connectHeaders = { Authorization: `Bearer ${fresh}` };
+      },
       onConnect: () => {
         client.subscribe('/user/queue/calls', (message) => {
           try {

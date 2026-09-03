@@ -4,7 +4,7 @@ import * as FileSystem from "expo-file-system/legacy";
 import { Platform } from "react-native";
 import { emitAuthEvent } from "../providers/authEvents";
 import { encryptMedia } from "../crypto/mediaCrypto";
-import { base64ToBytes, bytesToBase64 } from "../crypto/codec";
+import { base64ToBytes, bytesToBase64, bytesToUtf8 } from "../crypto/codec";
 
 /**
  * File payload shape required by React Native's FormData for binary uploads.
@@ -56,6 +56,44 @@ export const REFRESH_TOKEN_KEY = "aza_refresh_token";
 export const BIOMETRIC_TOKEN_KEY = "aza_biometric_token";
 export const DEVICE_ID_KEY = "aza_device_id";
 export const BYPASS_TOKEN_KEY = "aza_bypass_token";
+
+/** True when the JWT is expired or within a minute of it. Unparseable tokens read as fine. */
+const tokenExpiresSoon = (token: string): boolean => {
+  try {
+    let payload = (token.split(".")[1] ?? "").replace(/-/g, "+").replace(/_/g, "/");
+    while (payload.length % 4 !== 0) payload += "=";
+    const claims = JSON.parse(bytesToUtf8(base64ToBytes(payload)));
+    if (typeof claims.exp !== "number") return false;
+    return claims.exp * 1000 - Date.now() < 60_000;
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Access token that is actually good to present, refreshing first if the
+ * stored one is expired or about to be.
+ *
+ * The STOMP providers pass this from `beforeConnect`, because the axios
+ * refresh flow only runs when a REST call gets a 401 — an app that sits on
+ * its sockets without touching REST lets the access token lapse silently,
+ * and every reconnect attempt then re-sends the same dead bearer forever.
+ * The refresh is delegated to a throwaway `getMe` so it rides the
+ * interceptor's single-flight lock instead of racing it for the (rotating)
+ * refresh token.
+ */
+export const getValidAccessToken = async (): Promise<string | null> => {
+  const token = await SecureStore.getItemAsync(TOKEN_KEY);
+  if (!token) return null;
+  if (!tokenExpiresSoon(token)) return token;
+  try {
+    await api.get("/api/v1/users/me");
+  } catch {
+    // Refresh failed — the interceptor has already cleared tokens / logged
+    // out if the session is truly dead; fall through to whatever is stored.
+  }
+  return SecureStore.getItemAsync(TOKEN_KEY);
+};
 
 let onAuthFailure: (() => void) | null = null;
 export const setOnAuthFailure = (cb: () => void) => {

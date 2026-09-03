@@ -14,7 +14,7 @@ import { AppState } from 'react-native';
 import { Client, ReconnectionTimeMode } from '@stomp/stompjs';
 import * as SecureStore from 'expo-secure-store';
 
-import { BASE_URL, TOKEN_KEY } from '../services/api';
+import { BASE_URL, TOKEN_KEY, getValidAccessToken } from '../services/api';
 import { useAuth } from './AuthProvider';
 import { useE2EE } from './E2EEProvider';
 import { useChatStore } from '../store/chatStore';
@@ -81,6 +81,14 @@ export function ChatSocketProvider({ children }: { children: React.ReactNode }) 
       heartbeatOutgoing: 10_000,
       forceBinaryWSFrames: true,
       appendMissingNULLonIncoming: true,
+      // Re-read the bearer before every connect attempt, refreshing it if it
+      // has lapsed. connectHeaders alone pins the token captured at client
+      // creation, so an app that sat on its sockets without touching REST
+      // (no 401, no rotation event) retried a dead credential forever.
+      beforeConnect: async () => {
+        const fresh = await getValidAccessToken();
+        if (fresh) client.connectHeaders = { Authorization: `Bearer ${fresh}` };
+      },
       onConnect: () => {
         // Personal queue — server publishes per-recipient chat events here.
         client.subscribe('/user/queue/chat', (frame) => {

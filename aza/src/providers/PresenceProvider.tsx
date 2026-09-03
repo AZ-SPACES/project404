@@ -3,7 +3,7 @@ import React, { useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
 import { Client } from '@stomp/stompjs';
 import * as SecureStore from 'expo-secure-store';
-import { BASE_URL, TOKEN_KEY } from '../services/api';
+import { BASE_URL, TOKEN_KEY, getValidAccessToken } from '../services/api';
 import { useAuth } from './AuthProvider';
 import { subscribeAuthEvents } from './authEvents';
 import { usePresenceStore } from '../store/presenceStore';
@@ -49,6 +49,14 @@ export function PresenceProvider({ children }: { children: React.ReactNode }) {
         heartbeatOutgoing: 10_000,
         forceBinaryWSFrames: true,
         appendMissingNULLonIncoming: true,
+        // Re-read the bearer before every connect attempt, refreshing it if
+        // it has lapsed. connectHeaders alone pins the token captured at
+        // client creation, so once it expired every retry re-sent the same
+        // dead credential and presence never came back.
+        beforeConnect: async () => {
+          const fresh = await getValidAccessToken();
+          if (fresh) client.connectHeaders = { Authorization: `Bearer ${fresh}` };
+        },
         onConnect: () => {
           // Send initial heartbeat so the server marks us online immediately.
           client.publish({ destination: '/app/heartbeat' });
@@ -71,7 +79,10 @@ export function PresenceProvider({ children }: { children: React.ReactNode }) {
             }
           });
 
-          // Refresh presence every 30 seconds.
+          // Refresh presence every 30 seconds. onConnect fires again on every
+          // reconnect, so clear any interval from the previous session first
+          // rather than stacking a new one beside it.
+          if (heartbeatRef.current) clearInterval(heartbeatRef.current);
           heartbeatRef.current = setInterval(() => {
             if (client.connected) {
               client.publish({ destination: '/app/heartbeat' });
@@ -150,11 +161,15 @@ export function PresenceProvider({ children }: { children: React.ReactNode }) {
       if (e.type !== 'tokenRotated') return;
       const c = clientRef.current;
       if (!c) return;
-      clientRef.current = null;
-      c.deactivate({ force: true }).catch(() => {});
-      // The outer effect will re-run on the next state change and rebuild
-      // a client; presence's heartbeat cadence is generous enough to absorb
-      // the brief gap.
+      // Bounce the same client: beforeConnect picks up the fresh token on
+      // the way back in. The old version nulled clientRef and waited for the
+      // outer effect to rebuild — but that effect only re-runs when
+      // userToken changes, which a rotation doesn't touch, so presence
+      // stayed dead (and the AppState handler, seeing no client, could
+      // never revive it) until the app restarted.
+      c.deactivate({ force: true })
+        .catch(() => {})
+        .then(() => c.activate());
     });
     return unsub;
   }, []);
