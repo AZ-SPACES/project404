@@ -27,6 +27,21 @@ Published surface (`springdoc.paths-to-match`): `/api/v1/merchant/**`,
 `/api/v1/checkout/**`, `/api/v1/developer/**`, `/oauth/**`. A Postman collection ships at
 `docs/AZA_Backend.postman_collection.json`.
 
+### Merchant pricing is now administered, not configured
+
+Until `V62` a merchant's MDR was a single integer on the merchant row, changed by editing
+that row. It is now resolved through the same versioned fee engine as consumer fees, and
+two consequences matter at the API and operations layer rather than in the pricing model
+itself (§5.2 covers the model):
+
+- **Plan changes go through maker–checker.** Moving a merchant between pricing plans is a
+  gated action like any other privileged money-affecting change, so a rate cannot be altered
+  by one person. The approval workflow was extended to carry fee updates (`8498a47b`).
+- **Historical pricing is now answerable.** `effective_from`/`effective_to` on plan rules
+  means "what rate was this merchant on in March?" is a query rather than an archaeology
+  exercise — which matters for dispute handling and for the settlement statements merchants
+  reconcile against.
+
 ## 9.2 Hosted checkout
 
 ```mermaid

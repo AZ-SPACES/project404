@@ -71,6 +71,20 @@ agreement, the same primitive underlying the Signal Protocol.
 - **Encrypted backup.** Deriving a backup key from a user PIN makes the ciphertext
   brute-forceable server-side. AZA instead uses a random 256-bit key rendered as a 13-group
   Crockford base32 code that the user alone holds. **[CITE: WhatsApp E2EE backup whitepaper for the contrasting HSM-based approach]**
+- **The device-versus-account problem, which is the literature this thesis ends up
+  contributing to.** Every design above binds message confidentiality to *device-held* key
+  material, and therefore binds history to the device. The standard answers — an encrypted
+  backup, a device-to-device transfer, a QR-linked companion — all require the *old* device
+  to be present and cooperative, which is precisely the state a lost, stolen or broken phone
+  is not in. Signal accepts the loss; WhatsApp offers a backup whose key users routinely
+  lose; Telegram and Instagram default to server-readable cloud storage and reserve E2EE for
+  an opt-in mode. AZA independently reproduced this decision and took Telegram's answer
+  (§12.4a). **[CITE: the secure-messaging usability literature on key management and backup
+  loss — Whitten & Tygar for the general result; Signal/WhatsApp/Telegram design docs for the
+  three positions.]** For a market where a phone is frequently a user's only device, the
+  cost of the Signal position is highest and the argument for the Telegram position
+  strongest — which is a claim about *deployment context* rather than about cryptography,
+  and is worth stating as such.
 
 ## 2.4 Identity, delegation and API platforms
 
@@ -107,7 +121,16 @@ agreement, the same primitive underlying the Signal Protocol.
 
 The literature treats these as separate systems: mobile money platforms, secure messengers,
 payment APIs, and super-app runtimes. Published work on *combining* regulated e-money
-settlement with end-to-end encrypted messaging in a single auditable system — and the
-engineering invariants that make that combination safe — is thin, particularly for the
-West African context. That combination, and the invariant framework around it, is what
-this thesis contributes.
+settlement with private messaging in a single auditable system — and the engineering
+invariants that make that combination safe — is thin, particularly for the West African
+context. That combination, and the invariant framework around it, is what this thesis
+contributes.
+
+There is a second, narrower gap this work fell into and can report from the inside.
+Published secure-messaging designs are overwhelmingly reports of systems *as designed*;
+reports of a deployed system **retiring** end-to-end encryption, with the reasoning and the
+measured cost of the alternative, are rare — understandably, since it is not a flattering
+result to publish. §12.4a is that report. The finding is not that E2EE is impractical; it is
+that E2EE and account-owned history are incompatible without a cooperating second device,
+and that which side of the trade a product should take is determined by how many devices its
+users actually have.

@@ -6,25 +6,33 @@ Four layers, each with a different job:
 
 | Layer | Tooling | Count | In CI? | What it protects |
 |---|---|---|---|---|
-| Backend unit/service tests | JUnit 5, Mockito, H2, `spring-security-test` | 36 classes, 367 tests | ✅ | The money invariants and business rules |
+| Backend unit/service tests | JUnit 5, Mockito, H2, `spring-security-test` | 51 classes, 502 tests | ✅ | The money invariants and business rules |
 | **Backend integration tests** | **Testcontainers + PostgreSQL 16** | **2 classes, 7 tests** | ✅ | **Migrations, constraints, row locking, concurrency** |
-| Mobile unit tests | Jest, React Native Testing Library | 17 suites, 254 tests | ✅ | Cryptography, stores, utilities |
-| Mobile typecheck | `tsc --noEmit` | 387 files | ✅ | Type-level defects invisible to tests and to Metro |
+| Mobile unit tests | Jest, React Native Testing Library | 24 suites, 326 tests | ✅ | Cryptography, stores, utilities |
+| Mobile typecheck | `tsc --noEmit` | 410 files | ✅ | Type-level defects invisible to tests and to Metro |
 | Mobile E2E | Maestro | 20 flows | ❌ | The critical user journeys on a device/emulator |
-| Web lint + build | ESLint (incl. React Compiler rules), TypeScript, `next build` | 4 apps | ✅ | Compile-time and lint-time defects |
+| Watch (Swift) | XCTest | 2 classes | ❌ | **Never compiled** — the watchOS platform components are not installed (§7.7) |
+| Web lint + build | ESLint (incl. React Compiler rules), TypeScript, `next build` | 5 apps | ✅ | Compile-time and lint-time defects |
 
-### Measured results (2026-08-21)
+### Measured results (re-run 2026-09-06 at `9678fa5a`)
 
 ```bash
 cd backend && mvn -q test -Dsurefire.excludes="**/*ApplicationTests.java"
 cd aza && npm test -- --coverage
 ```
 
-| Suite | Result |
-|---|---|
-| Backend | **374 tests, 40 classes, 0 failures, 0 errors** (7 Docker-gated ITs skip locally) |
-| Mobile | **254 tests, 17 suites, 0 failures** |
-| Mobile typecheck | **0 errors** (was 893) |
+| Suite | 2026-08-21 | **2026-09-06** |
+|---|---|---|
+| Backend | 374 tests, 40 classes, 0 failures | **509 tests, 53 classes, 0 failures, 0 errors** (7 Docker-gated ITs skip locally) |
+| Mobile | 254 tests, 17 suites, 0 failures | **326 tests, 24 suites, 0 failures** |
+| Mobile typecheck | 0 errors (was 893) | **0 errors** |
+
+**+135 backend tests and +72 mobile tests in sixteen days**, and the composition matters more
+than the count: the additions are concentrated on exactly the paths the invariant re-reading
+opened up — `WalletLedgerTest`, `SuperAgentServiceTest`, `ApprovalLockingTest`,
+`TransactionReversalTest`, `RecurringTransferExecutorTest`, `UserWithdrawalServiceTest`,
+`FloatServiceTest`, plus the first backend coverage chat has ever had
+(`ChatServiceMessageBodyTest`, `ChatServiceBroadcastTest`, `MessageContentCipherTest`).
 
 Quote these rather than estimates. Reproduce the backend aggregate with:
 
@@ -43,7 +51,7 @@ are concentrated on the money path and its adjacent hazards. That is the right p
 a fintech, and you should defend it against the "your line coverage is low" objection by
 pointing at *what* is tested rather than *how much*.
 
-## 11.2 Backend test inventory (40 classes)
+## 11.2 Backend test inventory (53 classes)
 
 Grouped by what they defend:
 
@@ -84,6 +92,31 @@ Grouped by what they defend:
 - `PresenceServiceTest`, `ImageServiceTest`, `BirthdayServiceTest`
 - `BillPaymentServiceTest`
 - `MiniAppBundleServiceTest`, `MiniAppCatalogSyncTest`
+
+**Added since 2026-08-21** *(13 classes, and each one names a defect it was written for)*
+
+| Class | What it defends |
+|---|---|
+| `WalletLedgerTest` (14) | The chokepoint's arithmetic, validation and audit write, plus the locked/unlocked entry-point contract (§5.4a) |
+| `SuperAgentServiceTest` (17) | Invariant 8 — no margin, no e-money created, downline scoping, required master-scoped idempotency |
+| `ApprovalLockingTest` | Payment approvals take a pessimistic lock |
+| `TransactionReversalTest` | Reversals lock, and credit a frozen wallet deliberately |
+| `RecurringTransferExecutorTest` | Recurring transfers are atomic and idempotent |
+| `MerchantFeeCalculatorTest` | Pricing-plan resolution, band selection, the per-merchant override outranking the plan |
+| `MessageContentCipherTest` (8) | AES-256-GCM round trip, the `gcm1:` prefix contract, unprefixed pass-through, key-absent behaviour |
+| `ChatServiceMessageBodyTest` | A body persists encrypted and returns readable; **a device holding no key material can read a history page**; deletion and expiry really remove the body rather than hiding it from one client. Uses a real `MessageContentCipher`, not a mock, because the round trip is the thing worth asserting |
+| `ChatServiceBroadcastTest` | Per-recipient payloads carry the correct `isSelf` for each participant |
+| `WebSocketEventLogTest` | The durable Redis-Stream recovery log and cursor replay (§4.5) |
+| `RateLimitFilterActorKeyTest` | Device-before-IP keying, and the strict per-IP fallback when no device is presented (§6.4) |
+| `PasscodePolicyTest` | Server-side passcode strength at every write path |
+| `EmailValidationServiceTest` | Syntax, disposable-domain list, normalisation |
+
+The `ChatServiceMessageBodyTest` line is worth quoting in the thesis rather than
+summarising: *"a device holding no key material can read a history page"* is a test whose
+**passing** documents the withdrawal of end-to-end encryption (§12.4a). Under the old
+design it would necessarily have failed. A test that asserts the absence of a security
+property is an unusual artefact, and stating why it exists is more honest than letting the
+property lapse silently.
 
 ## 11.3 Integration tests against real PostgreSQL
 
@@ -176,33 +209,46 @@ Document these as part of the QA strategy — they cover exactly what unit tests
 
 | Metric | Value | Source |
 |---|---|---|
-| Backend tests passing | **374 / 374** (40 classes; 7 Docker-gated skip locally) | `mvn test` |
-| Backend suite runtime | ≈ 2 min | measured |
-| **Backend line coverage — whole backend** | **22.61%** (branches 17.36%) | JaCoCo |
-| **Backend line coverage — money classes** | **63.31%** (branches 46.40%) | JaCoCo, 13 classes |
-| Mobile tests passing | **254 / 254** (17 suites) | `npm test` |
+| Backend tests passing | **509 / 509** (53 classes; 7 Docker-gated skip locally) | `mvn test` |
+| Backend suite runtime | ≈ 4 min | measured |
+| **Backend line coverage — whole backend** | **25.64%** (branches 21.23%), was 22.61% | JaCoCo |
+| **Backend line coverage — money classes, original 13** | **63.15%** (branches 47.79%), was 63.31% | JaCoCo — the like-for-like comparison |
+| **Backend line coverage — money classes, current 17** | **61.70%** (branches 47.93%) | JaCoCo, adding `WalletLedger`, `SuperAgentService`, `MerchantFeeCalculator`, `RecurringTransferExecutor` |
+| Mobile tests passing | **326 / 326** (24 suites) | `npm test` |
 | Mobile typecheck errors | **0** (was 893) | `tsc -p tsconfig.ci.json` |
-| **Mobile coverage — `src/crypto`** | **87.76%** statements, 72.09% branches, 89.19% functions | Jest |
-| Mobile coverage — all instrumented files | 47.85% statements | Jest, 25 files |
+| **Mobile coverage — `src/crypto`** | **87.75%** statements, 71.31% branches, 89.18% functions | Jest |
 | Mean CI duration | — | `gh run list --workflow=CI --limit 20` |
 | CI pass rate, last 50 runs | — | `gh run list --workflow=CI --limit 50 --json conclusion` |
 
 ### Reading these numbers honestly
 
-Three caveats, each of which is better stated by you than found by an examiner.
+Four caveats, each of which is better stated by you than found by an examiner.
 
-**1. Report the money-path figure and the aggregate, and explain the gap.** 22.61% overall
-reflects 100 services covering everything from birthday greetings to Unsplash image search.
-63.31% on the money path reflects where the effort was deliberately spent. Neither number
-alone is the truth. The two weakest money classes, `TransferService` (52%) and
-`CheckoutService` (35%), are also the two largest — 810 and 673 lines — and are the honest
-targets for the next round.
+**1. Report the money-path figure and the aggregate, and explain the gap.** 25.64% overall
+reflects 116 services covering everything from birthday greetings to Unsplash image search.
+The money path reflects where the effort was deliberately spent. Neither number alone is
+the truth. The two weakest money classes, `TransferService` (51%) and `CheckoutService`
+(35%), are still the two largest, and are still the honest targets for the next round.
 
-**2. The mobile aggregate has a misleading denominator.** Jest instruments only files a test
-actually imports — 25 of 387. So 47.85% is coverage *of the tested subset*, not of the
-codebase. Either add `collectCoverageFrom` to get a true denominator, or quote the crypto
-figure and describe the rest qualitatively. Do not present 47.85% as whole-codebase
-coverage.
+**1b. The money-path figure went *down*, and that is the most instructive number in the
+table.** Like-for-like on the original 13 classes it is flat (63.31% → 63.15%). Adding the
+four new money classes takes it to **61.70%**, because `SuperAgentService` — 603 lines, the
+newest money path — sits at 36.6% despite having 17 dedicated tests.
+
+Resist the temptation to quote only the like-for-like figure. The drop is real and it means
+something specific: **a coverage percentage over a growing set is a lagging indicator, and
+new code drags it down even when the new code is tested.** The other three additions are at
+97%, 100% and 90%; one large new service outweighs them. Quote both numbers, state which set
+each is over, and treat `SuperAgentService` as the named target rather than letting an
+aggregate hide it.
+
+**2. The mobile aggregate has a misleading denominator, so it is no longer quoted.** Jest
+instruments only files a test actually imports, which was 25 of 387 at the August
+measurement — so the aggregate was coverage *of the tested subset*, not of the codebase. It
+has been dropped from the table in favour of the crypto figure, which is scoped explicitly
+with `--collectCoverageFrom='src/crypto/**/*.ts'` and therefore means what it says. Describe
+the rest of the mobile codebase qualitatively; a number with an unstated denominator is
+worse than no number.
 
 **3. A coverage set is chosen by reading code, not by matching names.** `WalletService` was
 initially counted as a money class and reported 3%, which looked alarming. It is not a money
@@ -229,13 +275,15 @@ All committed on branch `Home`; see §16.4 for the commit-to-fix mapping.
 
 | Gap | Closed by |
 |---|---|
-| No mobile CI job | `mobile-test` job — typecheck, 254 tests, coverage artifact |
+| No mobile CI job | `mobile-test` job — typecheck, now 326 tests, coverage artifact |
 | Mobile suite not runnable | `npm install` from the workspace root; documented in the job |
 | No integration tests against real PostgreSQL | `MigrationChainIT` + `ConcurrentTransferIT` via Testcontainers |
 | No automated concurrency test | `ConcurrentTransferIT` — 100 parallel debits, measured |
 | No deadlock test / non-canonical lock ordering | `WalletLocker` + 7 unit tests + a bidirectional IT |
 | No test that effects are deferred past commit | `AfterCommitExecutor` + 5 unit tests |
 | No backend coverage instrumentation | JaCoCo, report uploaded by CI |
+| No backend test coverage for chat at all | `ChatServiceMessageBodyTest`, `ChatServiceBroadcastTest`, `MessageContentCipherTest` |
+| Deploy asserted nothing about container health | Health-poll + state + restart-counter gate (§10.2) |
 
 ### Still open
 
@@ -254,3 +302,15 @@ All committed on branch `Home`; see §16.4 for the commit-to-fix mapping.
    in place, the full-context boot could plausibly be folded into `MigrationChainIT`.
 7. **Mini-app workspaces are excluded from the CI typecheck** via a documented stub. The
    proper fix is a shared tsconfig and hoisted dependencies for those workspaces.
+8. **`SuperAgentService` is the least-covered money class at 36.6%**, despite 17 dedicated
+   tests — it is 603 lines and the tests concentrate on the invariant rather than the
+   surface. Named explicitly here so an aggregate cannot hide it (§11.7).
+9. **Nothing has been compiled for watchOS.** The Swift targets have unit tests written
+   (`WalletSnapshotTests`, `QRCodeTests`) but the platform components are not installed in
+   the development Xcode, so neither those tests nor the watch app itself has ever been
+   built. `watchSchemaParity.test.ts` checks the Swift/TypeScript payload contract from the
+   JavaScript side, which is the only automated check currently possible across that
+   boundary (§7.7).
+10. **No check that enum-backed `CHECK` constraints match their Java enums.** Both `V58` and
+    `V64` exist because one drifted from the other, and `V64`'s drift reached production
+    (§10.3). This is a small, well-specified piece of automation that does not exist.

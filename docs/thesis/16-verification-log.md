@@ -1,13 +1,20 @@
 # 16. Verification Log
 
 Every claim in this documentation set that could be checked mechanically was checked on
-**2026-08-21** against commit `8440c51` (branch `Home`). This file records the command, the
-result and the verdict, so the thesis can cite verification rather than assertion — and so
-a marker can re-run it.
+**2026-08-21** against commit `8440c51` (branch `Home`), and **re-verified on 2026-09-06**
+against commit `9678fa5a` (branch `main`). This file records the command, the result and the
+verdict, so the thesis can cite verification rather than assertion — and so a marker can
+re-run it.
 
-The pass produced **three findings in the backend and two latent runtime bugs in the mobile
-client**. All five have since been **fixed and covered by tests**; the original diagnosis is
-kept below alongside the remedy, because the diagnosis is the part with thesis value.
+The first pass produced **three findings in the backend and two latent runtime bugs in the
+mobile client**. All five have since been **fixed and covered by tests**; the original
+diagnosis is kept below alongside the remedy, because the diagnosis is the part with thesis
+value.
+
+The second pass (§16.6) closed the last open finding, found three wallet writers the first
+pass had missed, and recorded one deliberate **reduction** in a verified property — the
+withdrawal of end-to-end encryption for new chat messages. A verification log that only ever
+records improvements is not a log, it is a changelog.
 
 > **Read this as a narrative, not a checklist.** The sequence — write down the invariants,
 > check them mechanically, find that two of nine did not hold, fix them, prove the fix with
@@ -18,7 +25,7 @@ kept below alongside the remedy, because the diagnosis is the part with thesis v
 
 ## 16.1 Summary
 
-| # | Claim under test | Verdict at audit | Status now |
+| # | Claim under test | Verdict at audit (2026-08-21) | Status now (2026-09-06) |
 |---|---|---|---|
 | V1 | `AgentCashService` idempotency is tenant-scoped | ✅ Closed — ownership guard present | ✅ |
 | V2 | Wallet locks are acquired in a canonical order | ⚠️ **F1** — only in `AgentCashService` | ✅ **Fixed** — shared `WalletLocker`, 7 tests |
@@ -28,16 +35,21 @@ kept below alongside the remedy, because the diagnosis is the part with thesis v
 | V6 | Invariant 5 — `BigDecimal` only near money | ✅ No `double`/`float` on any amount | ✅ + schema-level assertion |
 | V7 | Invariant 7 — GHS-only, no FX path | ✅ No FX code, no non-GHS literals | ✅ |
 | V8 | Invariant 2 — effects fire after the debit **commits** | ⚠️ **F2** — effects fired pre-commit | ✅ **Fixed** — `AfterCommitExecutor`, 5 tests |
-| V9 | Invariant 8 — no margin on super-agent float | ⚠️ **F3** — governs code that no longer exists | ⚠️ Retained as a forward constraint |
+| V9 | Invariant 8 — no margin on super-agent float | ⚠️ **F3** — governs code that no longer exists | ✅ **Fixed** — tier built, `SuperAgentServiceTest` (17 tests) |
 | V10 | Maker–checker rejects self-approval | ✅ Rejected outright, including for ADMIN | ✅ |
 | V11 | No `.env` was ever committed | ✅ Clean across all history | ✅ |
-| V12 | Backend test suite passes | ✅ 355 tests, 36 classes | ✅ **374 tests, 40 classes** |
-| V13 | Mobile test suite runs | ⚠️ Not runnable; **no mobile CI job** | ✅ **Fixed** — 254 tests, CI job added |
+| V12 | Backend test suite passes | ✅ 355 tests, 36 classes | ✅ **509 tests, 53 classes, 0 failures** |
+| V13 | Mobile test suite runs | ⚠️ Not runnable; **no mobile CI job** | ✅ **Fixed** — **326 tests, 24 suites**, CI job added |
 | V14 | Schedulers safe on multiple instances | ❌ No ShedLock or leader election | ⚠️ Unchanged — single-instance by design |
 | V15 | Mobile app typechecks | ⚠️ **893 errors**; 2 were live runtime bugs | ✅ **Fixed** — 0 errors, typecheck in CI |
 | V16 | Migrations apply to an empty database | ⚠️ Never tested — H2 only | ✅ **Fixed** — `MigrationChainIT` on real PostgreSQL |
 | V17 | Concurrent debits cannot double-spend | ⚠️ Argued, never demonstrated | ✅ **Fixed** — `ConcurrentTransferIT`, measured |
-| V18 | Backend coverage is instrumented | ❌ No JaCoCo | ✅ **Fixed** — money classes 62.5% lines |
+| V18 | Backend coverage is instrumented | ❌ No JaCoCo | ✅ **Fixed** — money classes 61.7% lines over 17 classes |
+| V19 | Invariant 4 — **every** wallet writer takes a row lock | *(not asked in this form)* | ⚠️ **F6 at re-verification** — three writers did not; ✅ closed structurally by `WalletLedger` |
+| V20 | Invariant 3 — every money-moving endpoint has an idempotency key | *(checked per-endpoint in pass 1)* | ⚠️ **F7** — three gaps (float mint, user withdrawal, recurring transfer); ✅ all closed |
+| V21 | Chat content is unreadable to the server | ✅ True at audit — per-device E2EE | ❌ **No longer true, by design** — see F8 |
+| V22 | The deploy fails when a service is not running | *(not asked in pass 1)* | ⚠️ **F9** — `docker compose ps` was printed, never read; ✅ closed |
+| V23 | A TURN relay is actually running | *(not asked in pass 1)* | ⚠️ **F10** — credentials signed against a service that did not exist; ✅ closed |
 
 ---
 
@@ -217,7 +229,7 @@ and this is the cleanest evidence of it in the repository.
 
 ---
 
-### F3 — Invariant 8 governs code that no longer exists
+### F3 — Invariant 8 governs code that no longer exists ✅ *(closed 2026-09-06 — see §16.6)*
 
 **Severity:** LOW (documentation drift, not a defect)
 
@@ -782,4 +794,180 @@ grep -n "app:" .github/workflows/ci.yml
 
 # V14 scheduler locking
 grep -rn "ShedLock\|SchedulerLock" backend/src/main/java
+
+# ── Added for the second pass (§16.6) ───────────────────────────────────────
+
+# V19 every wallet writer takes a lock
+grep -rn "setBalance" backend/src/main/java | grep -v WalletLedger.java
+# expect: no direct writers outside WalletLedger
+
+# V20 idempotency on every money endpoint
+grep -rn "idempotency_key\|idempotencyKey" backend/src/main/resources/db/migration \
+  backend/src/main/java/com/aza/backend/service
+
+# V21 chat content readability (expect the server-side cipher, no send-side E2EE)
+grep -rn "encryptForAllDevices" aza/src            # expect: no matches
+grep -n "contentCipher" backend/src/main/java/com/aza/backend/service/ChatService.java
+
+# V22 deploy asserts container health
+grep -n "RestartCount\|State.Health" .github/workflows/deploy.yml
+
+# V23 TURN relay is defined and its config is documented
+grep -n "coturn" docker-compose.yml; ls turnserver.conf.example
+
+# counts quoted throughout the thesis
+ls backend/src/main/resources/db/migration/*.sql | wc -l
+for d in controller service repository entity dto; do \
+  echo "$d $(find backend/src/main/java/com/aza/backend/$d -name '*.java' | wc -l)"; done
+find aza/src -name '*Screen.tsx' | wc -l
 ```
+
+---
+
+## 16.6 Second verification pass — 2026-09-06, commit `9678fa5a`
+
+Sixteen days, 48 commits, 344 files. The whole log was re-run rather than spot-checked,
+because the point of a mechanical gate is that it is cheap to repeat.
+
+### Measured results
+
+```bash
+cd backend && ./mvnw -B test
+# Tests run: 509, Failures: 0, Errors: 0, Skipped: 7   → BUILD SUCCESS
+
+cd aza && npx jest
+# Test Suites: 24 passed, 24 total
+# Tests:       326 passed, 326 total
+
+cd aza && npx tsc -p tsconfig.json --noEmit
+# exit 0, no output
+
+# money-class coverage, from backend/target/site/jacoco/jacoco.csv
+awk -F, 'NR>1' jacoco.csv | grep -E ",(AfterCommitExecutor|HoldLedgerAuditService|…)," \
+  | awk -F, '{lm+=$8;lc+=$9} END{printf "%.2f%%\n", lc*100/(lc+lm)}'
+```
+
+| Metric | 2026-08-21 | 2026-09-06 |
+|---|---|---|
+| Backend tests / classes | 374 / 40 | **509 / 53** |
+| Mobile tests / suites | 254 / 17 | **326 / 24** |
+| Mobile typecheck errors | 0 | **0** |
+| Whole-backend line coverage | 22.61% | **25.64%** |
+| Money-class coverage, original 13 | 63.31% | **63.15%** |
+| Money-class coverage, current 17 | — | **61.70%** |
+| `src/crypto` statement coverage | 87.76% | **87.75%** |
+| Flyway migrations | 57 | **62** (→ V64) |
+| Backend controllers / services / entities | 113 / 100 / 105 | **120 / 116 / 111** |
+| Invariants holding unconditionally | 8 of 9 | **9 of 9** |
+
+The skipped 7 are the Docker-gated Testcontainers ITs, as before; they run in CI, and
+**skipped is not passed** — cite the CI run when reporting them.
+
+### New findings
+
+#### F6 — Three wallet writers took no row lock
+
+Invariant 4 was recorded as ✅ in the first pass, and the paths that pass traced did all
+lock. Re-reading the invariant as a **search over every writer** rather than over every
+documented flow found three that did not: the promo credit, the referral reward, and float
+mint/burn. Twenty files each carried their own
+`wallet.setBalance(...); walletRepository.save(wallet)` block; three omitted the lock.
+
+*Failure scenario:* two concurrent requests read the same balance, both compute from it, one
+write is lost. Money created or destroyed depending on sign.
+
+**Closed structurally**, not locally: `WalletLedger` is now the only way to move a balance
+and takes the lock at its entry point (§5.4a). `WalletLedgerTest` (14 tests, 97% lines),
+`ApprovalLockingTest`, `TransactionReversalTest`.
+
+**This is the most methodologically important finding in either pass.** It bounds what the
+first pass could claim: a trace-based verification is only as complete as the set of flows
+you know to trace, and "verified ✅" against that method means "no counter-example on the
+paths examined", not "no counter-example". Say so in the thesis — it is a stronger position
+than pretending the first verdict was wrong, because it was not wrong, it was *scoped*.
+
+#### F7 — Three money endpoints had no idempotency key
+
+Float mint (`V60`), user withdrawal (`V61`), recurring transfers. Detail in §5.4a. The float
+case is the interesting one: **maker–checker does not cover it**, because two approvals for
+the same bank deposit are two legitimate approvals — each passes every check the approver
+can see. Dual control answers "did one person act alone?", not "has this event already been
+processed?".
+
+#### F8 — A verified security property was withdrawn
+
+**V21 was ✅ at audit and is ❌ now, by design.** Chat message bodies are no longer
+end-to-end encrypted; they are stored server-readable, encrypted at rest under a
+server-held key, so history can follow the account rather than the device. Mechanism in
+§6.3.0, reasoning and cost in §12.4a.
+
+Recorded here as a finding, in the same format as the defects, because a verification log
+that silently drops a claim it previously verified is worthless. The verdict changed; the
+reason it changed is documented; the residual property (encryption at rest, T4a) is stated
+separately from the one that was lost (T4b).
+
+Corroborating check, and a strange one to write:
+
+```bash
+grep -rn "encryptForAllDevices" aza/src        # → no matches (removed, 68894e13)
+grep -n "contentCipher" backend/src/main/java/com/aza/backend/service/ChatService.java
+# → 171: messageBuilder.content(contentCipher.encrypt(request.getContent()));
+# → 865: ... contentCipher.decrypt(message.getContent())
+```
+
+`ChatServiceMessageBodyTest` asserts that *a device holding no key material can read a
+history page* — a test whose **passing** is the evidence for this finding.
+
+#### F9 — The deploy gate printed its evidence and never read it
+
+`docker compose ps` exits 0 whether a container is up, dead, or restarting in a loop. A
+service that died on a bad config deployed "successfully". coturn restarted **201 times**
+before the replacement gate caught it. Detail in §10.2.
+
+Worth its own line because the failure is a *category* the thesis should name: a step that
+produces the artefact a reader would accept as evidence, without performing the check that
+artefact implies. It is worse than a missing check, because it defeats review.
+
+#### F10 — TURN credentials were signed against a relay that did not exist
+
+`turnserver.conf` was in the tree, `CallService` had always handed clients
+`turn:<host>:3478` signed with `TURN_SECRET`, and **no service ever ran coturn**. Calls
+connected only when peers reached each other directly — fine on shared Wi-Fi, broken behind
+the symmetric NAT most mobile carriers use. Detail in §4.5.
+
+Nothing was wrong in code, so no code-level check could have found it. The missing artefact
+was a service definition.
+
+### Findings re-checked and still open
+
+| # | Item | Status |
+|---|---|---|
+| V14 | Scheduler locking | ❌ Unchanged — no ShedLock, no leader election, nine jobs |
+| — | Password SSH in the deploy | ⚠️ Unchanged |
+| — | Build-on-server rather than GHCR | ⚠️ Unchanged |
+| — | Maestro flows not in CI | ⚠️ Unchanged |
+| — | No dependency/SAST/secret scanning in CI | ⚠️ Unchanged |
+| — | Web apps have no unit tests | ⚠️ Unchanged |
+| — | `aza/coverage/` still tracked in git | ⚠️ Unchanged |
+
+### What the second pass says about the method
+
+Three observations the thesis can defend, and the third is the one worth arguing:
+
+1. **The rate of finding declined but did not stop.** Pass 1 found five, pass 2 found five.
+   The composition changed: pass 1 found things the invariants pointed straight at, pass 2
+   found things only a *re-reading* of the invariants as queries pointed at — plus two
+   (F9, F10) that no invariant covers because they are about deployment artefacts rather
+   than code.
+2. **Fixing structurally beats fixing locally, measurably.** F1 was fixed by adding
+   `WalletLocker` and using it in the paths that were wrong; sixteen days later F6 found
+   three more paths that had never used it. `WalletLedger` removes the possibility rather
+   than the instances. The general rule: **if the fix is "and remember to do X", it is not a
+   fix.**
+3. **A verification log must be able to record regressions, including deliberate ones.**
+   F8 is the test of that. It would have been easy to quietly rewrite Chapter 6 and leave
+   the log showing V21 ✅ — nothing in the repository would contradict it, because the E2EE
+   code is all still there and all still passing. The log's value is exactly its
+   willingness to say the verdict changed.
+
+---

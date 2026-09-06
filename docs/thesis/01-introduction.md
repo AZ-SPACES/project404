@@ -27,7 +27,7 @@ Existing digital financial services in Ghana treat messaging, payment, merchant 
 and third-party integration as separate, loosely-coupled products. This fragmentation
 produces (a) poor user experience for everyday peer-to-peer settlement, (b) high
 integration cost for merchants and developers, and (c) weak, non-verifiable audit trails
-for consumers. No widely available platform in the market offers end-to-end encrypted
+for consumers. No widely available platform in the market offers private
 conversation and regulated e-money settlement within a single, auditable transactional
 boundary.
 
@@ -47,9 +47,18 @@ ledger with enforceable financial, security and regulatory invariants.
 2. **Implement a transactional money engine** that guarantees balanced movement,
    idempotency, concurrency-safe balance updates, and a complete audit trail for every
    value movement.
-3. **Implement end-to-end encryption** for chat and chat media using a modern asynchronous
-   key-agreement protocol (X3DH) with forward secrecy, multi-device support and
-   user-held, server-opaque backups.
+3. **Implement strong message confidentiality** for chat and chat media, and evaluate the
+   trade-off between end-to-end encryption and account-owned history. The objective as
+   originally written was "implement end-to-end encryption … with forward secrecy,
+   multi-device support and user-held, server-opaque backups". It was met — X3DH v3 with
+   per-device identities was built, tested and deployed — and then **deliberately
+   withdrawn** for new messages, because per-device encryption makes chat history the
+   property of a device rather than of an account, and a user whose only phone is lost or
+   replaced loses everything. What ships now is encryption at rest under a server-held key,
+   with the E2EE implementation retained for existing history and as the foundation for an
+   opt-in mode. **Report the objective in this revised form and treat the trade as the
+   result** — §12.4a makes the argument in full; restating the original objective and
+   claiming it met would be false.
 4. **Build a compliance and risk layer** — tiered KYC, transaction limits, rule-based
    transaction monitoring (velocity, structuring, large-value), sanctions screening,
    maker–checker administrative controls and regulatory reporting.
@@ -81,7 +90,8 @@ ledger with enforceable financial, security and regulatory invariants.
   e-money and KYC expectations; it is not a licensed EMI. **[FILL IN: state your
   institution's position on this clearly — it is the single most likely viva question.]**
 - Formal cryptographic proof of the E2EE protocol. The implementation follows X3DH; a
-  Double Ratchet (post-compromise security) is designed for but not implemented.
+  Double Ratchet (post-compromise security) is designed for but not implemented. Note also
+  that the protocol governs stored history rather than current traffic (§6.3.0).
 
 ## 1.6 Significance / contribution
 
@@ -94,43 +104,56 @@ The contributions defensible in a thesis are:
    movement, debit-before-external-effect, tenant-scoped idempotency, lock-based
    concurrency, maker–checker for administrative movement) and a review methodology that
    operationalises them (`.claude/skills/money-path-review/SKILL.md`).
-3. **A practical multi-device E2EE design for a low-resource mobile context** — X3DH with
-   per-device identities, consumed one-time pre-keys, per-file media keys, and a
-   randomly-keyed (not PIN-derived) chat backup that is opaque to the server.
+3. **A practical multi-device E2EE design for a low-resource mobile context, and a
+   documented account of why it was traded away** — X3DH with per-device identities,
+   consumed one-time pre-keys, per-file media keys, and a randomly-keyed (not PIN-derived)
+   chat backup opaque to the server; then the measured argument that per-device encryption
+   and account-owned history are incompatible without a cooperating old device, and that in
+   a single-device market the second requirement wins. The second half is the more valuable
+   contribution: designs of the first kind are well represented in the literature, and
+   honest reports of retiring one in production are not.
 4. **A developer platform pattern for an African fintech** — hosted checkout with
    marketplace splits to non-merchant sellers, delegated payment mandates, and a
    sandboxed mini-app runtime with an explicit permission and consent model.
 5. **An empirical engineering account** of building a system of this size
-   (~220,000 lines across seven deployables) with the delivery controls that keep a money
-   path safe over 57 schema migrations.
+   (~250,000 lines across eight deployables plus a watchOS companion) with the delivery
+   controls that keep a money path safe over 62 schema migrations — including two full
+   mechanical verification passes, ten findings, and the movement from six of nine money
+   invariants holding unconditionally to nine of nine.
+6. **A demonstration that invariants enforced by construction outperform invariants
+   verified by inspection**, with the counter-example that makes the point: invariant 4 was
+   verified as holding by tracing every documented money path, and three writers on
+   undocumented paths took no lock. §5.4a and §16.6 carry the evidence.
 
-## 1.7 Scale of the artefact (measured 2026-08-21)
+## 1.7 Scale of the artefact (measured 2026-09-06)
 
-| Component | Language / stack | Size |
-|---|---|---|
-| Backend | Java 21, Spring Boot 4.0.6 | 61,330 LOC, 745 Java files |
-| — controllers | | 113 |
-| — services | | 100 |
-| — JPA entities | | 105 |
-| — repositories | | 109 |
-| — DTOs | | 250 |
-| — Flyway migrations | | 57 (V1 → V57) |
-| — backend tests | JUnit 5 / Mockito / Testcontainers | 40 classes — **374 tests, all passing** |
-| Mobile app | React Native 0.86 / Expo 57 / TS | 98,733 LOC, 387 files, 170 feature screens |
-| — unit tests | Jest + RNTL | 17 suites, **254 tests, all passing** |
-| — E2E flows | Maestro | 20 flows |
-| `aza-web` (marketing + developer portal) | Next.js 16 | 15,922 LOC |
-| `aza-admin` (back office) | Next.js 16 | 26,654 LOC |
-| `aza-merchants` (merchant portal) | Next.js 16 | 15,512 LOC |
-| `aza-pay` (hosted checkout) | Next.js 16 | 2,014 LOC |
-| Mini apps + SDK | TypeScript | 7 reference apps + published SDK |
-| **Total** | | **≈ 220,000 LOC** |
+| Component | Language / stack | Size | 2026-08-21 |
+|---|---|---|---|
+| Backend | Java 21, Spring Boot 4.0.6 | 64,867 LOC, 767 Java files | 61,330 / 745 |
+| — controllers | | 120 | 113 |
+| — services | | 116 | 100 |
+| — JPA entities | | 111 | 105 |
+| — repositories | | 110 | 109 |
+| — DTOs | | 259 | 250 |
+| — Flyway migrations | | 62 (V1 → V64) | 57 |
+| — backend tests | JUnit 5 / Mockito / Testcontainers | 53 classes — **509 tests, all passing** | 40 / 374 |
+| Mobile app | React Native 0.86 / Expo 57 / TS | 103,132 LOC, 410 files, 171 feature screens | 98,733 / 387 / 170 |
+| — unit tests | Jest + RNTL | 24 suites, **326 tests, all passing** | 17 / 254 |
+| — E2E flows | Maestro | 20 flows | 20 |
+| — watchOS companion | Swift / SwiftUI / WidgetKit | 1 app + 3 complications + a local Expo module | — |
+| `aza-web` (marketing + developer portal) | Next.js 16 | 15,922 LOC | 15,922 |
+| `aza-admin` (back office) | Next.js 16 | 26,654 LOC | 26,654 |
+| `aza-merchants` (merchant portal) | Next.js 16 | 15,512 LOC | 15,512 |
+| `aza-pay` (hosted checkout) | Next.js 16 | 2,014 LOC | 2,014 |
+| `aza-superagents` (master-agent console) | Next.js 16 | 3,145 LOC | *empty scaffold* |
+| Mini apps + SDK | TypeScript | 7 reference apps + published SDK | same |
+| **Total** | | **≈ 253,000 LOC** | ≈ 220,000 |
 
 > Reproduce these numbers with:
 > `find backend/src/main/java -name '*.java' | xargs wc -l | tail -1`
 > `find aza/src \( -name '*.ts' -o -name '*.tsx' \) | xargs wc -l | tail -1`
 >
-> Built over **694 commits between 14 March and 15 August 2026** by two principal
+> Built over **750 commits between 14 March and 3 September 2026** by two principal
 > contributors. Every quantitative claim in this documentation set was re-verified against
 > the repository on 2026-08-21; the method and results are in `16-verification-log.md`.
 

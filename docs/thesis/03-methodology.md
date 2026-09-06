@@ -108,7 +108,7 @@ For the thesis, characterise this as **incremental delivery with invariant-drive
 | Cache / pub-sub | Redis 7 | OTP and rate-limit counters with TTL semantics; presence with a 65-second TTL; WebSocket fan-out across instances. |
 | Schema management | Flyway | Versioned, replayable, auditable migrations; `baseline-on-migrate` to adopt a pre-existing ddl-auto schema without replaying one-shot data migrations. |
 | Mobile | React Native 0.86 + Expo 57 | One codebase for iOS and Android; Expo modules give hardware-backed key storage (SecureStore), biometrics, camera and notifications without native code. |
-| Mobile state | Zustand + TanStack Query | Small client-state store plus a server-cache layer, avoiding a monolithic Redux tree across 170 screens. |
+| Mobile state | Zustand + TanStack Query | Small client-state store plus a server-cache layer, avoiding a monolithic Redux tree across 171 screens. |
 | Web | Next.js 16 / React 19 / Tailwind 4 | Server components for the marketing and hosted-payment surfaces (fast first paint on low-end devices, important for the target market); one component idiom across four apps. |
 | Crypto | `@noble/curves`, `@noble/ciphers`, `@noble/hashes` | Audited, dependency-free, constant-time JS implementations of X25519/Ed25519/AES-GCM/HKDF. Justify **not** rolling your own and **not** using a native module. |
 | Realtime | STOMP over WebSocket | Structured pub/sub semantics over a single socket, with a Spring-native broker and an auth interceptor. |

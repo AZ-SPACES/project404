@@ -105,11 +105,49 @@ Seeded consumer catalogue:
 | P2P transfer | Free up to GHS 100 per transaction and GHS 1,000 per rolling month; 0.5% above, capped at GHS 10 |
 | Cash-out (agent) | 1%, minimum GHS 0.50, capped at GHS 15 |
 | Cash-in, bill pay, airtime | Free to the consumer (no active rule) |
-| Merchant | Per-merchant `fee_rate_bps` override (MDR) |
+| Merchant | Priced by **pricing plan**, with an optional per-merchant `fee_rate_bps` override |
 
 Rolling-monthly consumption is tallied per `(user_id, transaction_type, usage_month)` in
 `monthly_fee_usage`, keyed `YYYY-MM`, with a uniqueness constraint so concurrent updates
 cannot create a second tally row.
+
+#### Merchant MDR joins the fee engine (`V62`)
+
+`V23` gave consumer fees rule versioning, `effective_from`/`effective_to` dating, amount
+bands and min/max caps, then left merchant pricing as a per-merchant integer — the comment
+in that migration says "for now", and this is what "for now" cost. Merchant pricing had no
+versioning, no dating, no bands, no caps, and no way to answer *"what rate was this merchant
+on in March?"* from the pricing model at all.
+
+The structural obstacle is worth stating because it is the interesting part: the engine
+resolved rules on `transaction_type` alone, and `transaction_type` has no room to express
+**who is being charged**. Adding a merchant dimension directly would have meant a rule per
+merchant, which is not a pricing model, it is the same integer with extra steps. The
+resolution is an intermediate concept — a **pricing plan** — so one `MERCHANT_MDR` rule
+prices a whole class of merchants and is versioned like any other rule:
+
+- `merchants.pricing_plan` (default `STANDARD`) says which class a merchant sits in.
+  Finance moves merchants between plans through the admin API, **under maker–checker**.
+- `fee_rules.pricing_plan` says which plan a rule prices. `NULL` means *any* plan, so a
+  catch-all rule can back-stop plans with no rule of their own. A rule written for a
+  *different* plan is **never** used as a fallback — pricing a merchant on somebody else's
+  negotiated terms would be worse than having no rule at all.
+- Rates still differ per merchant three ways: different plans, tier bands *within* a plan
+  (so one plan prices a GHS 5 sale and a GHS 50,000 sale differently), and `fee_rate_bps`
+  surviving as a per-merchant override that outranks the plan entirely.
+
+**`fee_rate_bps` changes meaning, and the data migration is where the care went.** It is no
+longer "this merchant's rate" but "this merchant is an *exception* to their plan", so `NULL`
+becomes meaningful rather than missing. Merchants sitting on exactly the standard 150 bps
+were never negotiated there — that is just the entity default they were created with — so
+they are set to `NULL` and move onto the plan, which means a future change to standard
+pricing actually reaches them. Anything on a *different* rate was a deliberate exception and
+keeps it to the basis point. A CHECK constraint bounds any override to 0–10,000 bps, with
+`NULL` passing, so a direct SQL fix cannot quietly install a 300% MDR either.
+
+The seeded `MERCHANT_MDR — standard` rule is 1.5% with no bands and no caps, deliberately
+reproducing the pre-migration behaviour exactly rather than inventing commercial terms in a
+schema change. Covered by `MerchantFeeCalculatorTest` (new) and `FeeCalculationServiceTest`.
 
 ### KYC tiers and limits
 
@@ -304,17 +342,28 @@ These nine invariants are the platform's written contract for money code. They a
 core of the correctness argument in the thesis, and they are enforced by a documented
 review gate (`.claude/skills/money-path-review/SKILL.md`).
 
-| # | Invariant | Failure mode it prevents | Verified 2026-08-21 |
-|---|---|---|---|
-| 1 | **Balanced movement.** Every credit has a matching debit in the same transaction. | Money created from nothing. This is the audit finding that motivated the framework: a withdrawal flow that credited a destination and never debited the wallet. | ✅ Holds |
-| 2 | **Debit before external effect.** The wallet debit commits before (or atomically with) any push, webhook or provider call. | Money leaving on a callback that never arrives, or arriving twice on a replayed one. | ✅ Holds — **F2 fixed**, see below |
-| 3 | **Tenant-scoped idempotency.** Every money-moving endpoint takes an idempotency key, scoped to the tenant. | Duplicate charges on client retry; cross-tenant result leakage. | ✅ Holds |
-| 4 | **Concurrency-safe balance updates.** Row locking or atomic DB updates, never read-modify-write in Java. | Double-spend under concurrency. | ✅ Holds — **measured**, and F1 (ordering) fixed |
-| 5 | **`BigDecimal` only.** No `double`/`float` near an amount; amounts validated positive, non-null, in range at the boundary. | Silent rounding loss; negative-amount transfers. | ✅ Holds — grep-verified |
-| 6 | **AuthZ + passcode.** Consumer money flows verify the 4-digit passcode; admin money ops go through maker–checker; merchant/partner ops check API-key scope and ownership. | A single admin moving funds alone; acting on another tenant's wallet by ID. | ✅ Holds |
-| 7 | **Product scope.** GHS-only, Ghana-only, internal rails. Any multi-currency or FX path is a finding. | Unbounded scope creep into unregulated territory. | ✅ Holds — grep-verified |
-| 8 | **No margin on float distribution.** SUPER-tier float distribution is an internal transfer with no fee or markup. | An agent hierarchy quietly becoming a fee cascade. | ⚠️ **Vacuous — F3** (see below) |
-| 9 | **Audit trail.** Every movement writes its ledger record inside the same transaction, with enough metadata for reconciliation. | Unreconcilable breaks; unprovable disputes. | ✅ Holds |
+**All nine now hold unconditionally.** That sentence is worth less than the two paragraphs
+explaining how they got there, so lead with the movement: at the August audit six held
+unconditionally, two held with a documented qualification, and one governed no live code.
+The remaining work was not writing new features that happened to satisfy the rules — it was
+using each rule as a search query against the codebase, which is what turned up the three
+wallet writers that took no lock (§5.4a), the mint path that could double-count a bank
+deposit (V60), and the withdrawal endpoint that debited on every retry (V61).
+
+Re-verified **2026-09-06** at commit `9678fa5a`. The 2026-08-21 column is retained because
+the movement between the two columns is the evidence, not the final state.
+
+| # | Invariant | Failure mode it prevents | 2026-08-21 | 2026-09-06 |
+|---|---|---|---|---|
+| 1 | **Balanced movement.** Every credit has a matching debit in the same transaction. | Money created from nothing. This is the audit finding that motivated the framework: a withdrawal flow that credited a destination and never debited the wallet. | ✅ Holds | ✅ Holds — now structurally, via `WalletLedger.transfer` |
+| 2 | **Debit before external effect.** The wallet debit commits before (or atomically with) any push, webhook or provider call. | Money leaving on a callback that never arrives, or arriving twice on a replayed one. | ✅ **F2 fixed** | ✅ Holds |
+| 3 | **Tenant-scoped idempotency.** Every money-moving endpoint takes an idempotency key, scoped to the tenant. | Duplicate charges on client retry; cross-tenant result leakage. | ✅ Holds | ✅ Holds — **three gaps closed**: user withdrawals (V61), recurring transfers, float mint/burn (V60) |
+| 4 | **Concurrency-safe balance updates.** Row locking or atomic DB updates, never read-modify-write in Java. | Double-spend under concurrency. | ✅ **measured**, F1 fixed | ✅ Holds — **three unlocked writers found and closed** by `WalletLedger` (§5.4a); payment approvals and reversals now lock too |
+| 5 | **`BigDecimal` only.** No `double`/`float` near an amount; amounts validated positive, non-null, in range at the boundary. | Silent rounding loss; negative-amount transfers. | ✅ grep-verified | ✅ Holds — asserted at schema level by `MigrationChainIT`, which no longer flags boolean columns |
+| 6 | **AuthZ + passcode.** Consumer money flows verify the 4-digit passcode; admin money ops go through maker–checker; merchant/partner ops check API-key scope and ownership. | A single admin moving funds alone; acting on another tenant's wallet by ID. | ✅ Holds | ✅ Holds — extended to float distribution (`ROLE_SUPER_AGENT` + passcode) and to merchant pricing changes (maker–checker) |
+| 7 | **Product scope.** GHS-only, Ghana-only, internal rails. Any multi-currency or FX path is a finding. | Unbounded scope creep into unregulated territory. | ✅ grep-verified | ✅ Holds |
+| 8 | **No margin on float distribution.** SUPER-tier float distribution is an internal transfer with no fee or markup. | An agent hierarchy quietly becoming a fee cascade. | ⚠️ **Vacuous — F3** | ✅ **Holds — F3 closed.** `SuperAgentService` built; `SuperAgentServiceTest` (17 tests) |
+| 9 | **Audit trail.** Every movement writes its ledger record inside the same transaction, with enough metadata for reconciliation. | Unreconcilable breaks; unprovable disputes. | ✅ Holds | ✅ Holds — `float_distributions` adds a ledger for the new movement type |
 
 ### Finding F2 — external effects fired *before* commit (fixed)
 
@@ -364,19 +413,61 @@ Use this in the discussion chapter: the chat path got it right and the money pat
 in the same codebase by the same authors — an invariant that is *understood* is not the same
 as an invariant that is *enforced*.
 
-### Finding F3 — invariant 8 governs code that no longer exists
+### Finding F3 — invariant 8 governed code that no longer existed (now closed)
 
-`SuperAgentService` has been removed from `backend/src/`. `Agent.Tier.SUPER` is declared but
-referenced nowhere in `service/` or `controller/`. The surviving float code, `FloatService`,
-contains no fee, commission, margin or bps logic at all — it exposes only `mint`, `burn` and
-`list`.
+**At audit.** `SuperAgentService` had been removed from `backend/src/`. `Agent.Tier.SUPER`
+was declared but referenced nowhere in `service/` or `controller/`. The surviving float
+code, `FloatService`, contained no fee, commission, margin or bps logic at all — only
+`mint`, `burn` and `list`.
 
-The invariant is therefore currently **vacuous**: there is no float-distribution path for it
-to govern. It is not violated; there is nothing to violate. Do not quietly drop it to make
-the list nine-for-nine — state that the super-agent tier is designed and its safety rule
-written, that the implementation was withdrawn pending the super-agent portal
-(`aza-superagents` is an empty scaffold), and that the invariant is retained as a **forward
-constraint** on that future work.
+The invariant was therefore **vacuous**: there was no float-distribution path for it to
+govern. It was not violated; there was nothing to violate. The instinct to quietly drop it
+and report nine-for-nine is exactly the instinct the method exists to resist — and, as it
+turned out, dropping it would have discarded the one signal that located a missing tier.
+
+**Closed (`d35b9b59`).** Both halves are now built: the backend money path and the
+`aza-superagents` console that drives it. The invariant governs live code and is enforced
+by tests.
+
+`SuperAgentService` is the money path, and each of its guarantees maps to an invariant
+above rather than being invented for the occasion:
+
+- **No e-money is created.** A distribution is an internal `AGENT_FLOAT` → `AGENT_FLOAT`
+  move, so the safeguarding invariant (§5.5) is untouched — issued e-money and the
+  safeguarded balance both stay exactly where they were. This is the whole reason the tier
+  can exist without a finance step for every till.
+- **Strictly no margin (invariant 8).** The amount that leaves the master's float is the
+  amount that lands in the sub-agent's: no fee, no spread, and no commission accrual on
+  either side. Commission remains a matter between AZA and whichever agent served the
+  customer, which is what stops a hierarchy from becoming a fee cascade.
+- **Locking through `WalletLocker` in canonical order (invariant 4)**, with the ledger row
+  and the `Transaction` written in the same transaction (invariant 9).
+- **Three independent gates (invariant 6):** `ROLE_SUPER_AGENT`, derived per request from an
+  ACTIVE agent of tier SUPER exactly as `ROLE_AGENT` is; `requireActiveSuper` inside the
+  service; and the operator's passcode before any balance changes. Every read and write is
+  scoped to the caller's own downline.
+- **Idempotency keys are required, not optional (invariant 3)**, and scoped to the master —
+  a key belonging to someone else is refused rather than replayed, which is the same
+  cross-tenant rule V43 established for checkout. Under concurrency the UNIQUE index is the
+  real arbiter: the loser's whole transaction rolls back, wallet updates included.
+
+Two design decisions are worth defending explicitly in the thesis:
+
+1. **Inviting a sub-agent files a PENDING application with the parent set; staff
+   maker–checker still activates it.** A master cannot put its own recruit live. The
+   alternative — letting a master onboard directly — would make the KYC gate delegable to
+   the party with the least incentive to apply it.
+2. **Adopting an existing agent is deliberately unsupported**, which is also what makes a
+   parent cycle impossible. `V58` carries a CHECK against the degenerate self-parent, but a
+   database constraint cannot see a longer cycle (A→B→A); making the parent write-once at
+   creation removes the class of problem instead of policing it. Where a longer chain *is*
+   visible — in `SuperAgentService`, which walks it — the check is enforced anyway.
+
+`V58` also widens `transactions_type_check` for `FLOAT_DISTRIBUTION`. Note the trap, since
+the thesis has now hit it twice from opposite directions: that CHECK enumerates the
+`TransactionType` values that existed when the column was created, so **the first
+distribution on any non-empty database would have been rejected** without this. `V64`
+(§6.7) is the same trap on `transactions.status`, found the hard way in production.
 
 The review method is: map each changed endpoint to its flow, trace
 `validation → authZ/passcode → idempotency → debit → credit → record → external effects`,
@@ -384,6 +475,91 @@ and **actively construct the failure scenario** (duplicate request, concurrent r
 crash between debit and credit, callback replay, negative amount, someone else's wallet ID)
 rather than reading for plausibility. Severity is CRITICAL if money is lost, created or
 duplicated; HIGH for authZ or idempotency gaps; MEDIUM for audit/validation gaps.
+
+## 5.4a `WalletLedger` — making the lock impossible to forget
+
+The single most consequential backend change since the audit, and the one with the most
+transferable lesson.
+
+**The situation.** Invariant 4 was verified as holding, and it did — every path the audit
+traced took a `PESSIMISTIC_WRITE` lock before touching a balance. But the invariant was
+enforced *by every author remembering to enforce it*. Twenty files each carried their own
+copy of:
+
+```java
+wallet.setBalance(wallet.getBalance().add(amount));
+walletRepository.save(wallet);
+```
+
+**Three of those twenty never took the row lock first.** That is the classic
+read–modify–write race: two concurrent requests read the same balance, both compute from
+it, and one of the two writes vanishes — money created or destroyed depending on the sign.
+The audit did not find them because the audit traced the *documented* money paths, and
+these were not on them; they were the promo credit, the referral reward, and float
+mint/burn.
+
+**The fix is structural rather than local.** Routing every balance change through
+`WalletLedger` means the lock is not something a caller *can* forget: the only way to move
+a balance is to call a method that has already taken it. Fixing the three unlocked writers
+individually would have restored the invariant for exactly as long as it took someone to
+write a twenty-first path.
+
+The class draws two boundaries that are worth defending, because both are places where the
+obvious design is wrong:
+
+1. **`credit`/`debit`/`transfer` take the lock; `*Locked` variants do not.** Some callers
+   must lock a wider set of rows in one go — a wallet plus a merchant, say — and have
+   therefore already taken the wallet lock as part of that set. Forcing them through the
+   locking entry point would mean re-locking a row they hold, and forbidding them would
+   push them back to hand-rolled arithmetic. The `*Locked` variants assert nothing about
+   locking and exist so those callers still share the arithmetic, the validation and the
+   audit write. Two-sided operations go through `WalletLocker`'s canonical ordering so they
+   cannot deadlock against each other (this is finding F1's fix, now unavoidable rather
+   than merely available).
+2. **Frozen-wallet policy stays with the callers.** An ordinary transfer must refuse a
+   frozen wallet; an admin reversal crediting a frozen wallet is the entire *point* of the
+   reversal. Passcode, limits, idempotency and authorization are likewise the caller's
+   business. `WalletLedger` is the last mile, not the gate — a distinction worth making
+   explicitly, because the temptation with a chokepoint class is to keep adding policy to
+   it until it needs to know who is calling and why.
+
+**A denormalisation removed at the same time (`V59`).** `users.balance` was a copy of the
+user's PERSONAL wallet balance, written alongside `wallets.balance` by most money paths and
+silently skipped by others — including, as it happens, the same three: the referral reward,
+the promo credit, and float mint/burn. Anything reading it could be told a stale balance,
+and the mini-app SDK's balance endpoint was doing exactly that. Once there is one place a
+balance changes, a second copy of it is not a cache but a second source of truth, so the
+column is dropped and the SDK endpoint reads the wallet.
+
+The migration carries the rollback note explicitly, which is the kind of operational
+honesty the thesis should show rather than describe: rolling back past the release that
+removed the entity field restores a column that starts at 0 for everyone, and the balances
+it would then report are wrong. Roll forward instead.
+
+Covered by `WalletLedgerTest` (14 tests, 97% line coverage), `ApprovalLockingTest` and
+`TransactionReversalTest` — the latter two because payment approvals and transaction
+reversals were themselves reading and writing balances without pessimistic locking
+(`4cec45d8`).
+
+### Three idempotency gaps found by re-reading invariant 3
+
+Reported together because they share a shape: each is an endpoint that moves money and had
+no key, and in each case the reason it had none is instructive.
+
+| Gap | What a retry did | Fix |
+|---|---|---|
+| **Float mint (`V60`)** | Nothing stopped the same bank deposit being minted twice: `bank_reference` carried no constraint and the service did no duplicate check. Two mints citing one deposit put **issued e-money above the safeguarded balance** — the exact invariant that table's own header comment claims to protect. | `UNIQUE (type, bank_reference)`. The pair rather than the reference alone, because a mint and a later burn may legitimately cite the same bank transaction when a deposit is returned. |
+| **User withdrawal (`V61`)** | Requesting a withdrawal *reserves* the funds — it debits immediately. A double-submitted request (retry, double tap, flaky connection) debited twice and left two PENDING rows. | `UNIQUE (user_id, idempotency_key)`, scoped per user. A **global** unique key would let one account's retry collide with another's and hand back somebody else's withdrawal — the cross-tenant leak V43 fixed for checkout. |
+| **Recurring transfers** | Execution was not atomic and not idempotent, so a failure mid-run could re-execute a leg. | Extracted into `RecurringTransferExecutor` with wallet limits, fees and idempotency enforced (`1b6d23b0`, `e8d1066a`); `RecurringTransferExecutorTest`. |
+
+**The float-mint case deserves a paragraph of its own, because maker–checker does not cover
+it.** Two approvals raised for the same bank deposit are two *legitimate* approvals: each
+passes every check the approver can see, because nothing in front of an approver shows them
+that this deposit has already been minted. Dual control defends against a single actor
+acting alone; it does not defend against two honest actors approving the same underlying
+event twice. That is a duplicate-detection problem, and it belongs in a uniqueness
+constraint. Worth stating plainly in the thesis, since maker–checker is easy to present as
+a general-purpose safety property when it answers one specific question.
 
 ## 5.5 The safeguarding invariant and the agent network
 

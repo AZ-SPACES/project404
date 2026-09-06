@@ -22,7 +22,7 @@ source data lives, and which chapter it belongs in.
 | 13 | Agent cash-in/cash-out flow, showing commission accrued as a payable not e-money | `V24__agents.sql`, `AgentCashService` | 5 |
 | 14 | Safeguarding position: issued e-money vs safeguarded balance vs agent float | `SafeguardingSnapshot`, `WalletRepository` sums | 5 |
 | 15 | **X3DH handshake** — IK/SPK/OPK/EK and the four DH operations | `aza/src/crypto/e2ee.ts` header | 6 |
-| 16 | E2EE message envelope wire format | §6.3 | 6 |
+| 16 | E2EE message envelope wire format | §6.3.1 | 6 |
 | 17 | Key hierarchy and storage locations (device SecureStore vs server) | §6.3 table | 6 |
 | 18 | Media encryption pipeline (capture → compress → encrypt → upload → decrypt at render) | `mediaCrypto.ts`, `useDecryptedMediaUri` | 6 |
 | 19 | Audit anchor hash chain | `AuditAnchorService` | 6 |
@@ -41,6 +41,16 @@ source data lives, and which chapter it belongs in.
 | 32 | E-money creation and destruction — `mint`/`burn` as the only paths that change total issuance | §5.5 | 5 |
 | 33 | Certificate-pinning evolution — leaf pins (broke twice) → root-CA pins + expiry valve | `06-security-and-cryptography.md` §6.5 | 5/6 |
 | 34 | Multi-device ciphertext fan-out — one `MessageCiphertext` row per (message, device) | §6.3 | 5 |
+| 41 | **Before/after: per-device E2EE fan-out vs a single server-encrypted body.** The single most important new figure. Two panels: (a) one message → N envelopes, none openable by device *n+1*; (b) one message → one `gcm1:` row, openable by any authenticated device. Annotate the arrow between them with what is gained (account-owned history, 0 key-bundle round trips) and what is lost (the operator can read it) | §6.3.0, §12.4a | 6/7 |
+| 42 | Threat-model shift: T4 splits into T4a (stolen dump — still defended) and T4b (operator — no longer defended) | §6.1, §12.4 | 6 |
+| 43 | **`WalletLedger` as a chokepoint** — twenty callers each taking their own lock (three forgetting) vs one entry point that takes it. The visual argument for enforcement-by-construction | §5.4a | 5/7 |
+| 44 | Invariant conformance over three states: 6/9 → 8/9 → 9/9, with each transition labelled by its finding | §12.3 | 7 |
+| 45 | Super-agent hierarchy and float distribution — master float → sub-agent float, annotated "no e-money created, no margin taken" | §5.4, `V58` | 5 |
+| 46 | Merchant pricing resolution — merchant → plan → rule → band → cap, with the per-merchant override short-circuiting the chain | §5.2, `V62` | 5 |
+| 47 | The durable event log — pub/sub as live transport, Redis Stream as recovery, client cursor replay | §4.5 | 4 |
+| 48 | Watch architecture — phone-authoritative, application context, App Group boundary to the complication process | §7.7 | 5 |
+| 49 | The deploy health gate — state check + restart-counter comparison across a settle window, and why neither alone suffices | §10.2 | 6 |
+| 50 | The `V64` incident as a causal chain: enum value added → stale CHECK rejects UPDATE → risk-engine catch swallows it → transaction poisoned → unrelated INSERT fails → raw error on the PIN screen | §6.7 | 6/7 |
 | 35 | Finding F1 — the deadlock cycle, and how canonical ordering removes it | `16-verification-log.md` §16.2 | 6/7 |
 | 36 | Finding F2 — effect timing before and after `AfterCommitExecutor` | §16.2 | 6/7 |
 | 37 | **The concurrency experiment result** — 100 parallel debits, 50 succeed, balance 0 | `12-results-and-evaluation.md` §12.5 | 7 |
@@ -95,7 +105,9 @@ verification page.
 | Limitations | `13-limitations-and-future-work.md` §13.1 |
 | **Verification summary — 18 checks, 5 findings, 4 fixed** | `16-verification-log.md` §16.1 |
 | Concurrency experiment results | `12-results-and-evaluation.md` §12.5 |
-| Coverage — backend aggregate vs money classes | `11-testing-and-quality.md` §11.7 |
+| Coverage — backend aggregate vs money classes, at both measurement dates | `11-testing-and-quality.md` §11.7 |
+| Verification findings F1–F10, both passes, with verdict and remedy | `16-verification-log.md` §16.1, §16.6 |
+| Deliverable counts at both measurement dates | `12-results-and-evaluation.md` §12.2 |
 | Maker–checker action inventory (18 actions × approver role) | `05-backend-design.md` §5.8 |
 | Webhook delivery properties | `09-platform-apis.md` §9.6 |
 | Measured development history (694 commits, commit-type distribution) | `03-methodology.md` §3.1 |
@@ -106,7 +118,8 @@ verification page.
 |---|---|---|
 | A | Full API endpoint listing | `mvn spring-boot:run` then `GET /v3/api-docs`, or enumerate `controller/` |
 | B | Complete database schema | Concatenate `backend/src/main/resources/db/migration/*.sql`, or `pg_dump --schema-only` |
-| C | E2EE protocol specification | `aza/src/crypto/e2ee.ts` + §6.3 |
+| C | E2EE protocol specification (retained; governs stored history) | `aza/src/crypto/e2ee.ts` + §6.3.1 |
+| C2 | At-rest message cipher specification | `MessageContentCipher.java` + §6.3.0 |
 | D | The nine money invariants and the review method | `.claude/skills/money-path-review/SKILL.md` |
 | E | Developer integration guides | `docs/AZA_CONNECT.md`, `SIGN_IN_WITH_AZA.md`, `miniapps/aza-sdk/docs/` |
 | F | Design record: payment holds | `HELD_SETTLEMENT_PLAN.md` |

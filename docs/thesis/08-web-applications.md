@@ -1,6 +1,6 @@
 # 8. The Web Surfaces
 
-Four Next.js 16 / React 19 applications, all built with Tailwind 4 and (except `aza-pay`)
+Five Next.js 16 / React 19 applications, all built with Tailwind 4 and (except `aza-pay`)
 a shadcn-style component layer over Base UI.
 
 ## 8.1 `aza-web` — marketing, legal and developer portal
@@ -78,7 +78,41 @@ Keeping this surface small and dependency-light is a security decision: it is th
 app that routinely handles an authenticated payment action from an untrusted referrer, so
 its attack surface is minimised by construction.
 
-## 8.5 Shared web hardening
+## 8.5 `aza-superagents` — the master-agent console
+
+`superagents.aza.systems` · 3,145 LOC · port 3003. Built in `d35b9b59`; at the August audit
+this was an empty scaffold, and the earlier draft of this chapter listed only four apps.
+
+| Area | Route | Purpose |
+|---|---|---|
+| Dashboard | `/dashboard` | Downline float position at a glance |
+| Agents | `/agents`, `/agents/[id]` | The master's own sub-agents and their float |
+| Invite | `/agents/invite` | Files a PENDING agent application with the parent set — staff maker–checker still activates it, so a master cannot put its own recruit live |
+| Distribute | `/distribute` | Push float down to a sub-agent, or recall idle float back up before a settlement run |
+| Distributions | `/distributions` | The `float_distributions` ledger, filtered to this master |
+| Reconciliation | `/reconciliation` | Master-level position against the sub-agent tills |
+
+### Two security decisions worth defending
+
+Both are places where the console deliberately does *not* copy the pattern from a sibling
+app, which is the more interesting kind of decision to write up.
+
+1. **No token reaches the browser at all.** Access and refresh are both `httpOnly` cookies,
+   and every backend call goes through a single proxy route, `/api/sa/[...path]`, whose
+   backend prefix is **fixed in the handler** so a crafted path cannot relay the session's
+   credentials to an arbitrary endpoint. A console whose primary action is moving float is
+   the wrong place for a token in `localStorage`.
+2. **No 2FA bypass.** The merchant portal skips the second factor for non-staff merchants —
+   a defensible trade for a self-service dashboard. This console rejects that trade, for the
+   same reason as above: the actions differ, so the authentication requirement differs, even
+   though the code was there to copy.
+
+This app is also the practical test of the scaffolding checklist in §8.6: it was stood up
+with security headers, CORS registration, the internal-secret proxy pattern, a port
+assignment, nginx config, a compose service, a CI matrix entry and a GHCR image from the
+first commit, rather than acquiring them afterwards.
+
+## 8.6 Shared web hardening
 
 Every app is built with a build-time `NEXT_PUBLIC_API_URL`, ships behind nginx with TLS,
 and is subject to the backend's origin allow-list (`ALLOWED_ORIGINS`). New subdomain apps
@@ -86,3 +120,5 @@ are scaffolded from a checklist that applies security headers, CORS registration
 internal-secret proxy pattern, port assignment, nginx config, compose service, CI matrix
 entry and GHCR image from day one (`.claude/skills/new-subdomain-app/SKILL.md`) —
 worth citing as evidence of a repeatable hardening process rather than per-app improvisation.
+`aza-superagents` (§8.5) is the first app built entirely through that checklist, which makes
+it the evidence that the checklist is executable rather than aspirational.
