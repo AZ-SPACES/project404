@@ -116,7 +116,7 @@ The contributions defensible in a thesis are:
    marketplace splits to non-merchant sellers, delegated payment mandates, and a
    sandboxed mini-app runtime with an explicit permission and consent model.
 5. **An empirical engineering account** of building a system of this size
-   (~250,000 lines across eight deployables plus a watchOS companion) with the delivery
+   (~250,000 lines across eight deployables) with the delivery
    controls that keep a money path safe over 62 schema migrations — including two full
    mechanical verification passes, ten findings, and the movement from six of nine money
    invariants holding unconditionally to nine of nine.
@@ -125,7 +125,10 @@ The contributions defensible in a thesis are:
    verified as holding by tracing every documented money path, and three writers on
    undocumented paths took no lock. §5.4a and §16.6 carry the evidence.
 
-## 1.7 Scale of the artefact (measured 2026-09-06)
+## 1.7 Scale of the artefact
+
+Backend, web and migration figures are as measured at `9678fa5a` (2026-09-06); the mobile
+figures were re-measured at `af9601f5` (2026-09-08).
 
 | Component | Language / stack | Size | 2026-08-21 |
 |---|---|---|---|
@@ -137,17 +140,16 @@ The contributions defensible in a thesis are:
 | — DTOs | | 259 | 250 |
 | — Flyway migrations | | 62 (V1 → V64) | 57 |
 | — backend tests | JUnit 5 / Mockito / Testcontainers | 53 classes — **509 tests, all passing** | 40 / 374 |
-| Mobile app | React Native 0.86 / Expo 57 / TS | 103,132 LOC, 410 files, 171 feature screens | 98,733 / 387 / 170 |
-| — unit tests | Jest + RNTL | 24 suites, **326 tests, all passing** | 17 / 254 |
+| Mobile app | React Native 0.86 / Expo 57 / TS | 102,410 LOC, 406 files, 171 feature screens | 98,733 / 387 / 170 |
+| — unit tests | Jest + RNTL | 22 suites, **307 tests, all passing** | 17 / 254 |
 | — E2E flows | Maestro | 20 flows | 20 |
-| — watchOS companion | Swift / SwiftUI / WidgetKit | 1 app + 3 complications + a local Expo module | — |
 | `aza-web` (marketing + developer portal) | Next.js 16 | 15,922 LOC | 15,922 |
 | `aza-admin` (back office) | Next.js 16 | 26,654 LOC | 26,654 |
 | `aza-merchants` (merchant portal) | Next.js 16 | 15,512 LOC | 15,512 |
 | `aza-pay` (hosted checkout) | Next.js 16 | 2,014 LOC | 2,014 |
 | `aza-superagents` (master-agent console) | Next.js 16 | 3,145 LOC | *empty scaffold* |
 | Mini apps + SDK | TypeScript | 7 reference apps + published SDK | same |
-| **Total** | | **≈ 253,000 LOC** | ≈ 220,000 |
+| **Total** | | **≈ 252,000 LOC** | ≈ 220,000 |
 
 > Reproduce these numbers with:
 > `find backend/src/main/java -name '*.java' | xargs wc -l | tail -1`

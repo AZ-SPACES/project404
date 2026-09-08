@@ -60,8 +60,12 @@ every `§` cross-reference in this folder and in any draft written against it st
 | Coverage — `src/crypto` | **87.75%** statements | flat |
 | Money invariants holding unconditionally | **9 of 9** | +1 (F3 closed) |
 | Flyway migrations | **62** (→ `V64`) | +5 |
-| Deployables | **8** + a watchOS companion + the mini-app SDK | +1 |
+| Deployables | **8** + the mini-app SDK | +1 |
 | Working tree | clean | |
+
+Those are the figures as measured in that pass. §1.7 of
+`01-introduction-background-methodology.md` carries the current size and test counts,
+re-measured at `af9601f5` (2026-09-08).
 
 **One property moved backwards**, deliberately: user-to-user chat is no longer end-to-end
 encrypted for new messages (§6.3.0, §12.4a). Bodies are encrypted at rest under a
@@ -76,6 +80,6 @@ with master agents distributing float down a hierarchy, a merchant and partner A
 (hosted checkout, marketplace splits, OAuth "Sign in with AZA"), and an embedded
 mini-application hub — on a single ledger, under one compliance and risk framework. The
 system is implemented as a Spring Boot 4 / PostgreSQL backend, a React Native (Expo) mobile
-client with a watchOS companion, and five Next.js web surfaces, deployed as Docker
+client, and five Next.js web surfaces, deployed as Docker
 containers behind nginx with automated CI/CD. Correctness on the money path is governed by
 nine written invariants, all of which are enforced by tests and mechanically re-verified.

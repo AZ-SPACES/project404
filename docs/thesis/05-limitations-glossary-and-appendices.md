@@ -139,10 +139,7 @@ set is listed because the closures are themselves evidence for Chapter 3.
     flow passed through (promo credit, referral reward, float mint/burn). Closed structurally
     by `WalletLedger` (§5.4a), but recorded here because the *audit* that verified invariant
     4 in August did not find them — which bounds what a trace-based verification can claim.
-27b. **The watchOS companion has never been compiled.** Swift unit tests exist but the
-    platform components are not installed in the development Xcode, so neither the tests nor
-    the app have been built; only the TypeScript side is exercised by CI (§7.7).
-27c. **No check that enum-backed `CHECK` constraints match their Java enums.** `V64` exists
+27b. **No check that enum-backed `CHECK` constraints match their Java enums.** `V64` exists
     because one drifted and reached production, breaking the fraud hold (§6.7, §10.3).
 28. **Coverage artefacts are tracked in git** (`aza/coverage/`), so every run produces
     thousands of lines of diff noise. They belong in `.gitignore`.
@@ -167,10 +164,7 @@ remains before submission:
 4. **Add `collectCoverageFrom`** to the mobile Jest config so the coverage denominator is
    the codebase rather than the tested subset.
 5. **Gitignore `aza/coverage/`.**
-5b. **Install the watchOS platform components** (`xcodebuild -downloadPlatform watchOS`) and
-   build the watch target at least once. It currently blocks building the iOS scheme too,
-   so this is not optional work — it is a prerequisite for any iOS release (§7.7).
-5c. **Add a schema-drift check** comparing enum-backed `CHECK` constraints against the
+5b. **Add a schema-drift check** comparing enum-backed `CHECK` constraints against the
    current Java enums. Both `V58` and `V64` exist because one drifted from the other, and
    `V64`'s drift broke the fraud hold in production. A small script, high value.
 6. **State the regulatory position** (§1.5) and the KYC-tier placeholder caveat explicitly.
@@ -362,9 +356,6 @@ capabilities that survived contact with the product is reporting half the engine
 | **Redis Stream** | An append-only log with per-entry ids. Backs `WebSocketEventLog`, the durable per-user recovery log behind the live pub/sub transport (§4.5). |
 | **At-least-once delivery** | A replayed event may arrive twice, so consumers dedupe on id. The delivery guarantee of the event log. |
 | **STOMP** | Simple Text Oriented Messaging Protocol; here over WebSocket. |
-| **WatchConnectivity / application context** | Apple's phone↔watch transport, and its latest-value-wins primitive. Carries the wallet snapshot to the watch; chosen over `transferUserInfo` and `sendMessage` (§7.7). |
-| **App Group** | A shared container letting an app and its extensions on **one device** exchange data. How the watch app hands snapshots to its WidgetKit complications, which run in a separate process. |
-| **WidgetKit complication** | A watch-face element rendered by a separate extension process. |
 | **TOTP** | Time-based One-Time Password (RFC 6238). |
 | **coturn** | The TURN/STUN server implementation AZA runs, as a host service on the droplet. |
 | **CGNAT** | Carrier-Grade NAT — many subscribers sharing one public IP. Why unauthenticated rate limits key on device before IP (§6.4), and why a TURN relay is required for calls (§4.5). |
@@ -450,9 +441,8 @@ source data lives, and which chapter it belongs in.
 | 45 | Super-agent hierarchy and float distribution — master float → sub-agent float, annotated "no e-money created, no margin taken" | §5.4, `V58` | 5 |
 | 46 | Merchant pricing resolution — merchant → plan → rule → band → cap, with the per-merchant override short-circuiting the chain | §5.2, `V62` | 5 |
 | 47 | The durable event log — pub/sub as live transport, Redis Stream as recovery, client cursor replay | §4.5 | 4 |
-| 48 | Watch architecture — phone-authoritative, application context, App Group boundary to the complication process | §7.7 | 5 |
-| 49 | The deploy health gate — state check + restart-counter comparison across a settle window, and why neither alone suffices | §10.2 | 6 |
-| 50 | The `V64` incident as a causal chain: enum value added → stale CHECK rejects UPDATE → risk-engine catch swallows it → transaction poisoned → unrelated INSERT fails → raw error on the PIN screen | §6.7 | 6/7 |
+| 48 | The deploy health gate — state check + restart-counter comparison across a settle window, and why neither alone suffices | §10.2 | 6 |
+| 49 | The `V64` incident as a causal chain: enum value added → stale CHECK rejects UPDATE → risk-engine catch swallows it → transaction poisoned → unrelated INSERT fails → raw error on the PIN screen | §6.7 | 6/7 |
 | 35 | Finding F1 — the deadlock cycle, and how canonical ordering removes it | `05-limitations-glossary-and-appendices.md` §16.2 | 6/7 |
 | 36 | Finding F2 — effect timing before and after `AfterCommitExecutor` | §16.2 | 6/7 |
 | 37 | **The concurrency experiment result** — 100 parallel debits, 50 succeed, balance 0 | `04-operations-testing-and-results.md` §12.5 | 7 |

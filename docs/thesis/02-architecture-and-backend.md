@@ -2,19 +2,13 @@
 
 ## 4.1 Overview
 
-AZA is a **monorepo containing eight deployable artefacts** plus a shared mini-app SDK and
-a watchOS companion embedded in the mobile app. All clients speak to one backend over
-HTTPS/WSS; the backend owns the only database.
-
-The watch is the one exception to that sentence and the exception is deliberate: **it never
-authenticates and never calls the API**, receiving everything from the paired phone over
-WatchConnectivity (§7.7). Draw it as a leaf off the mobile client, not as a ninth client.
+AZA is a **monorepo containing eight deployable artefacts** plus a shared mini-app SDK.
+All clients speak to one backend over HTTPS/WSS; the backend owns the only database.
 
 ```mermaid
 graph TB
   subgraph Clients
     M["Mobile app<br/>React Native / Expo<br/>171 screens"]
-    WA["watchOS companion<br/>read-only, phone-fed<br/>+ 3 complications"]
     W["aza-web<br/>marketing + developer portal"]
     A["aza-admin<br/>back office"]
     ME["aza-merchants<br/>merchant portal"]
@@ -44,7 +38,6 @@ graph TB
   end
 
   M --> N
-  WA -.WatchConnectivity.-> M
   SA --> N
   W --> N
   A --> N
@@ -74,7 +67,7 @@ graph TB
 | `aza-merchants` | Merchant self-service: API keys, products, invoices, payouts, settlements, webhooks, Connect, mandates, team, mini-app submission | `merchants.aza.systems` | 3001 |
 | `aza-pay` | Hosted checkout `/c/[sessionId]` and mandate approval `/m/[mandateId]` | `pay.aza.systems` | 3002 |
 | `aza-superagents` | Master-agent console: downline, float distribution and recall, reconciliation, sub-agent invitation | `superagents.aza.systems` | 3003 |
-| `aza` | Consumer mobile app, with an embedded watchOS companion target | App Store / Play Store (EAS) | — |
+| `aza` | Consumer mobile app | App Store / Play Store (EAS) | — |
 | `nginx` | TLS, reverse proxy to the backend, static mini-app bundle serving | :80 / :443 | — |
 | `postgres`, `redis`, `certbot`, `coturn` | Supporting infrastructure | internal / UDP relay | — |
 
@@ -90,10 +83,6 @@ referenced nothing, which is what made money invariant 8 vacuous (§12.3b). Both
 built in `d35b9b59`. Report the sequence, not just the endpoint: an invariant that governed
 no live code was the *symptom* that located the missing tier, which is a small but real
 argument for writing invariants down before the code that satisfies them exists.
-
-**The watchOS companion** (`4d31228e`, `90c62548`) is a target of the mobile app rather than
-a separate deployable — it ships inside the iOS build — but it is a distinct runtime with
-its own process boundaries and is documented as such in §7.7.
 
 ## 4.3 Backend internal architecture
 
