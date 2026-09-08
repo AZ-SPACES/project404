@@ -1,0 +1,22 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: cs-defense-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: defense
+      POSTGRES_PASSWORD: defense
+      POSTGRES_DB: defense
+    ports:
+      - "5433:5432"
+    volumes:
+      - defense-pgdata:/var/lib/postgresql/data
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U defense -d defense"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  defense-pgdata:
