@@ -35,15 +35,35 @@ the roster and never touches recorded scores.
 
 ## On defense day
 
-One machine runs `npm run dev` (or `npm run build && npm start`) and the other
-laptops open it over the venue LAN at `http://<that-machine-ip>:3000`. Postgres is
-the single source of truth, so a browser can be closed or refreshed without loss.
-Each room's board polls every 8 seconds, so co-examiners see each other's ballots
-land without reloading.
+It is deployed at **https://defense.aza.systems**. Examiners open that on any
+device and pick their room, then their own name. Postgres is the single source of
+truth, so a browser can be closed or refreshed without loss, and each room's board
+polls every 8 seconds so co-examiners see each other's ballots land without
+reloading.
 
-Examiners pick their room, then their own name. There is no password: anyone who
-can reach the URL can file a ballot. That is fine on a closed venue network, and
-is the reason not to expose this to the public internet.
+Running it on the venue LAN instead is still supported and needs no deployment:
+one machine runs `npm run build && npm start`, the rest open
+`http://<that-machine-ip>:3000`.
+
+### ⚠️ There is no authentication
+
+This was a deliberate choice, made with the trade-off understood — not an
+oversight, and not something to "fix" without deciding to. **Anyone who knows the
+hostname can file or overwrite a ballot for any of the 501 students, and can
+replace the entire roster through `/import`.** Nothing identifies an examiner
+beyond the name they pick from a dropdown, so the app cannot tell a panel member
+from a passer-by, and an altered score leaves no attributable trace.
+
+What follows from that, while it is public:
+
+- Treat the hostname as the only barrier. Don't post it anywhere public.
+- Export results as soon as scoring ends — `/results` → Download CSV. The CSV is
+  the record; the database is a live document anyone can still edit.
+- Take it down when the defense is over: delete `nginx/conf.d/defense.conf`,
+  `docker compose exec nginx nginx -s reload`. That closes the exposure without
+  touching the data.
+- If it needs to stay up longer, put a gate in front of it — a shared passcode in
+  Next middleware, `auth_basic` on the vhost, or an IP allowlist for the venue.
 
 ## Importing a new allocation
 
@@ -98,6 +118,51 @@ Known quirks carried over from the source, not silently fixed:
 Room venues and panels come from the department's room note: RM 1 FF12, RM 2 FF23,
 RM 3 Simulation Lab, RM 4 FF12, RM 5 F5. They are not in the allocation sheet, so
 an import never overwrites them.
+
+## Deployment
+
+The app is served from the Aza DigitalOcean droplet, alongside `api.aza.systems`.
+
+Deploying is a push: merge to `main` on `AZ-SPACES/project404`, CI runs
+(`evaluations-ci` builds this app), and on success `.github/workflows/deploy.yml`
+SSHes to the droplet, pulls, rebuilds and health-gates the stack. There is nothing
+to run by hand.
+
+Moving parts, all in the repo root:
+
+| Where | What |
+|---|---|
+| `evaluations/Dockerfile` | three-stage build; the runtime image is Next's `standalone` output plus `db/` and `data/` |
+| `docker-compose.yml` | the `evaluations` and `defense-db` services |
+| `docker-compose.backend.yml` | leaves `evaluations` **enabled** — unlike the aza-* frontends it is not on Vercel |
+| `nginx/conf.d/defense.conf` | the `defense.aza.systems` vhost |
+
+`defense-db` is a Postgres of its own rather than a schema inside `aza-postgres`,
+so reseeding the roster can never reach production Aza data. It publishes no port;
+reach it with `docker compose exec defense-db psql -U defense defense`.
+
+Neither a DNS record nor a certificate was needed: `*.aza.systems` already points
+at the droplet, and the wildcard certificate issued by
+`scripts/init-miniapps-ssl.sh` already covers one label deep.
+
+### The roster on the server
+
+`schema.sql` is mounted into the database's `initdb.d`, so tables exist from the
+first boot. The deploy then seeds `data/allocation.json` **only if the database
+holds no students**. That is the important detail: seeding unconditionally would
+mean any deploy during the defense silently reverted a roster uploaded through
+`/import`. To reseed deliberately:
+
+```bash
+docker compose exec evaluations node db/seed.mjs   # idempotent; never touches scores
+```
+
+### Setting the database password
+
+`DEFENSE_DB_PASSWORD` in the droplet's root `.env` overrides the default. Postgres
+reads it on the volume's **first** start only — setting it later without also
+dropping `defense_pgdata` leaves the old password in place and the app then fails
+to authenticate.
 
 ## Layout
 
