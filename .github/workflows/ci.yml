@@ -166,3 +166,38 @@ jobs:
           NEXT_PUBLIC_API_URL: ${{ matrix.NEXT_PUBLIC_API_URL }}
           NEXT_PUBLIC_SITE_URL: ${{ matrix.NEXT_PUBLIC_SITE_URL }}
           NEXT_TELEMETRY_DISABLED: 1
+
+  # ── Defense scoring app: typecheck + build ───────────────────────────────
+  # Deliberately its own job rather than another entry in the frontend-ci matrix
+  # above: that matrix runs `npm run lint`, and this app ships no eslint config
+  # and no eslint dependency, so it would fail there for a reason that has
+  # nothing to do with its health.
+  #
+  # `next build` runs tsc over the whole project, which is the gate that matters
+  # here. Without it a type error would first surface as a failed `docker build`
+  # on the droplet — during the deploy, after CI had already reported green.
+  evaluations-ci:
+    name: Evaluations Build (CS defense)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: evaluations/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: evaluations
+
+      # No DATABASE_URL: every route is force-dynamic, so the build never opens
+      # a connection. If that ever stops being true this job is where it breaks.
+      - name: Build
+        run: npm run build
+        working-directory: evaluations
+        env:
+          NEXT_TELEMETRY_DISABLED: 1

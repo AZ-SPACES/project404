@@ -45,9 +45,41 @@ Examiners pick their room, then their own name. There is no password: anyone who
 can reach the URL can file a ballot. That is fine on a closed venue network, and
 is the reason not to expose this to the public internet.
 
+## Importing a new allocation
+
+`/import` replaces the roster from a `.csv` or `.xlsx` without touching examiners,
+venues, or ballots already recorded for students who stay in the list.
+
+It reads two shapes:
+
+- **The department's own table** — no header row; `GROUP n` rows separating the
+  students beneath them. Columns are matched by position (name, index, student ID,
+  room, day).
+- **A normal spreadsheet** — a header row plus a Group column. Headers are matched
+  by name, and anything mismatched can be remapped from the dropdowns.
+
+A room whose group numbers step evenly (6, 11, 16 …) implies the group before the
+first label, which is how the source leaves group 1 unwritten; those students are
+placed in the inferred group and the import warns you which number it chose.
+Crossing into a new room always ends the previous group, so an unlabelled block
+can never be absorbed into the room above it.
+
+Nothing is written until you press Import, and the preview shows added / removed /
+skipped counts first. Any removal needs an explicit tick, and the commit runs in a
+single transaction — if it fails, nothing changes.
+
+## Exporting results
+
+- `/results` → **Download CSV**, or `GET /api/results?format=csv` — every room.
+- A room's board → **Export room CSV**, or `?format=csv&room=rm-3` — one room.
+
+Each student gets one row per examiner plus a `PANEL MEAN` row carrying the
+weighted total. The file is UTF-8 with a BOM and CRLF line endings so Excel opens
+the names correctly on Windows.
+
 ## Data
 
-`data/allocation.json` is generated from two Word documents:
+`data/allocation.json` is the initial seed, generated from two Word documents:
 
 - `DEFENSE ALLOCATION FOR COMPUTER SCIENCE 2026.docx` — rooms, groups, students
 - `CS4-PROJECT_ALLOCATION-2025-2026.docx` — supervisors, joined on student ID
@@ -64,7 +96,8 @@ Known quirks carried over from the source, not silently fixed:
 - Only 285 of 501 students matched a supervisor in the CS4 document.
 
 Room venues and panels come from the department's room note: RM 1 FF12, RM 2 FF23,
-RM 3 Simulation Lab, RM 4 FF12, RM 5 F5.
+RM 3 Simulation Lab, RM 4 FF12, RM 5 F5. They are not in the allocation sheet, so
+an import never overwrites them.
 
 ## Layout
 
@@ -73,10 +106,14 @@ app/
   page.tsx                 room picker with per-room progress
   rooms/[room]/            scoring board (server page + client RoomBoard)
   results/                 standings across all rooms
+  import/                  upload wizard (preview, column mapping, commit)
   api/rooms/               room list and one room's full state
   api/scores/              ballot upsert (validates range and room membership)
   api/results/             aggregated results, ?format=csv to export
+  api/import/              preview and commit endpoints
 lib/rubric.ts              criteria, weights, and the scoring maths
+lib/parseSheet.ts          csv reader and xlsx reader
+lib/importAllocation.ts    column detection, group resolution, warnings
 lib/db.ts                  pg pool
 db/schema.sql              loaded automatically on first container start
 db/seed.mjs                idempotent roster seed

@@ -13,6 +13,7 @@
     "db:seed": "node db/seed.mjs"
   },
   "dependencies": {
+    "exceljs": "^4.4.0",
     "next": "16.2.1",
     "pg": "^8.13.1",
     "react": "19.2.4",

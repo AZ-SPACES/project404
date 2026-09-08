@@ -195,6 +195,10 @@ export default function RoomBoard({
               {saving ? "Saving…" : savedAt ? `Saved ${savedAt}` : "Scores save as you tap"}
             </div>
           </div>
+          <a href={`/api/results?format=csv&room=${room.id}`} className="btn"
+             title={`Export every ballot filed in ${room.label}`}>
+            Export room CSV
+          </a>
           <button onClick={() => chooseExaminer("")} className="btn"
                   title="Hand the laptop to your co-examiner">
             {me?.name ?? "Choose name"}

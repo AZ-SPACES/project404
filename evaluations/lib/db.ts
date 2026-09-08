@@ -1,4 +1,4 @@
-import { Pool } from "@/node_modules/@types/pg";
+import { Pool } from "pg";
 
 const connectionString =
   process.env.DATABASE_URL ?? "postgres://defense:defense@localhost:5433/defense";

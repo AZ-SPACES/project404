@@ -11,7 +11,7 @@ type Row = {
   ballots: { examinerId: string; examiner: string; ballot: Ballot }[];
 };
 
-async function load(): Promise<Row[]> {
+async function load(roomId: string | null): Promise<Row[]> {
   return query<Row>(`
     select r.id as "roomId", r.code as "roomCode", r.venue,
            g.number as "groupNumber",
@@ -31,8 +31,9 @@ async function load(): Promise<Row[]> {
       from students s
       join groups g on g.number = s.group_number
       join rooms  r on r.id = g.room_id
+     where $1::text is null or r.id = $1
      order by r.sort, g.number, s.sort
-  `);
+  `, [roomId]);
 }
 
 function csvCell(v: unknown) {
@@ -40,8 +41,10 @@ function csvCell(v: unknown) {
 }
 
 export async function GET(req: Request) {
-  const rows = await load();
-  const format = new URL(req.url).searchParams.get("format");
+  const params = new URL(req.url).searchParams;
+  const roomId = params.get("room");
+  const rows = await load(roomId);
+  const format = params.get("format");
 
   if (format !== "csv") {
     return NextResponse.json({
@@ -76,10 +79,12 @@ export async function GET(req: Request) {
   }
 
   const stamp = new Date().toISOString().slice(0, 10);
-  return new NextResponse(lines.join("\n"), {
+  const scope = roomId ? `-${roomId}` : "";
+  // A BOM keeps Excel on Windows from mangling the UTF-8 names.
+  return new NextResponse("﻿" + lines.join("\r\n"), {
     headers: {
       "content-type": "text/csv; charset=utf-8",
-      "content-disposition": `attachment; filename="cs-defense-scores-${stamp}.csv"`,
+      "content-disposition": `attachment; filename="cs-defense-scores${scope}-${stamp}.csv"`,
     },
   });
 }

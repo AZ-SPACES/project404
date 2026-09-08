@@ -225,6 +225,63 @@ services:
     networks:
       - aza-network
 
+  # ── CS project defense scoring — defense.aza.systems ─────────────────────
+  # Its own database rather than another schema inside aza-postgres. This is a
+  # separate application with a separate lifetime: the roster gets re-imported
+  # and the volume may well be dropped and reseeded between rehearsals, and
+  # none of that should be able to reach production Aza data.
+  defense-db:
+    image: postgres:16-alpine
+    container_name: defense-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: defense
+      POSTGRES_USER: defense
+      # Only ever reachable on aza-network — no published port — so the default
+      # is survivable, but set DEFENSE_DB_PASSWORD in .env to override it.
+      # Postgres reads this on the volume's FIRST start only: changing it later
+      # without also dropping defense_pgdata leaves the old password in place
+      # and the app then fails to authenticate.
+      POSTGRES_PASSWORD: ${DEFENSE_DB_PASSWORD:-defense}
+    volumes:
+      - defense_pgdata:/var/lib/postgresql/data
+      # Creates the tables on first start so /api/rooms answers (with an empty
+      # list) before the roster is seeded. Without it the evaluations
+      # healthcheck below could never pass on a first deploy, and the deploy
+      # gate would roll the whole release back over an empty database.
+      - ./evaluations/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    networks:
+      - aza-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U defense -d defense"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Unlike the six aza-* frontends this is NOT on Vercel and is NOT disabled by
+  # docker-compose.backend.yml: it needs a database on the private network, so
+  # the droplet serves it directly. nginx/conf.d/defense.conf routes to it.
+  evaluations:
+    build: ./evaluations
+    container_name: defense-evaluations
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://defense:${DEFENSE_DB_PASSWORD:-defense}@defense-db:5432/defense
+    depends_on:
+      defense-db:
+        condition: service_healthy
+    # /api/rooms is a real query against defense-db, so "healthy" means the app
+    # can actually serve a ballot — not merely that node came up.
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:3000/api/rooms || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+    networks:
+      - aza-network
+
   nginx:
     image: nginx:alpine
     container_name: aza-nginx
@@ -266,6 +323,7 @@ networks:
 
 volumes:
   postgres_data:
+  defense_pgdata:
   redis_data:
   certbot_webroot:
   certbot_certs:

@@ -46,6 +46,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <nav className="flex items-center gap-2">
                 <Link href="/" className="btn">Rooms</Link>
                 <Link href="/results" className="btn">Results</Link>
+                <Link href="/import" className="btn">Import</Link>
               </nav>
               <Image src="/css-logo.png" alt="Computer Science Society" width={60} height={40}
                      className="h-10 w-auto" />

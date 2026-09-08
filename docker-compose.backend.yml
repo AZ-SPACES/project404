@@ -1,6 +1,7 @@
-# Production overlay for the DigitalOcean droplet, where every frontend is on Vercel and
-# the box serves api.aza.systems only. It disables the six Next.js services; nginx needs
-# no override, because nginx/conf.d is the API config (HTTP + HTTPS) in its final state.
+# Production overlay for the DigitalOcean droplet, where the aza frontends are on Vercel
+# and the box serves api.aza.systems and defense.aza.systems. It disables the six aza-*
+# Next.js services; nginx needs no override, because nginx/conf.d is the served config
+# (HTTP + HTTPS) in its final state.
 #
 # Command: docker compose -f docker-compose.yml -f docker-compose.backend.yml up -d
 # The deploy workflow always passes both files.
@@ -29,3 +30,9 @@ services:
   postgres:
     ports:
       - "127.0.0.1:5432:5432"
+
+  # DELIBERATELY NOT DISABLED: `evaluations` and `defense-db` are absent from the
+  # list above because, unlike the aza-* frontends, the defense scoring app is not
+  # on Vercel. It is a stateful Next.js app that talks to a Postgres on the private
+  # compose network, so this droplet is what serves it — see nginx/conf.d/defense.conf.
+  # Adding it to the disabled profiles would 502 defense.aza.systems.
