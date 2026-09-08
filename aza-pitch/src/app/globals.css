@@ -1,0 +1,577 @@
+@import "tailwindcss";
+
+/* ============================================================
+   AZA PITCH — design tokens
+
+   Light is the default and dark is opt-in, stamped as `data-theme`
+   on <html> by the inline script in layout.tsx (so there is no flash
+   of the wrong ground before hydration).
+
+   Only these tokens change between the two themes. Nothing else in the
+   stylesheet or in any slide references a raw colour, which is what keeps
+   the two grounds from drifting apart as slides get edited.
+   ============================================================ */
+@theme inline {
+  --color-background: var(--bg);
+  --color-foreground: var(--text);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-geist-mono);
+}
+
+:root {
+  color-scheme: light;
+
+  /* Ground — the sage the rest of the brand uses, with white cards on top of it. */
+  --bg: #E6ECE1;
+  --surface: #FFFFFF;
+  --surface-2: #F2F5EE;
+
+  --text: #0E0F0C;
+  --text-secondary: #4A4F46;
+  --text-tertiary: #6E7468;
+
+  --line: #D3DACB;
+  --line-strong: #B4BEAA;
+
+  /* The accent slot: everything expressive resolves through this one token.
+     On the light ground the brand lime cannot carry text — #B7EE7A on #E6ECE1
+     is about 1.3:1 — so the accent here is the deep green, and the lime stays
+     available below for fills that sit *behind* dark text. */
+  --accent: #174717;
+  --accent-lift: #1E5E1E;
+
+  /* The literal brand lime. Only ever used as a fill with dark text on top. */
+  --lime: #B7EE7A;
+
+  /* Semantic, used by the pills in the results and fee tables. */
+  --ok: #1F6B2B;
+  --warn: #8A5300;
+  --bad: #B3261E;
+
+  --radius: 0.75rem;
+
+  /* Canonical motion curves, carried over from aza-web. */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+
+  --slide-pad-x: clamp(1.5rem, 6vw, 7rem);
+  --slide-pad-y: clamp(4.5rem, 9vh, 7rem);
+  --measure: 62ch;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* Deeper and cooler than the app's #121212: a projector lifts blacks, and the
+     extra headroom keeps the surface cards separable in a lit room. */
+  --bg: #0B0C0A;
+  --surface: #131511;
+  --surface-2: #1B1E18;
+
+  --text: #F4F6F1;
+  --text-secondary: #9AA096;
+  --text-tertiary: #6B7166;
+
+  --line: #262A22;
+  --line-strong: #3A3F34;
+
+  /* On the dark ground the lime is the accent — this is the palette PRODUCT.md
+     describes, where the lime is the single most expressive element. */
+  --accent: #B7EE7A;
+  --accent-lift: #C9F599;
+
+  --ok: #B7EE7A;
+  --warn: #E3B341;
+  --bad: #EA4335;
+}
+
+@layer base {
+  * { box-sizing: border-box; min-width: 0; }
+
+  html {
+    background: var(--bg);
+    /* Native snap does the work; no Lenis here. Lenis and CSS scroll-snap
+       fight for the same scroll position and produce a slide that drifts
+       back a few pixels after every settle. */
+    scroll-behavior: auto;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-synthesis-weight: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden; /* the deck element owns scrolling */
+  }
+
+  ::selection { background: var(--lime); color: #0B0C0A; }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: 3px;
+  }
+}
+
+/* ============================================================
+   DECK MECHANICS
+   ============================================================ */
+.deck {
+  height: 100dvh;
+  overflow-y: scroll;
+  overflow-x: hidden;
+  scroll-snap-type: y mandatory;
+  scrollbar-width: none;
+}
+.deck::-webkit-scrollbar { display: none; }
+
+.slide {
+  position: relative;
+  min-height: 100dvh;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: var(--slide-pad-y) var(--slide-pad-x);
+  /* Slides are content boxes, not cards — the ground is continuous and the
+     rules below are what separate one from the next. */
+  border-top: 1px solid var(--line);
+}
+.slide:first-child { border-top: 0; }
+
+/* A slide whose content genuinely exceeds the viewport (the invariant table)
+   scrolls inside itself rather than breaking the snap rhythm. */
+.slide--dense { justify-content: flex-start; }
+.slide--dense .slide-body { overflow-y: auto; }
+
+/* ============================================================
+   TYPOGRAPHY
+   ============================================================ */
+.eyebrow {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.eyebrow::before {
+  content: "";
+  width: 1.75rem;
+  height: 1px;
+  background: var(--accent);
+  flex: none;
+}
+
+.display {
+  font-size: clamp(2.1rem, 5.4vw, 4.6rem);
+  line-height: 0.98;
+  letter-spacing: -0.035em;
+  font-weight: 700;
+  margin: 0;
+  text-wrap: balance;
+}
+
+.headline {
+  font-size: clamp(1.6rem, 3.4vw, 2.9rem);
+  line-height: 1.06;
+  letter-spacing: -0.028em;
+  font-weight: 650;
+  margin: 0;
+  text-wrap: balance;
+}
+
+.lede {
+  font-size: clamp(1rem, 1.5vw, 1.2rem);
+  line-height: 1.55;
+  color: var(--text-secondary);
+  max-width: var(--measure);
+  text-wrap: pretty;
+}
+
+.body-sm {
+  font-size: clamp(0.86rem, 1.05vw, 0.98rem);
+  line-height: 1.6;
+  color: var(--text-secondary);
+  text-wrap: pretty;
+}
+
+.mono {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.accent { color: var(--accent); }
+.dim { color: var(--text-tertiary); }
+
+/* ============================================================
+   PRIMITIVES
+   ============================================================ */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: clamp(1rem, 1.8vw, 1.6rem);
+}
+
+.rule { height: 1px; background: var(--line); border: 0; margin: 0; }
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.28rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.pill--ok { border-color: color-mix(in oklab, var(--ok) 45%, transparent); color: var(--ok); }
+.pill--warn { border-color: color-mix(in oklab, var(--warn) 45%, transparent); color: var(--warn); }
+.pill--bad { border-color: color-mix(in oklab, var(--bad) 45%, transparent); color: var(--bad); }
+
+/* Data tables — hairline, no zebra, figures aligned on the decimal. */
+.dtable { width: 100%; border-collapse: collapse; font-size: clamp(0.76rem, 0.95vw, 0.9rem); }
+.dtable th {
+  text-align: left;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.66rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  font-weight: 500;
+  padding: 0 1rem 0.6rem 0;
+  border-bottom: 1px solid var(--line-strong);
+  white-space: nowrap;
+}
+.dtable td {
+  padding: 0.7rem 1rem 0.7rem 0;
+  border-bottom: 1px solid var(--line);
+  color: var(--text-secondary);
+  vertical-align: top;
+}
+.dtable td:first-child { color: var(--text); }
+.dtable tr:last-child td { border-bottom: 0; }
+.dtable .num { font-family: var(--font-geist-mono), ui-monospace, monospace; font-variant-numeric: tabular-nums; color: var(--text); }
+
+/* Wide content scrolls in its own box rather than the page. */
+.scroll-x { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+/* ============================================================
+   MOTION — every animated property is opacity or transform.
+   The `.is-live` class is added when a slide becomes the active one.
+   ============================================================ */
+.anim {
+  opacity: 0;
+  transform: translateY(18px);
+  transition:
+    opacity 0.62s var(--ease-out),
+    transform 0.62s var(--ease-out);
+  transition-delay: calc(var(--i, 0) * 65ms);
+}
+.is-live .anim { opacity: 1; transform: none; }
+
+.anim-rise { transform: translateY(28px); }
+.anim-fade { transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .deck { scroll-behavior: auto; }
+  .anim {
+    opacity: 1;
+    transform: none;
+    transition: none;
+    transition-delay: 0ms;
+  }
+}
+
+/* ============================================================
+   CHROME — brand, counter, rail, progress, hint.
+   All fixed-position and outside the scroller, so none of it
+   participates in snapping.
+   ============================================================ */
+.deck-chrome {
+  position: fixed;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: clamp(1rem, 2.4vh, 1.6rem) var(--slide-pad-x);
+  pointer-events: none;
+}
+.deck-chrome--top { top: 0; }
+.deck-chrome > * { pointer-events: auto; }
+
+.deck-brand { display: flex; align-items: center; gap: 0.6rem; }
+.deck-wordmark {
+  font-weight: 700;
+  font-size: 0.92rem;
+  letter-spacing: 0.22em;
+  color: var(--text);
+}
+.deck-brand-sep { width: 1px; height: 0.9rem; background: var(--line-strong); }
+.deck-brand-label {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.deck-counter {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  color: var(--text-secondary);
+}
+.deck-ref {
+  color: var(--accent);
+  border: 1px solid color-mix(in oklab, var(--accent) 32%, transparent);
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+}
+
+/* Rail: a dash per slide, growing and going lime when active. Labels appear on
+   hover/focus only — a permanent 18-item menu would compete with the slide. */
+.deck-rail {
+  position: fixed;
+  right: clamp(0.65rem, 1.6vw, 1.5rem);
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 0.42rem;
+  align-items: flex-end;
+}
+.deck-dot {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.55rem;
+  background: none;
+  border: 0;
+  padding: 0.18rem 0;
+  cursor: pointer;
+}
+.deck-dot-mark {
+  display: block;
+  width: 14px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--line-strong);
+  transition: width 0.32s var(--ease-out), background-color 0.32s var(--ease-out);
+}
+.deck-dot:hover .deck-dot-mark,
+.deck-dot:focus-visible .deck-dot-mark { background: var(--text-secondary); }
+.deck-dot.is-active .deck-dot-mark { width: 30px; background: var(--accent); }
+
+.deck-dot-label {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.66rem;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateX(6px);
+  transition: opacity 0.22s var(--ease-out), transform 0.22s var(--ease-out);
+  order: -1;
+}
+.deck-dot:hover .deck-dot-label,
+.deck-dot:focus-visible .deck-dot-label { opacity: 1; transform: none; }
+
+.deck-progress {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--line);
+  z-index: 20;
+}
+.deck-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  transform-origin: 0 50%;
+  transition: transform 0.42s var(--ease-out);
+}
+
+.deck-hint {
+  position: fixed;
+  left: var(--slide-pad-x);
+  bottom: clamp(1.4rem, 4vh, 2.4rem);
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  transition: opacity 0.5s var(--ease-out);
+}
+.deck-hint.is-gone { opacity: 0; pointer-events: none; }
+.deck-hint-sep { text-transform: none; letter-spacing: 0; }
+.deck-hint kbd {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.72rem;
+  line-height: 1;
+  padding: 0.24rem 0.4rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  color: var(--text-secondary);
+}
+
+/* The chrome brackets every slide, so slides reserve room for it rather than
+   letting the first line slide under the brand. */
+.slide { padding-top: max(var(--slide-pad-y), 5.5rem); }
+
+@media (max-width: 640px) {
+  .deck-rail { display: none; }
+  .deck-brand-label { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .deck-dot-mark,
+  .deck-dot-label,
+  .deck-progress-fill,
+  .deck-hint { transition: none; }
+}
+
+/* ============================================================
+   GATE — the track chooser
+   ============================================================ */
+.gate {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: var(--slide-pad-y) var(--slide-pad-x);
+  overflow-y: auto;
+}
+
+.gate-grid {
+  display: grid;
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+@media (min-width: 900px) {
+  .gate-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+.gate-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  width: 100%;
+  height: 100%;
+  text-align: left;
+  background: var(--surface);
+  border: 0;
+  padding: clamp(1.3rem, 2.4vw, 2rem);
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  transition: background-color 0.28s var(--ease-out);
+}
+.gate-card:hover,
+.gate-card:focus-visible { background: var(--surface-2); }
+
+.gate-card-name {
+  font-size: clamp(1.3rem, 2.2vw, 1.75rem);
+  font-weight: 650;
+  letter-spacing: -0.025em;
+  line-height: 1.05;
+}
+.gate-card:hover .gate-card-name,
+.gate-card:focus-visible .gate-card-name { color: var(--accent); }
+
+.gate-card-blurb { flex: 1; }
+
+.gate-card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 0.4rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--line);
+}
+.gate-card-arrow {
+  color: var(--accent);
+  font-size: 1.05rem;
+  transition: transform 0.28s var(--ease-out);
+}
+.gate-card:hover .gate-card-arrow,
+.gate-card:focus-visible .gate-card-arrow { transform: translateX(5px); }
+
+/* Track switcher in the chrome */
+.deck-track {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: none;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  padding: 0.26rem 0.7rem;
+  cursor: pointer;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.66rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  transition: color 0.2s var(--ease-out), border-color 0.2s var(--ease-out);
+}
+.deck-track:hover { color: var(--accent); border-color: color-mix(in oklab, var(--accent) 45%, transparent); }
+
+@media (prefers-reduced-motion: reduce) {
+  .gate-card,
+  .gate-card-arrow,
+  .deck-track { transition: none; }
+}
+
+/* Theme toggle — same pill geometry as the track switcher next to it. */
+.theme-toggle {
+  display: inline-grid;
+  place-items: center;
+  width: 1.85rem;
+  height: 1.85rem;
+  background: none;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: color 0.2s var(--ease-out), border-color 0.2s var(--ease-out);
+}
+.theme-toggle:hover {
+  color: var(--accent);
+  border-color: color-mix(in oklab, var(--accent) 45%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-toggle { transition: none; }
+}
+
+/* The scroller is focused programmatically so it can receive arrow keys. It is
+   tabIndex=-1, so :focus-visible never matches it and no ring is suppressed for
+   anyone navigating by keyboard — the rail buttons still show theirs. */
+.deck:focus { outline: none; }

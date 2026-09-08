@@ -116,7 +116,7 @@ jobs:
           path: aza/coverage/
           retention-days: 7
 
-  # ── Frontend lint + build (all 5 Next.js apps in parallel) ───────────────
+  # ── Frontend lint + build (all 6 Next.js apps in parallel) ───────────────
   frontend-ci:
     name: Frontend CI (${{ matrix.app }})
     runs-on: ubuntu-latest
@@ -135,6 +135,8 @@ jobs:
             NEXT_PUBLIC_API_URL: https://api.aza.systems
           - app: aza-superagents
             NEXT_PUBLIC_API_URL: https://api.aza.systems
+          - app: aza-pitch
+            NEXT_PUBLIC_SITE_URL: https://pitch.aza.systems
 
     steps:
       - uses: actions/checkout@v4

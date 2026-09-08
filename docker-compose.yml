@@ -213,6 +213,18 @@ services:
     networks:
       - aza-network
 
+  aza-pitch:
+    build:
+      context: ./aza-pitch
+      args:
+        NEXT_PUBLIC_SITE_URL: https://pitch.aza.systems
+    container_name: aza-pitch
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+    networks:
+      - aza-network
+
   nginx:
     image: nginx:alpine
     container_name: aza-nginx
