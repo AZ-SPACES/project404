@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { apiUrl } from "@/lib/api";
 import { CRITERIA, aggregate, ballotTotal, type Ballot, type CriterionKey } from "@/lib/rubric";
 
 export type Student = {
@@ -53,7 +54,7 @@ export default function RoomBoard({
     let alive = true;
     const tick = async () => {
       try {
-        const res = await fetch(`/api/rooms/${room.id}`, { cache: "no-store" });
+        const res = await fetch(apiUrl(`/api/rooms/${room.id}`), { cache: "no-store" });
         if (!res.ok || !alive) return;
         const data: { scores: ScoreRow[] } = await res.json();
         setScores((prev) => {
@@ -83,7 +84,7 @@ export default function RoomBoard({
       timers.current.set(k, setTimeout(async () => {
         timers.current.delete(k);
         try {
-          const res = await fetch("/api/scores", {
+          const res = await fetch(apiUrl("/api/scores"), {
             method: "POST",
             headers: { "content-type": "application/json" },
             body: JSON.stringify({ studentId, examinerId, patch }),

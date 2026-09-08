@@ -1,5 +1,5 @@
 # Production overlay for the DigitalOcean droplet, where the aza frontends are on Vercel
-# and the box serves api.aza.systems and defense.aza.systems. It disables the six aza-*
+# and the box serves api.aza.systems and defense-api.aza.systems. It disables the six aza-*
 # Next.js services; nginx needs no override, because nginx/conf.d is the served config
 # (HTTP + HTTPS) in its final state.
 #
@@ -32,7 +32,12 @@ services:
       - "127.0.0.1:5432:5432"
 
   # DELIBERATELY NOT DISABLED: `evaluations` and `defense-db` are absent from the
-  # list above because, unlike the aza-* frontends, the defense scoring app is not
-  # on Vercel. It is a stateful Next.js app that talks to a Postgres on the private
-  # compose network, so this droplet is what serves it — see nginx/conf.d/defense.conf.
-  # Adding it to the disabled profiles would 502 defense.aza.systems.
+  # list above. The defense scoring UI *is* on Vercel now, like the aza-* frontends,
+  # but only the UI moved — the roster and every recorded ballot live in defense-db,
+  # which publishes no port and sits on the private compose network where Vercel
+  # cannot reach it. So `evaluations` stays up here as the API origin Vercel calls,
+  # over defense-api.aza.systems — see nginx/conf.d/defense-api.conf.
+  #
+  # Adding either to the disabled profiles would leave defense.aza.systems loading
+  # and permanently empty: the pages would render on Vercel and every data call
+  # behind them would fail.

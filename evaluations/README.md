@@ -59,11 +59,14 @@ What follows from that, while it is public:
 - Treat the hostname as the only barrier. Don't post it anywhere public.
 - Export results as soon as scoring ends — `/results` → Download CSV. The CSV is
   the record; the database is a live document anyone can still edit.
-- Take it down when the defense is over: delete `nginx/conf.d/defense.conf`,
+- Take it down when the defense is over: delete `nginx/conf.d/defense-api.conf`,
   `docker compose exec nginx nginx -s reload`. That closes the exposure without
-  touching the data.
+  touching the data. The Vercel deployment then loads and stays empty, which is
+  harmless — but delete the project too if you want it properly gone.
 - If it needs to stay up longer, put a gate in front of it — a shared passcode in
-  Next middleware, `auth_basic` on the vhost, or an IP allowlist for the venue.
+  `proxy.ts`, `auth_basic` on the vhost, or an IP allowlist for the venue. Note
+  that the gate belongs on the **API** host: gating only the Vercel UI leaves
+  `defense-api.aza.systems` answering to anyone who curls it.
 
 ## Importing a new allocation
 
@@ -121,29 +124,53 @@ an import never overwrites them.
 
 ## Deployment
 
-The app is served from the Aza DigitalOcean droplet, alongside `api.aza.systems`.
+The app is split across two places, because its data cannot leave the droplet.
 
-Deploying is a push: merge to `main` on `AZ-SPACES/project404`, CI runs
-(`evaluations-ci` builds this app), and on success `.github/workflows/deploy.yml`
-SSHes to the droplet, pulls, rebuilds and health-gates the stack. There is nothing
-to run by hand.
+| | Where | Serves |
+|---|---|---|
+| UI | Vercel, `defense.aza.systems` | the pages |
+| API + data | the droplet, `defense-api.aza.systems` | `/api/*` and `defense-db` |
+
+`defense-db` publishes no port and lives only on `aza-network`, so Vercel cannot
+reach Postgres and no amount of configuration will change that. What Vercel calls
+instead is the same `evaluations` container as before, now reached on its own
+hostname. One image serves both roles: `lib/api.ts` reads
+`NEXT_PUBLIC_DEFENSE_API_URL`, which Vercel sets and the droplet build leaves
+empty, so on the droplet every call stays a same-origin relative path.
+
+Deploying the droplet half is a push: merge to `main` on `AZ-SPACES/project404`,
+CI runs (`evaluations-ci` builds this app), and on success
+`.github/workflows/deploy.yml` SSHes to the droplet, pulls, rebuilds and
+health-gates the stack. Vercel deploys its half from the same push.
 
 Moving parts, all in the repo root:
 
 | Where | What |
 |---|---|
 | `evaluations/Dockerfile` | three-stage build; the runtime image is Next's `standalone` output plus `db/` and `data/` |
+| `evaluations/proxy.ts` | CORS for the Vercel origin, including the preflight the ballot POST needs |
 | `docker-compose.yml` | the `evaluations` and `defense-db` services |
-| `docker-compose.backend.yml` | leaves `evaluations` **enabled** — unlike the aza-* frontends it is not on Vercel |
-| `nginx/conf.d/defense.conf` | the `defense.aza.systems` vhost |
+| `docker-compose.backend.yml` | leaves both **enabled** — only the UI moved to Vercel, the data did not |
+| `nginx/conf.d/defense-api.conf` | the `defense-api.aza.systems` vhost |
 
-`defense-db` is a Postgres of its own rather than a schema inside `aza-postgres`,
-so reseeding the roster can never reach production Aza data. It publishes no port;
-reach it with `docker compose exec defense-db psql -U defense defense`.
+Neither a DNS record nor a certificate was needed for the API host: `*.aza.systems`
+already points at the droplet, and the wildcard certificate issued by
+`scripts/init-miniapps-ssl.sh` covers one label deep. Only `defense` itself needed
+an explicit Cloudflare `CNAME` to Vercel, to override that wildcard.
 
-Neither a DNS record nor a certificate was needed: `*.aza.systems` already points
-at the droplet, and the wildcard certificate issued by
-`scripts/init-miniapps-ssl.sh` already covers one label deep.
+### Vercel project settings
+
+| Setting | Value |
+|---|---|
+| Root Directory | `evaluations` |
+| Node.js Version | 22.x (matches CI) |
+| `NEXT_PUBLIC_DEFENSE_API_URL` | `https://defense-api.aza.systems` |
+
+`output: "standalone"` in `next.config.ts` is for the Dockerfile; Vercel ignores it.
+
+> Preview deploys read and write the **production** database, and their origins are
+> not in the CORS allowlist, so their data calls fail. Add the preview URL to
+> `DEFENSE_ALLOWED_ORIGINS` on the droplet if you need one to work.
 
 ### The roster on the server
 
@@ -176,10 +203,12 @@ app/
   api/scores/              ballot upsert (validates range and room membership)
   api/results/             aggregated results, ?format=csv to export
   api/import/              preview and commit endpoints
+lib/api.ts                 where the API lives: relative on the droplet, absolute on Vercel
 lib/rubric.ts              criteria, weights, and the scoring maths
 lib/parseSheet.ts          csv reader and xlsx reader
 lib/importAllocation.ts    column detection, group resolution, warnings
 lib/db.ts                  pg pool
 db/schema.sql              loaded automatically on first container start
 db/seed.mjs                idempotent roster seed
+proxy.ts                   CORS for the Vercel origin
 ```

@@ -196,6 +196,12 @@ jobs:
 
       # No DATABASE_URL: every route is force-dynamic, so the build never opens
       # a connection. If that ever stops being true this job is where it breaks.
+      #
+      # NEXT_PUBLIC_DEFENSE_API_URL is deliberately unset too. This job gates the
+      # image the droplet builds, where the app is its own API and the variable
+      # must stay empty so lib/api.ts resolves to same-origin paths. Vercel sets
+      # it in its own project settings; setting it here would gate the wrong
+      # build.
       - name: Build
         run: npm run build
         working-directory: evaluations

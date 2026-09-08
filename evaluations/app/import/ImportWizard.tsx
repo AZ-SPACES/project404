@@ -3,6 +3,7 @@
 import { useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FIELDS, FIELD_LABELS, REQUIRED_FIELDS, type FieldKey } from "@/lib/importAllocation";
+import { apiUrl } from "@/lib/api";
 
 type Column = { index: number; letter: string; header: string; sample: string[] };
 type RoomSummary = { id: string; code: string; label: string; groups: number; students: number };
@@ -42,7 +43,7 @@ export default function ImportWizard() {
         if (opts.sheet) body.set("sheet", opts.sheet);
         if (opts.headerRow !== undefined) body.set("headerRow", opts.headerRow === null ? "" : String(opts.headerRow));
         if (opts.mapping) body.set("mapping", JSON.stringify(opts.mapping));
-        const res = await fetch("/api/import/preview", { method: "POST", body });
+        const res = await fetch(apiUrl("/api/import/preview"), { method: "POST", body });
         const data: Preview & { error?: string } = await res.json();
         if (!res.ok) { setError(data.error ?? "That file could not be read."); setPreview(null); return; }
         setPreview(data);
@@ -78,7 +79,7 @@ export default function ImportWizard() {
       body.set("headerRow", preview.headerRow === null ? "" : String(preview.headerRow));
       body.set("mapping", JSON.stringify(preview.mapping));
       if (confirmed) body.set("confirmDeletions", "true");
-      const res = await fetch("/api/import/commit", { method: "POST", body });
+      const res = await fetch(apiUrl("/api/import/commit"), { method: "POST", body });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "The import failed."); return; }
       setDone(data as CommitResult);

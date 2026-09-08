@@ -225,7 +225,7 @@ services:
     networks:
       - aza-network
 
-  # ── CS project defense scoring — defense.aza.systems ─────────────────────
+  # ── CS project defense scoring — defense-api.aza.systems ─────────────────
   # Its own database rather than another schema inside aza-postgres. This is a
   # separate application with a separate lifetime: the roster gets re-imported
   # and the volume may well be dropped and reseeded between rehearsals, and
@@ -258,9 +258,15 @@ services:
       timeout: 5s
       retries: 5
 
-  # Unlike the six aza-* frontends this is NOT on Vercel and is NOT disabled by
-  # docker-compose.backend.yml: it needs a database on the private network, so
-  # the droplet serves it directly. nginx/conf.d/defense.conf routes to it.
+  # The defense scoring UI is on Vercel like the six aza-* frontends, but this
+  # service is NOT disabled by docker-compose.backend.yml, because Vercel serves
+  # only the pages. The data stays here: defense-db publishes no port and lives
+  # on aza-network alone, so this container is what Vercel actually calls, over
+  # defense-api.aza.systems. Its own copy of the UI is never routed to.
+  #
+  # Note there is no NEXT_PUBLIC_DEFENSE_API_URL here. The image must build
+  # without it so lib/api.ts falls back to same-origin paths; the variable is
+  # inlined at build time and belongs only to the Vercel project.
   evaluations:
     build: ./evaluations
     container_name: defense-evaluations

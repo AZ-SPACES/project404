@@ -146,7 +146,7 @@ jobs:
             # Docker cannot see it, so requiring it here would fail every deploy. It is
             # reachable externally and worth checking that way if TURN monitoring is wanted.
             #
-            # defense-db and evaluations serve defense.aza.systems and ARE required: they
+            # defense-db and evaluations serve defense-api.aza.systems and ARE required: they
             # run on this box rather than Vercel, so nothing else would notice them failing.
             REQUIRED="postgres redis backend nginx defense-db evaluations"
             FAILED=""
@@ -232,9 +232,14 @@ jobs:
             # files under conf.d instead only proves the bind mount contains them, which
             # is exactly the check that passed while defense.aza.systems was serving the
             # wrong certificate because nginx had never read the file.
+            #
+            # defense.aza.systems itself is no longer checked here: it is a Vercel
+            # deployment now and this droplet never answers for it. The host that
+            # replaced it, defense-api.aza.systems, is the origin Vercel calls — if
+            # that is missing from the loaded config the scoring UI is up but blank.
             $COMPOSE exec -T nginx nginx -t
             LOADED=$($COMPOSE exec -T nginx nginx -T 2>/dev/null)
-            for host in api.aza.systems defense.aza.systems; do
+            for host in api.aza.systems defense-api.aza.systems; do
               if ! echo "$LOADED" | grep -q "server_name $host;"; then
                 echo "  ✗ $host is not in the loaded nginx config"
                 exit 1

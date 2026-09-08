@@ -1,32 +1,23 @@
 import Link from "next/link";
-import { query } from "@/lib/db";
+import { serverApiUrl } from "@/lib/api";
 import { CRITERIA, TOTAL_WEIGHT } from "@/lib/rubric";
 
 export const dynamic = "force-dynamic";
 
+// Mirrors the /api/rooms payload rather than the old SQL projection: the route
+// names the completed-ballot count `scored` and returns examiners as objects.
 type RoomCard = {
   id: string; code: string; label: string; venue: string; day: string;
-  groups: number; students: number; examiners: string[]; complete: number;
+  groups: number; students: number;
+  examiners: { id: string; name: string }[];
+  scored: number;
 };
 
-async function loadRooms() {
-  return query<RoomCard>(`
-    select r.id, r.code, r.label, r.venue, r.day,
-           (select count(*)::int from groups g where g.room_id = r.id) as groups,
-           (select count(*)::int from students s
-              join groups g on g.number = s.group_number
-             where g.room_id = r.id) as students,
-           coalesce((select array_agg(e.name order by e.sort)
-                       from examiners e where e.room_id = r.id), '{}') as examiners,
-           (select count(*)::int from scores sc
-              join students s on s.id = sc.student_id
-              join groups g   on g.number = s.group_number
-             where g.room_id = r.id
-               and sc.appearance is not null and sc.usability is not null
-               and sc.technical is not null and sc.innovation is not null
-               and sc.presentation is not null) as complete
-      from rooms r order by r.sort
-  `);
+async function loadRooms(): Promise<RoomCard[]> {
+  const res = await fetch(serverApiUrl("/api/rooms"), { cache: "no-store" });
+  if (!res.ok) throw new Error(`Could not load rooms (${res.status})`);
+  const { rooms } = (await res.json()) as { rooms: RoomCard[] };
+  return rooms;
 }
 
 export default async function Home() {
@@ -58,7 +49,7 @@ export default async function Home() {
       <div className="mt-3 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {rooms.map((r) => {
           const expected = r.students * Math.max(r.examiners.length, 1);
-          const pct = expected ? Math.round((r.complete / expected) * 100) : 0;
+          const pct = expected ? Math.round((r.scored / expected) * 100) : 0;
           return (
             <Link key={r.id} href={`/rooms/${r.id}`}
                   className="card block p-4 transition hover:border-knust">
@@ -67,7 +58,7 @@ export default async function Home() {
                 <span className="eyebrow">{r.venue}</span>
               </div>
               <p className="mt-1 text-[12.5px] text-ink-2">
-                {r.examiners.join(" · ") || "No panel assigned"}
+                {r.examiners.map((e) => e.name).join(" · ") || "No panel assigned"}
               </p>
               <p className="num mt-3 text-[11.5px] text-ink-3">
                 {r.groups} groups · {r.students} students · {r.day}
@@ -76,7 +67,7 @@ export default async function Home() {
                 <div className="h-full rounded-full bg-knust-2" style={{ width: `${pct}%` }} />
               </div>
               <p className="num mt-1.5 text-[11px] text-ink-3">
-                {r.complete} of {expected} ballots complete
+                {r.scored} of {expected} ballots complete
               </p>
             </Link>
           );

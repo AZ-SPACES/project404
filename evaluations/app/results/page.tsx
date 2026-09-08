@@ -1,42 +1,27 @@
-import { query } from "@/lib/db";
-import { CRITERIA, aggregate, type Ballot } from "@/lib/rubric";
+import { apiUrl, serverApiUrl } from "@/lib/api";
+import { CRITERIA, type Ballot, type aggregate } from "@/lib/rubric";
 
 export const dynamic = "force-dynamic";
 
+// /api/results already merges aggregate() into every row, so the page no longer
+// runs the rubric maths itself — it only sorts and renders what the API returns.
 type Row = {
-  roomCode: string; venue: string; groupNumber: number;
+  roomId: string; roomCode: string; venue: string; groupNumber: number;
   studentId: string; name: string; indexNo: string;
   universityId: string | null; supervisor: string | null;
   ballots: { examinerId: string; examiner: string; ballot: Ballot }[];
-};
+} & ReturnType<typeof aggregate>;
 
-async function load() {
-  return query<Row>(`
-    select r.code as "roomCode", r.venue, g.number as "groupNumber",
-           s.id as "studentId", s.name, s.index_no as "indexNo",
-           s.student_id as "universityId", s.supervisor,
-           coalesce((
-             select json_agg(json_build_object(
-                      'examinerId', e.id, 'examiner', e.name,
-                      'ballot', json_build_object(
-                        'appearance', sc.appearance, 'usability', sc.usability,
-                        'technical', sc.technical, 'innovation', sc.innovation,
-                        'presentation', sc.presentation))
-                    order by e.sort)
-               from scores sc join examiners e on e.id = sc.examiner_id
-              where sc.student_id = s.id
-           ), '[]'::json) as ballots
-      from students s
-      join groups g on g.number = s.group_number
-      join rooms  r on r.id = g.room_id
-     order by r.sort, g.number, s.sort
-  `);
+async function load(): Promise<Row[]> {
+  const res = await fetch(serverApiUrl("/api/results"), { cache: "no-store" });
+  if (!res.ok) throw new Error(`Could not load results (${res.status})`);
+  const { students } = (await res.json()) as { students: Row[] };
+  return students;
 }
 
 export default async function ResultsPage() {
   const rows = await load();
   const scored = rows
-    .map((r) => ({ ...r, ...aggregate(r.ballots.map((b) => b.ballot)) }))
     .filter((r) => r.total !== null)
     .sort((a, b) => (b.total ?? 0) - (a.total ?? 0));
 
@@ -49,7 +34,7 @@ export default async function ResultsPage() {
             {scored.length} of {rows.length} students have at least one ballot
           </p>
         </div>
-        <a href="/api/results?format=csv" className="btn btn-primary">Download CSV</a>
+        <a href={apiUrl("/api/results?format=csv")} className="btn btn-primary">Download CSV</a>
       </div>
 
       {!scored.length ? (
