@@ -43,40 +43,52 @@ export default async function ResultsPage() {
         </p>
       ) : (
         <div className="card mt-5 overflow-x-auto">
-          <table className="w-full min-w-[900px] border-collapse text-[13px]">
+          {/* The student column is pinned: the table is wider than a phone, and
+              scrolling to Total is useless if you lose whose row it is. Sticky
+              cells need separated borders, so every rule is drawn on the cell. */}
+          <table className="w-full min-w-[760px] border-separate border-spacing-0 text-[13px]">
             <thead>
-              <tr className="border-b border-line text-left">
-                <th className="num p-3 font-medium text-ink-3">#</th>
-                <th className="p-3 font-medium text-ink-3">Student</th>
-                <th className="p-3 font-medium text-ink-3">Room</th>
-                <th className="num p-3 font-medium text-ink-3">Group</th>
+              <tr className="text-left">
+                <th className="sticky left-0 z-10 min-w-[152px] border-b border-line bg-surface p-3 font-medium text-ink-3">
+                  <span className="num">#</span> Student
+                </th>
+                <th className="border-b border-line p-3 font-medium text-ink-3">Room</th>
+                <th className="num border-b border-line p-3 font-medium text-ink-3">Group</th>
                 {CRITERIA.map((c) => (
-                  <th key={c.key} className="num p-3 text-right font-medium text-ink-3"
+                  <th key={c.key} className="num border-b border-line p-3 text-right font-medium text-ink-3"
                       title={`${c.label} — ${c.weight}%`}>
                     {c.label.split(" ")[0]}
                   </th>
                 ))}
-                <th className="num p-3 text-right font-medium text-ink-3">Total</th>
-                <th className="num p-3 text-right font-medium text-ink-3">Ballots</th>
+                <th className="num border-b border-line p-3 text-right font-medium text-ink-3">Total</th>
+                <th className="num border-b border-line p-3 text-right font-medium text-ink-3">Ballots</th>
               </tr>
             </thead>
             <tbody>
               {scored.map((r, i) => (
-                <tr key={r.studentId} className="border-b border-line-soft last:border-0">
-                  <td className="num p-3 text-ink-3">{i + 1}</td>
-                  <td className="p-3">
-                    <div className="font-semibold">{r.name}</div>
-                    <div className="num text-[11px] text-ink-3">{r.indexNo}</div>
+                <tr key={r.studentId}>
+                  <td className="sticky left-0 z-10 min-w-[152px] border-b border-r border-line-soft bg-surface p-3">
+                    <div className="flex gap-2">
+                      <span className="num text-ink-3">{i + 1}</span>
+                      <span className="min-w-0">
+                        <span className="block font-semibold">{r.name}</span>
+                        <span className="num block text-[11px] text-ink-3">{r.indexNo}</span>
+                      </span>
+                    </div>
                   </td>
-                  <td className="p-3 text-ink-2">{r.roomCode}</td>
-                  <td className="num p-3">{r.groupNumber}</td>
+                  <td className="border-b border-line-soft p-3 text-ink-2">{r.roomCode}</td>
+                  <td className="num border-b border-line-soft p-3">{r.groupNumber}</td>
                   {CRITERIA.map((c) => (
-                    <td key={c.key} className="num p-3 text-right text-ink-2">
+                    <td key={c.key} className="num border-b border-line-soft p-3 text-right text-ink-2">
                       {r.per[c.key].mean?.toFixed(1) ?? "—"}
                     </td>
                   ))}
-                  <td className="num p-3 text-right font-semibold">{r.total?.toFixed(1)}</td>
-                  <td className="num p-3 text-right text-ink-3">{r.ballots.length}</td>
+                  <td className="num border-b border-line-soft p-3 text-right font-semibold">
+                    {r.total?.toFixed(1)}
+                  </td>
+                  <td className="num border-b border-line-soft p-3 text-right text-ink-3">
+                    {r.ballots.length}
+                  </td>
                 </tr>
               ))}
             </tbody>

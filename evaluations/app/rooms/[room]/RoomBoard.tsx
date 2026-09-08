@@ -31,6 +31,9 @@ export default function RoomBoard({
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
+  // Under md the rail stacks above the ballots, so it stays collapsed to a one
+  // line summary — otherwise every group change means scrolling a 600px list.
+  const [railOpen, setRailOpen] = useState(false);
 
   // Keys with a write in flight or queued — a poll must not overwrite them.
   const pending = useRef<Set<string>>(new Set());
@@ -169,7 +172,7 @@ export default function RoomBoard({
           <div className="mt-4 grid gap-2">
             {examiners.map((e) => (
               <button key={e.id} onClick={() => chooseExaminer(e.id)}
-                      className="btn w-full py-3 text-left text-[14px] font-semibold hover:border-knust">
+                      className="btn w-full justify-start py-3 text-left text-[14px] font-semibold hover:border-knust">
                 {e.name}
               </button>
             ))}
@@ -189,18 +192,20 @@ export default function RoomBoard({
             Panel: {examiners.map((e) => e.name).join(" · ")}
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="num text-right text-[11.5px] text-ink-3">
-            <div>{totalDone} of {totalStudents} scored by you</div>
-            <div className={saving ? "text-warn" : "text-ink-3"}>
+        <div className="flex w-full flex-wrap items-center gap-x-3 gap-y-2 sm:w-auto">
+          {/* Stacked, this drops below the buttons and reads as one line rather
+              than wrapping four times inside a narrow right-aligned column. */}
+          <div className="num order-last flex w-full flex-wrap gap-x-2 text-[11.5px] text-ink-3 sm:order-none sm:w-auto sm:flex-col sm:items-end sm:gap-x-0">
+            <span>{totalDone} of {totalStudents} scored by you</span>
+            <span className={`before:mr-2 before:content-['\u00b7'] sm:before:content-none ${saving ? "text-warn" : "text-ink-3"}`}>
               {saving ? "Saving…" : savedAt ? `Saved ${savedAt}` : "Scores save as you tap"}
-            </div>
+            </span>
           </div>
-          <a href={`/api/results?format=csv&room=${room.id}`} className="btn"
+          <a href={`/api/results?format=csv&room=${room.id}`} className="btn shrink-0"
              title={`Export every ballot filed in ${room.label}`}>
-            Export room CSV
+            Export<span className="hidden sm:inline">&nbsp;room CSV</span>
           </a>
-          <button onClick={() => chooseExaminer("")} className="btn"
+          <button onClick={() => chooseExaminer("")} className="btn shrink-0"
                   title="Hand the laptop to your co-examiner">
             {me?.name ?? "Choose name"}
           </button>
@@ -213,20 +218,34 @@ export default function RoomBoard({
         </p>
       )}
 
-      <div className="mt-5 grid items-start gap-5 lg:grid-cols-[300px_minmax(0,1fr)]">
+      <div className="mt-5 grid items-start gap-5 md:grid-cols-[260px_minmax(0,1fr)] xl:grid-cols-[300px_minmax(0,1fr)]">
         {/* Group rail */}
         <section className="card overflow-hidden">
+          {/* Stacked layout only: which group is open, and a way to change it. */}
+          <button type="button" onClick={() => setRailOpen((o) => !o)}
+                  aria-expanded={railOpen}
+                  className="flex w-full items-center gap-3 p-3 text-left md:hidden">
+            <span className="num shrink-0 text-[12px] text-ink-3">
+              {String(group?.number ?? 0).padStart(3, "0")}
+            </span>
+            <span className="min-w-0 flex-1 truncate text-[13px] font-semibold">
+              {group?.students.map((s) => s.name).join(", ")}
+            </span>
+            <span className="eyebrow shrink-0">{railOpen ? "Close" : "Change"}</span>
+          </button>
+          <div className={`${railOpen ? "" : "hidden"} border-t border-line-soft md:block md:border-t-0`}>
           <div className="border-b border-line-soft p-3">
             <input value={filter} onChange={(e) => setFilter(e.target.value)}
                    placeholder="Find a group, name or index no."
-                   className="w-full rounded-md border border-line bg-surface-2 px-3 py-2 text-[13px] outline-none placeholder:text-ink-3 focus:border-knust" />
+                   className="w-full rounded-md border border-line bg-surface-2 px-3 py-2.5 text-[13px] outline-none placeholder:text-ink-3 focus:border-knust" />
           </div>
-          <div className="max-h-[70vh] overflow-y-auto">
+          <div className="max-h-[55vh] overflow-y-auto md:max-h-[70vh]">
             {visibleGroups.map((g) => {
               const done = myProgress(g);
               const isOpen = g.number === group?.number;
               return (
-                <button key={g.number} onClick={() => setSelected(g.number)}
+                <button key={g.number}
+                        onClick={() => { setSelected(g.number); setRailOpen(false); }}
                         aria-current={isOpen}
                         className={`flex w-full items-start gap-3 border-b border-line-soft border-l-[3px] p-3 text-left transition ${
                           isOpen ? "border-l-knust bg-knust-soft" : "border-l-transparent hover:bg-surface-2"
@@ -252,6 +271,7 @@ export default function RoomBoard({
               <p className="p-6 text-center text-[12.5px] text-ink-3">Nothing matches that search.</p>
             )}
           </div>
+          </div>
         </section>
 
         {/* Ballots for the open group */}
@@ -267,9 +287,9 @@ export default function RoomBoard({
             );
 
             return (
-              <article key={s.id} className="card overflow-hidden">
-                <header className="flex flex-wrap items-start gap-4 border-b border-line-soft p-4">
-                  <div className="min-w-0">
+              <article key={s.id} className="card @container overflow-hidden">
+                <header className="flex items-start gap-4 border-b border-line-soft p-4">
+                  <div className="min-w-0 flex-1">
                     <span className="eyebrow">Group {group.number}</span>
                     <h3 className="font-display text-[18px] font-bold">{s.name}</h3>
                     <p className="num mt-0.5 text-[11.5px] text-ink-3">
@@ -280,8 +300,8 @@ export default function RoomBoard({
                       <p className="mt-0.5 text-[11.5px] text-ink-3">Supervisor: {s.supervisor}</p>
                     )}
                   </div>
-                  <div className="ml-auto text-right">
-                    <div className="num text-[32px] font-semibold leading-none tracking-tight">
+                  <div className="shrink-0 text-right">
+                    <div className="num text-[26px] font-semibold leading-none tracking-tight sm:text-[32px]">
                       {t.points.toFixed(1)}
                       <span className="text-[12px] font-normal text-ink-3">/100</span>
                     </div>
@@ -296,37 +316,37 @@ export default function RoomBoard({
                   const has = typeof v === "number";
                   return (
                     <div key={c.key}
-                         className="grid items-center gap-3 border-b border-line-soft p-4 sm:grid-cols-[minmax(0,1fr)_auto]"
+                         className="grid gap-3 border-b border-line-soft p-4 @[620px]:grid-cols-[minmax(0,1fr)_minmax(240px,352px)] @[620px]:items-center"
                          style={{ ["--sc" as string]: c.color, ["--scfg" as string]: c.onColor }}>
                       <div className="flex min-w-0 gap-2.5">
                         <span className="w-1 shrink-0 self-stretch rounded-sm"
                               style={{ background: c.color }} />
-                        <div>
-                          <h4 className="flex flex-wrap items-center gap-2 font-display text-[14px] font-semibold">
-                            {c.label}
-                            <span className="num rounded bg-sunken px-1.5 py-px text-[10.5px] text-ink-2">
+                        <div className="min-w-0 flex-1">
+                          <h4 className="flex items-center gap-2 font-display text-[14px] font-semibold">
+                            <span className="min-w-0 truncate">{c.label}</span>
+                            <span className="num shrink-0 rounded bg-sunken px-1.5 py-px text-[10.5px] text-ink-2">
                               {c.weight}%
+                            </span>
+                            {/* The earned points ride the title line: on a phone that
+                                saves a whole row over sitting beside the strip. */}
+                            <span className={`num ml-auto shrink-0 whitespace-nowrap text-[12.5px] font-normal ${has ? "text-ink-2" : "text-ink-3"}`}>
+                              {has ? <b className="text-ink">{(((v as number) / 10) * c.weight).toFixed(1)}</b> : "—"}
+                              {" / "}{c.weight.toFixed(1)}
                             </span>
                           </h4>
                           <p className="mt-0.5 max-w-[56ch] text-[12px] text-ink-3">{c.blurb}</p>
                         </div>
                       </div>
-                      <div className="flex flex-wrap items-center justify-end gap-3">
-                        <div className="flex gap-[3px]">
-                          {Array.from({ length: 11 }, (_, i) => (
-                            <button key={i} type="button" className="pip"
-                                    aria-pressed={has && v === i}
-                                    aria-label={`${c.label} score ${i}`}
-                                    data-state={has && v === i ? "on" : has && i < (v as number) ? "below" : "off"}
-                                    onClick={() => setScore(s.id, c.key, i)}>
-                              {i}
-                            </button>
-                          ))}
-                        </div>
-                        <span className={`num w-[82px] shrink-0 whitespace-nowrap text-right text-[12.5px] ${has ? "text-ink-2" : "text-ink-3"}`}>
-                          {has ? <b className="text-ink">{(((v as number) / 10) * c.weight).toFixed(1)}</b> : "—"}
-                          {" / "}{c.weight.toFixed(1)}
-                        </span>
+                      <div className="grid grid-cols-11 gap-[3px] max-[380px]:gap-[2px]">
+                        {Array.from({ length: 11 }, (_, i) => (
+                          <button key={i} type="button" className="pip"
+                                  aria-pressed={has && v === i}
+                                  aria-label={`${c.label} score ${i}`}
+                                  data-state={has && v === i ? "on" : has && i < (v as number) ? "below" : "off"}
+                                  onClick={() => setScore(s.id, c.key, i)}>
+                            {i}
+                          </button>
+                        ))}
                       </div>
                     </div>
                   );
@@ -356,7 +376,7 @@ export default function RoomBoard({
                       const ot = ballotTotal(row);
                       return (
                         <div key={examiner.id} className="flex items-center gap-3 text-[12px]">
-                          <span className="w-40 shrink-0 truncate text-ink-2">{examiner.name}</span>
+                          <span className="w-24 shrink-0 truncate text-ink-2 sm:w-40">{examiner.name}</span>
                           {row ? (
                             <>
                               <span className="num flex gap-2 text-ink-3">

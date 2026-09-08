@@ -259,7 +259,7 @@ export default function ImportWizard() {
             {done.removedStudents ? ` Removed ${done.removedStudents} student(s)` : ""}
             {done.deletedScores ? ` and ${done.deletedScores} ballot(s).` : done.removedStudents ? "." : ""}
           </p>
-          <a href="/" className="btn mt-4 inline-block">Back to rooms</a>
+          <a href="/" className="btn mt-4">Back to rooms</a>
         </section>
       )}
     </div>

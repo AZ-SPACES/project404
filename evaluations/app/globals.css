@@ -56,9 +56,12 @@ h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; letter-spacin
     box-shadow: 0 1px 2px rgb(21 25 26 / 0.05), 0 10px 26px -18px rgb(12 90 51 / 0.32);
   }
 
-  /* 0-10 scale button. --sc / --scfg are set per criterion at the row. */
+  /* 0-10 scale button. --sc / --scfg are set per criterion at the row.
+     The strip is an 11-column grid, so a pip takes the width its column gives
+     it and never forces the row wider than the card it sits in — at 360px that
+     used to push "10" past the card's clip and out of reach. */
   .pip {
-    width: 27px; height: 30px; border-radius: 5px;
+    width: 100%; min-width: 0; height: 40px; border-radius: 6px;
     border: 1px solid var(--color-line);
     background: var(--color-surface-2);
     font-family: var(--font-mono); font-size: 12px;
@@ -75,6 +78,8 @@ h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; letter-spacin
   }
 
   .btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-height: 38px;
     background: var(--color-surface);
     border: 1px solid var(--color-line);
     border-radius: 7px; padding: 7px 12px;
@@ -87,6 +92,13 @@ h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; letter-spacin
     color: #fff; font-weight: 600;
   }
   .btn-primary:hover { background: var(--color-knust-2); border-color: var(--color-knust-2); }
+}
+
+/* Touch devices get the 44px target; a mouse does not need it and the denser
+   row reads better on a laptop. */
+@media (pointer: coarse) {
+  .pip { height: 46px; }
+  .btn { min-height: 44px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

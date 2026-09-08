@@ -29,16 +29,29 @@ export default async function Home() {
     <main className="mt-7">
       {/* The rubric's own proportions, shown at the weights they carry. */}
       <section>
-        <div className="flex h-[38px] gap-[3px] overflow-hidden rounded-md">
+        {/* Narrow segments cannot hold their labels — under sm the bar keeps the
+            proportions and the names move to a legend underneath. */}
+        <div className="flex h-2.5 gap-[3px] overflow-hidden rounded-md sm:h-[38px]">
           {CRITERIA.map((c) => (
             <div key={c.key}
-                 className="flex min-w-0 items-center px-2.5 text-[12px] font-semibold"
+                 className="flex min-w-0 items-center text-[12px] font-semibold sm:px-2.5"
                  style={{ flex: c.weight, background: c.color, color: c.onColor }}>
-              <span className="truncate">{c.label}</span>
-              <span className="num ml-auto shrink-0 pl-2 text-[11px] opacity-80">{c.weight}%</span>
+              <span className="hidden truncate sm:inline">{c.label}</span>
+              <span className="num ml-auto hidden shrink-0 pl-2 text-[11px] opacity-80 sm:inline">
+                {c.weight}%
+              </span>
             </div>
           ))}
         </div>
+        <ul className="mt-2.5 flex flex-wrap gap-x-3.5 gap-y-1.5 text-[11.5px] sm:hidden">
+          {CRITERIA.map((c) => (
+            <li key={c.key} className="flex items-center gap-1.5">
+              <span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ background: c.color }} />
+              <span>{c.label}</span>
+              <span className="num text-ink-3">{c.weight}%</span>
+            </li>
+          ))}
+        </ul>
         <div className="mt-2 flex flex-wrap justify-between gap-3 text-[11.5px] text-ink-3">
           <p>Each student is scored 0–10 per criterion, weighted to {TOTAL_WEIGHT} points.</p>
           <p className="num">{groups} groups · {students} students · {rooms.length} rooms</p>
