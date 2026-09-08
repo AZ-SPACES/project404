@@ -5,31 +5,23 @@ more or less directly into a thesis. Each file maps to one or more thesis chapte
 
 | File | Covers | Suggested thesis chapter |
 |---|---|---|
-| `01-introduction.md` | Problem, motivation, aims, objectives, scope, contributions | Ch. 1 |
-| `02-background.md` | Domain background and the literature you need to cite | Ch. 2 |
-| `03-methodology.md` | Development methodology, tooling, process | Ch. 3 |
-| `04-system-architecture.md` | Overall architecture, components, deployment topology | Ch. 4 |
-| `05-backend-design.md` | Domain model, data model, service layer, money invariants | Ch. 4/5 |
-| `06-security-and-cryptography.md` | AuthN/AuthZ, E2EE protocol, risk & compliance controls | Ch. 5 |
-| `07-mobile-application.md` | React Native / Expo client design | Ch. 5 |
-| `08-web-applications.md` | The five Next.js surfaces | Ch. 5 |
-| `09-platform-apis.md` | Merchant API, Checkout, Connect, OAuth, Mini Apps | Ch. 5 |
-| `10-devops-and-deployment.md` | CI/CD, containers, migrations, TLS, operations | Ch. 6 |
-| `11-testing-and-quality.md` | Test strategy, coverage, evaluation method | Ch. 6 |
-| `12-results-and-evaluation.md` | What to measure, with tables to fill in | Ch. 7 |
-| `13-limitations-and-future-work.md` | Honest gaps and the roadmap | Ch. 8 |
-| `14-glossary.md` | Terms, acronyms, abbreviations | Front matter |
-| `15-figures-and-tables.md` | Every diagram/table you should draw, with source data | Appendix |
-| `16-verification-log.md` | **Two verification passes: 18 checks + 5 more, 10 findings in total, 9 fixed and covered by tests and 1 a deliberate withdrawal** | Appendix / Ch. 7 |
+| `01-introduction-background-methodology.md` | Ch. 1 problem, aims, objectives, scope, contributions · Ch. 2 domain background and literature · Ch. 3 development methodology, tooling, process | Ch. 1–3 |
+| `02-architecture-and-backend.md` | Ch. 4 architecture, components, deployment topology · Ch. 5 domain model, data model, service layer, money invariants | Ch. 4–5 |
+| `03-security-clients-and-platform.md` | Ch. 6 AuthN/AuthZ, E2EE protocol, risk & compliance · Ch. 7 React Native / Expo client · Ch. 8 the five Next.js surfaces · Ch. 9 Merchant API, Checkout, Connect, OAuth, Mini Apps | Ch. 6–9 |
+| `04-operations-testing-and-results.md` | Ch. 10 CI/CD, containers, migrations, TLS, operations · Ch. 11 test strategy, coverage, evaluation method · Ch. 12 results, with tables to fill in | Ch. 10–12 |
+| `05-limitations-glossary-and-appendices.md` | Ch. 13 limitations and roadmap · Ch. 14 glossary · Ch. 15 figures/tables to produce · **Ch. 16 two verification passes: 18 checks + 5 more, 10 findings, 9 fixed and covered by tests and 1 a deliberate withdrawal** | Ch. 13 · front matter · appendices |
+
+Chapter and section numbers are unchanged from the earlier one-file-per-chapter layout, so
+every `§` cross-reference in this folder and in any draft written against it still resolves.
 
 ## How to use this
 
-1. Read `01-introduction.md` first, especially §1.6 (contributions) and §1.8 (organisation)
+1. Read `01-introduction-background-methodology.md` first, especially §1.6 (contributions) and §1.8 (organisation)
    — they tell you what your *argument* is, not just what you built. A thesis is judged on
    the argument.
 2. Everything stated as fact here was read out of the repository on 2026-08-21 and
    **re-verified on 2026-09-06** against commit `9678fa5a`; every claim that could be checked
-   mechanically *was* checked — see `16-verification-log.md` for the commands and verdicts.
+   mechanically *was* checked — see Ch. 16 in `05-limitations-glossary-and-appendices.md` for the commands and verdicts.
 
    The first pass produced five findings: F1 non-canonical lock ordering, F2 pre-commit
    external effects, F3 a vacuous invariant, F4 a mobile app that no longer typechecked
