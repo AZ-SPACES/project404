@@ -71,7 +71,6 @@ code we add ourselves are unavailable there and degrade rather than crash:
 | Voice / video calls (`react-native-webrtc`, `react-native-incall-manager`) | Call setup fails and is logged; the rest of chat works |
 | Rasterising a view (`react-native-view-shot`) | Capture fails cleanly: the QR poster shares as a link, the receipt reports it could not be saved, edited chat photos send unedited |
 | The OS-native tab bar (`react-native-bottom-tabs`) | Falls back to the JS tab bar |
-| Apple Watch mirroring (`modules/aza-watch`) | No-op |
 | Remote push notifications | Not registered; local notifications still work |
 | OTA updates (`expo-updates`) | Disabled |
 

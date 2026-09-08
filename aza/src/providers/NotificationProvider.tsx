@@ -84,8 +84,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     // Deny-only, deliberately. Denying a sign-in fails closed — the worst a
     // stranger holding the unlocked device can do is lock the real user out of
     // one attempt. Approving grants account access, so it stays behind the full
-    // approval screen. iOS forwards these actions to a paired Apple Watch, which
-    // is where a sign-in alert is most likely to be seen first.
+    // approval screen.
     // Decline only. `declineMoneyRequest` takes no passcode and fails closed;
     // paying takes one, so it stays behind the app.
     Notifications.setNotificationCategoryAsync('MONEY_REQUESTED', [
@@ -188,8 +187,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
           return;
         }
 
-        // Deny a sign-in straight from the notification — including from a
-        // paired watch — without opening the app.
+        // Deny a sign-in straight from the notification, without opening the app.
         if ((response as any).actionIdentifier === 'DENY_LOGIN') {
           const requestId = data?.requestId as string | undefined;
           if (requestId) {

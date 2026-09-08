@@ -5,8 +5,8 @@ import Constants, { ExecutionEnvironment } from 'expo-constants';
  * of our own.
  *
  * Expo Go ships a fixed set of native modules, so anything we add beyond that
- * set — WebRTC, InCallManager, view-shot, the watch bridge, the native tab bar
- * — simply is not in the binary. Reaching for one there throws
+ * set — WebRTC, InCallManager, view-shot, the native tab bar — simply is not
+ * in the binary. Reaching for one there throws
  * "Invariant Violation: Your JavaScript code tried to access a native module
  * that doesn't exist" *while the bundle is still evaluating*, which takes the
  * whole app down before React ever mounts and before an error boundary exists
