@@ -6,26 +6,32 @@ export type CriterionKey =
 export type Criterion = {
   key: CriterionKey;
   label: string;
+  /** Column header where the full label will not fit. */
+  short: string;
   weight: number;
-  color: string;
-  onColor: string;
   blurb: string;
 };
 
+// Each criterion used to carry its own hue. The hues meant nothing, collided
+// with the KNUST green the app uses for state, and two of them failed contrast
+// behind white text. The weight percentage identifies a criterion instead.
 export const CRITERIA: Criterion[] = [
-  { key: "appearance",   label: "Appearance",          weight: 10, color: "#05409E", onColor: "#FFFFFF",
+  { key: "appearance",   label: "Appearance",          short: "Appear.", weight: 10,
     blurb: "Visual craft — type, colour, spacing, and how consistently it holds together." },
-  { key: "usability",    label: "Design & Usability",  weight: 20, color: "#2E7D8C", onColor: "#FFFFFF",
+  { key: "usability",    label: "Design & Usability",  short: "Design",  weight: 20,
     blurb: "Can a first-time user finish the core task without being told how?" },
-  { key: "technical",    label: "Technical Execution", weight: 20, color: "#4A8C3F", onColor: "#FFFFFF",
+  { key: "technical",    label: "Technical Execution", short: "Tech.",   weight: 20,
     blurb: "Does it run? Depth of the build, edge cases, and what happens when it fails." },
-  { key: "innovation",   label: "Innovation",          weight: 30, color: "#C9A227", onColor: "#231C03",
+  { key: "innovation",   label: "Innovation",          short: "Innov.",  weight: 30,
     blurb: "A new idea, or a genuinely new angle on an old one. Carries the most weight." },
-  { key: "presentation", label: "Presentation",        weight: 20, color: "#3A3F44", onColor: "#FFFFFF",
+  { key: "presentation", label: "Presentation",        short: "Present.", weight: 20,
     blurb: "The defence itself — story, pacing, and how questions get answered." },
 ];
 
 export const TOTAL_WEIGHT = CRITERIA.reduce((n, c) => n + c.weight, 0); // 100
+
+/** The criterion carrying the most weight; the only one the rubric bar accents. */
+export const HEAVIEST = CRITERIA.reduce((a, b) => (b.weight > a.weight ? b : a));
 
 export type Ballot = Partial<Record<CriterionKey, number | null>>;
 

@@ -1,30 +1,53 @@
 @import "tailwindcss";
 
-/* Palette sampled from the KNUST crest (green #009641, yellow #FFEC01, red #E20612)
-   and the Computer Science Society wordmark (blue #05409E). Light mode only. */
-@theme {
-  --color-ground:     #F5F6F2;
-  --color-surface:    #FFFFFF;
-  --color-surface-2:  #F0F2EB;
-  --color-sunken:     #E5E9DF;
-  --color-line:       #D6DBCF;
-  --color-line-soft:  #E8ECE2;
-  --color-ink:        #15191A;
-  --color-ink-2:      #47524D;
-  --color-ink-3:      #78837D;
-  --color-knust:      #0C5A33;
-  --color-knust-2:    #009641;
-  --color-knust-soft: #E2EFE7;
-  --color-gold:       #C9A227;
-  --color-gold-bright:#FFEC01;
-  --color-css-blue:   #05409E;
-  --color-warn:       #A8811A;
-  --color-alert:      #C11A24;
+/* Palette sampled from the KNUST crest (green #009641, yellow #FFEC01) and the
+   Computer Science Society wordmark (blue #05409E). Light mode only.
 
-  --font-display: Archivo, "Helvetica Neue", Arial, sans-serif;
-  --font-sans: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+   Colour strategy is restrained: tinted neutrals carry the surface, and the
+   KNUST green is the only accent. It means one thing everywhere — "the thing
+   you chose": the selected group, the score you filed, the primary action.
+   The five criteria used to each own a hue; those hues meant nothing, fought
+   the brand green, and two of them failed contrast. Weight percentages carry
+   criterion identity instead. */
+@theme {
+  --color-ground:      #F5F6F2;
+  --color-surface:     #FFFFFF;
+  --color-surface-2:   #F0F2EB;
+  --color-sunken:      #E5E9DF;
+  --color-line:        #D6DBCF;
+  --color-line-soft:   #E8ECE2;
+  --color-ink:         #15191A;
+  --color-ink-2:       #47524D;
+  /* 5.7:1 on white, 5.2:1 on the page ground. The old #78837D measured 3.9
+     and 3.6, and it carried most of the text in the app. */
+  --color-ink-3:       #5F6964;
+  --color-knust:       #0C5A33;
+  --color-knust-2:     #009641; /* crest green: graphics only, 3.9:1 with white */
+  --color-knust-hover: #0A7A3C; /* the same green where white text sits on it */
+  --color-knust-soft:  #E2EFE7;
+  --color-gold:        #C9A227;
+  --color-gold-bright: #FFEC01;
+  --color-css-blue:    #05409E;
+  --color-warn:        #856610; /* was #A8811A, 3.6:1 — and it carries save state */
+  --color-alert:       #C11A24;
+
+  /* One family plus a mono. Archivo and IBM Plex Sans are both grotesques; the
+     pairing cost a font request and showed no visible difference. */
+  --font-display: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --font-sans:    "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --font-mono:    "IBM Plex Mono", ui-monospace, monospace;
+
+  /* Semantic stacking order, lowest to highest. */
+  --z-rowhead: 10;  /* a pinned first column */
+  --z-colhead: 20;  /* a pinned header row */
+  --z-corner:  30;  /* where the two cross */
+  --z-overlay: 40;  /* skip link, anything over the page */
 }
+
+/* Tailwind does not derive utilities from these names, so declare them. */
+@utility z-rowhead { z-index: var(--z-rowhead); }
+@utility z-colhead { z-index: var(--z-colhead); }
+@utility z-corner  { z-index: var(--z-corner); }
 
 html { color-scheme: light; }
 
@@ -36,14 +59,17 @@ body {
 }
 
 h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; letter-spacing: -0.015em; }
+p { text-wrap: pretty; }
 
 :focus-visible { outline: 2px solid var(--color-knust); outline-offset: 2px; border-radius: 3px; }
 
 @layer components {
+  /* Kept for the one place a kicker earns its keep. It used to appear eight
+     times on a single screen, which made it page grammar rather than voice. */
   .eyebrow {
     font-family: var(--font-mono);
-    font-size: 10px;
-    letter-spacing: 0.14em;
+    font-size: 10.5px;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--color-ink-3);
   }
@@ -53,25 +79,33 @@ h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; letter-spacin
     background: var(--color-surface);
     border: 1px solid var(--color-line);
     border-radius: 11px;
-    box-shadow: 0 1px 2px rgb(21 25 26 / 0.05), 0 10px 26px -18px rgb(12 90 51 / 0.32);
+    /* A 1px border under a 26px shadow blur is the stock "AI card". The border
+       does the work; the shadow just lifts it off the ground a little. */
+    box-shadow: 0 1px 2px rgb(21 25 26 / 0.04);
   }
 
-  /* 0-10 scale button. --sc / --scfg are set per criterion at the row. */
+  /* One step on the 0-10 scale. Sized by its grid column, never fixed width,
+     so eleven of them always fit the row they are in. */
   .pip {
     width: 27px; height: 30px; border-radius: 5px;
     border: 1px solid var(--color-line);
     background: var(--color-surface-2);
     font-family: var(--font-mono); font-size: 12px;
     color: var(--color-ink-2); cursor: pointer;
-    transition: transform .1s ease, background .1s ease, color .1s ease, border-color .1s ease;
+    transition: transform .12s cubic-bezier(0.22, 1, 0.36, 1),
+                background .12s ease, color .12s ease, border-color .12s ease;
   }
-  .pip:hover { border-color: var(--color-ink-3); transform: translateY(-1px); }
+  .pip:hover { border-color: var(--color-ink-3); }
+  .pip:active { transform: scale(0.94); }
   .pip[data-state="on"] {
-    background: var(--sc); border-color: var(--sc); color: var(--scfg); font-weight: 600;
+    background: var(--color-knust); border-color: var(--color-knust);
+    color: #fff; font-weight: 600;
   }
+  /* Everything below the chosen value fills in, so the score reads as a level
+     at a glance and not just as one lit square. */
   .pip[data-state="below"] {
-    background: color-mix(in srgb, var(--sc) 16%, transparent);
-    border-color: color-mix(in srgb, var(--sc) 32%, transparent);
+    background: var(--color-knust-soft);
+    border-color: color-mix(in srgb, var(--color-knust) 24%, transparent);
   }
 
   .btn {
@@ -79,6 +113,7 @@ h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; letter-spacin
     border: 1px solid var(--color-line);
     border-radius: 7px; padding: 7px 12px;
     font-size: 12.5px; font-weight: 500; cursor: pointer;
+    transition: background .12s ease, border-color .12s ease;
   }
   .btn:hover { background: var(--color-surface-2); border-color: var(--color-ink-3); }
   .btn:disabled { opacity: .45; cursor: not-allowed; }
@@ -86,7 +121,39 @@ h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; letter-spacin
     background: var(--color-knust); border-color: var(--color-knust);
     color: #fff; font-weight: 600;
   }
-  .btn-primary:hover { background: var(--color-knust-2); border-color: var(--color-knust-2); }
+  .btn-primary:hover {
+    /* The crest green is 3.9:1 with white; this is the same green, legible. */
+    background: var(--color-knust-hover); border-color: var(--color-knust-hover);
+  }
+
+  .field {
+    width: 100%;
+    border: 1px solid var(--color-line);
+    background: var(--color-surface-2);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: var(--color-ink);
+    outline: none;
+  }
+  .field::placeholder { color: var(--color-ink-3); }
+  .field:focus { border-color: var(--color-knust); }
+
+  /* Keyboard-only escape hatch to the scoring column. */
+  .skip-link {
+    position: absolute; left: -9999px;
+    z-index: var(--z-overlay);
+    background: var(--color-knust); color: #fff;
+    padding: 10px 14px; border-radius: 8px; font-size: 13px; font-weight: 600;
+  }
+  .skip-link:focus { left: 20px; top: 14px; }
+}
+
+/* Touch devices get the 44px target; a mouse does not need it and the denser
+   row reads better on a laptop. */
+@media (pointer: coarse) {
+  .pip { height: 46px; }
+  .btn { min-height: 44px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

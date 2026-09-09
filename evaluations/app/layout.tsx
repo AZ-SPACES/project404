@@ -15,20 +15,22 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        {/* Two families, not three. One request less on venue wifi. */}
         <link
           rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+          href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
         />
       </head>
       <body>
+        <a href="#content" className="skip-link">Skip to scoring</a>
         <div className="mx-auto max-w-[1400px] px-5 pt-6 pb-16">
-          <header className="flex flex-wrap items-start justify-between gap-x-7 gap-y-5">
+          <header className="flex flex-wrap items-start justify-between gap-x-7 gap-y-4">
             <div className="flex min-w-0 items-center gap-4">
-              <Image src="/knust-crest.png" alt="KNUST crest" width={40} height={54}
+              <Image src="/knust-crest.png" alt="" width={40} height={54}
                      className="h-[54px] w-auto" priority />
               <div className="hidden sm:block">
                 <div className="font-display text-[13px] font-bold tracking-[0.03em]">KNUST</div>
-                <div className="text-[9.5px] leading-[1.3] text-ink-3">
+                <div className="text-[10px] leading-[1.3] text-ink-3">
                   Kwame Nkrumah University of<br />Science &amp; Technology
                 </div>
               </div>
@@ -43,20 +45,23 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </div>
             </div>
             <div className="flex items-center gap-4">
-              <nav className="flex items-center gap-2">
+              {/* Import is not here on purpose. It replaces the roster and can
+                  remove students, and this app has no sign-in — one mis-tap on
+                  a phone during a defense should not reach it. It lives at
+                  /import for whoever is running the day. */}
+              <nav aria-label="Main" className="flex items-center gap-2">
                 <Link href="/" className="btn">Rooms</Link>
                 <Link href="/results" className="btn">Results</Link>
-                <Link href="/import" className="btn">Import</Link>
               </nav>
               <Image src="/css-logo.png" alt="Computer Science Society" width={60} height={40}
-                     className="h-10 w-auto" />
+                     className="hidden h-10 w-auto sm:block" />
             </div>
           </header>
           <div className="mt-4 overflow-hidden rounded-sm">
             <div className="h-1 bg-knust" />
             <div className="h-0.5 bg-gold-bright" />
           </div>
-          {children}
+          <div id="content">{children}</div>
         </div>
       </body>
     </html>

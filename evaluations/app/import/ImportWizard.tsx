@@ -33,6 +33,7 @@ export default function ImportWizard() {
   const [error, setError] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
   const [done, setDone] = useState<CommitResult | null>(null);
+  const [dragging, setDragging] = useState(false);
 
   const runPreview = useCallback(
     async (f: File, opts: { sheet?: string; headerRow?: number | null; mapping?: Record<FieldKey, number> } = {}) => {
@@ -96,6 +97,19 @@ export default function ImportWizard() {
 
   return (
     <div className="mt-6 grid gap-5">
+      {/* Three stages, so it is clear that choosing a file is not the commit. */}
+      <ol className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px]">
+        {[["Choose the file", !!file], ["Match the columns", !!preview], ["Confirm the changes", !!s]]
+          .map(([label, reached], i, all) => (
+            <li key={label as string} className="flex items-center gap-2">
+              <span className={`num flex h-5 w-5 items-center justify-center rounded-full text-[11px] ${
+                reached ? "bg-knust text-white" : "bg-sunken text-ink-3"}`}>{i + 1}</span>
+              <span className={reached ? "font-semibold" : "text-ink-3"}>{label as string}</span>
+              {i < all.length - 1 && <span aria-hidden className="text-ink-3">→</span>}
+            </li>
+          ))}
+      </ol>
+
       <section className="card p-5">
         <h2 className="font-display text-[16px] font-semibold">Upload the allocation</h2>
         <p className="mt-1 max-w-[70ch] text-[13px] text-ink-2">
@@ -104,14 +118,22 @@ export default function ImportWizard() {
           or <span className="num">GROUP n</span>{" "}separator rows like the department&rsquo;s own table.
           Examiners and venues are not touched.
         </p>
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          <input ref={inputRef} type="file" accept=".csv,.xlsx,.xlsm,.txt"
-                 onChange={(e) => pick(e.target.files?.[0] ?? null)} className="hidden" />
+        <input ref={inputRef} type="file" accept=".csv,.xlsx,.xlsm,.txt"
+               onChange={(e) => pick(e.target.files?.[0] ?? null)} className="hidden" />
+        <div
+          onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={(e) => { e.preventDefault(); setDragging(false); pick(e.dataTransfer.files?.[0] ?? null); }}
+          className={`mt-4 flex flex-col items-center gap-3 rounded-xl border border-dashed p-6 text-center transition ${
+            dragging ? "border-knust bg-knust-soft" : "border-line bg-surface-2"
+          }`}>
           <button className="btn btn-primary" onClick={() => inputRef.current?.click()} disabled={busy}>
             Choose file
           </button>
-          {file && <span className="text-[13px] text-ink-2">{file.name}</span>}
-          {busy && <span className="num text-[12px] text-warn">Reading…</span>}
+          <p className="text-[12.5px] text-ink-3">
+            {file ? file.name : "or drop the spreadsheet here"}
+          </p>
+          {busy && <p className="num text-[12px] text-warn" aria-live="polite">Reading…</p>}
         </div>
 
         {preview && preview.sheetNames.length > 1 && (
@@ -119,7 +141,7 @@ export default function ImportWizard() {
             <span className="text-ink-2">Sheet</span>
             <select value={preview.sheet ?? ""} disabled={busy}
                     onChange={(e) => file && runPreview(file, { sheet: e.target.value })}
-                    className="rounded-md border border-line bg-surface-2 px-2 py-1.5 text-[12.5px]">
+                    className="field w-auto py-1.5 text-[12.5px]">
               {preview.sheetNames.map((n) => <option key={n} value={n}>{n}</option>)}
             </select>
           </label>
@@ -147,7 +169,7 @@ export default function ImportWizard() {
                 </span>
                 <select value={preview.mapping[f]} disabled={busy}
                         onChange={(e) => remap(f, Number(e.target.value))}
-                        className="rounded-md border border-line bg-surface-2 px-2 py-2 text-[12.5px]">
+                        className="field text-[12.5px]">
                   <option value={-1}>— not in this file —</option>
                   {preview.columns.map((c) => (
                     <option key={c.index} value={c.index}>
@@ -176,7 +198,7 @@ export default function ImportWizard() {
             ].map(([label, n]) => (
               <div key={label as string} className="rounded-lg border border-line-soft bg-surface-2 p-3">
                 <div className="num text-[22px] font-semibold leading-none">{n as number}</div>
-                <div className="eyebrow mt-1.5">{label as string}</div>
+                <div className="mt-1.5 text-[11.5px] text-ink-3">{label as string}</div>
               </div>
             ))}
           </div>
@@ -204,7 +226,7 @@ export default function ImportWizard() {
 
           {preview?.sample?.length ? (
             <div className="mt-4">
-              <span className="eyebrow">First rows as they will be saved</span>
+              <h3 className="text-[12.5px] font-semibold">First rows as they will be saved</h3>
               <ul className="mt-1.5 grid gap-1 text-[12.5px] text-ink-2">
                 {preview.sample.map((r) => (
                   <li key={r.id} className="num">
