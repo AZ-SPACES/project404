@@ -8,6 +8,9 @@ import { stagger } from "@/lib/utils";
  * The chooser. Deliberately not a slide inside the deck: the track determines
  * which deck exists, so it has to be answered before there is a running order
  * to navigate.
+ *
+ * The first card is the seven-minute defence cut, because that is the one with a
+ * fixed slot to fit into — the others are read at whatever length the room allows.
  */
 export function Gate({ onChoose }: { onChoose: (track: TrackId) => void }) {
   return (
@@ -23,13 +26,13 @@ export function Gate({ onChoose }: { onChoose: (track: TrackId) => void }) {
         </div>
 
         <h1 className="display mt-7 anim" style={stagger(1)}>
-          Same system. Three <span className="accent">different arguments</span>.
+          Same system. Four <span className="accent">different arguments</span>.
         </h1>
 
         <p className="lede mt-5 anim" style={stagger(2)}>
           AZA is a mobile-first payments platform for Ghana — one ledger carrying a wallet, a
           chat, a merchant rail, an agent cash network and a developer platform. Pick who is in
-          the room.
+          the room, and how long you have.
         </p>
 
         <ul className="gate-grid mt-12">
@@ -55,8 +58,8 @@ export function Gate({ onChoose }: { onChoose: (track: TrackId) => void }) {
           })}
         </ul>
 
-        <p className="body-sm mt-10 anim" style={stagger(6)}>
-          Every figure in all three decks is drawn from the repository and the internal strategy
+        <p className="body-sm mt-10 anim" style={stagger(7)}>
+          Every figure in all four decks is drawn from the repository and the internal strategy
           documents, and each is dated. Nothing here is a projection presented as a measurement.
         </p>
       </div>

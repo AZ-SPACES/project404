@@ -474,8 +474,14 @@
   border-radius: var(--radius);
   overflow: hidden;
 }
-@media (min-width: 900px) {
-  .gate-grid { grid-template-columns: repeat(3, 1fr); }
+/* Two up on a tablet, four up once there is room. Fixed at four rather than
+   auto-fit: an auto-fit track would reflow to 3+1 at intermediate widths, and an
+   orphaned fourth card reads as a mistake rather than as a choice. */
+@media (min-width: 760px) {
+  .gate-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (min-width: 1140px) {
+  .gate-grid { grid-template-columns: repeat(4, 1fr); }
 }
 
 .gate-card {

@@ -1,12 +1,32 @@
 # aza-pitch
 
-The AZA pitch deck — one app carrying three decks, chosen at an opening gate:
+The AZA pitch deck — one app carrying four decks, chosen at an opening gate:
 
 | Track | Slides | Argument |
 |---|---|---|
+| Defence · 7 min | 10 | The examined deck cut to a fixed slot, with the business model and the licensing position folded in |
+| Academic | 18 | Long-form thesis defence: objectives, invariants, concurrency, the withdrawn E2EE property |
 | Investor | 15 | The cash network, the flywheel, unit economics, the fee catalogue |
 | Partner & regulator | 11 | Closed-loop ledger, safeguarding, agent controls, dual control, audit |
-| Academic | 18 | Thesis defence: objectives, invariants, concurrency, the withdrawn E2EE property |
+
+### Which track to present
+
+`defence` is the one to open in a viva with a hard time limit. It is **not** a filtered
+view of `academic` — the slides are their own components under
+`src/components/slides/defence/`, because condensing eighteen slides into ten is a
+rewrite rather than a subset. It keeps the problem statement, the gap, the scope
+delimitations and the limitations intact (those are what an examiner grades against),
+compresses the artefact and money-engine detail, and folds in two slides borrowed
+from the other tracks: `business-model` from the investor deck and `controls` from the
+partner deck, which together pre-empt the two questions most likely to be asked.
+
+`academic` stays as the long-form deck and as the deep-linkable Q&A backup — keep it
+open in a second tab and jump to `?track=academic#testing`, `#concurrency` or
+`#architecture` when a panellist asks for the detail the short deck skipped.
+
+Budget for `defence` is roughly 40 seconds a slide. Every figure in it is inline SVG
+resolving through the same theme tokens as the rest of the deck, so there are no image
+assets to ship and both grounds work without a second export.
 
 Presented by scrolling (CSS scroll-snap, one slide per viewport) or with the arrow
 keys. `Esc` returns to the gate. Every slide is deep-linkable, and a whole track is
@@ -29,6 +49,9 @@ Every figure is drawn from a source in this repository and is dated on the slide
 
 - Investor track → `docs/aza-cash-network-revenue-strategy.html`
 - Partner and academic tracks → `docs/thesis/`
+- Defence track → both, condensed. Its two borrowed slides carry the same disclaimers
+  as the slides they came from — in particular, the unit-economics figures are marked
+  illustrative against suggested rates on their own face.
 - Headline figures re-verified against the repo at commit `9678fa5a` (2026-09-06)
 
 Rates on the investor fee slides are *suggested* rates, and the unit-economics slide

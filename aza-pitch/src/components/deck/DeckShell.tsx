@@ -17,7 +17,7 @@ function readTrackFromUrl(): TrackId | null {
 }
 
 /**
- * Holds the chosen track. All three tracks are in the RSC payload, but only the
+ * Holds the chosen track. All four tracks are in the RSC payload, but only the
  * chosen one is mounted — so the IntersectionObserver in `Deck` never sees slides
  * from a track that is not on screen.
  *
@@ -27,10 +27,12 @@ function readTrackFromUrl(): TrackId | null {
  * is statically prerendered, and the server snapshot is simply "no track chosen".
  */
 export function DeckShell({
+  defence,
   investor,
   partner,
   academic,
 }: {
+  defence: React.ReactNode;
   investor: React.ReactNode;
   partner: React.ReactNode;
   academic: React.ReactNode;
@@ -61,7 +63,7 @@ export function DeckShell({
 
   if (!track) return <Gate onChoose={choose} />;
 
-  const children = { investor, partner, academic }[track];
+  const children = { defence, investor, partner, academic }[track];
 
   return (
     <Deck key={track} slides={TRACKS[track].slides} trackName={TRACKS[track].name} onExit={exit}>
