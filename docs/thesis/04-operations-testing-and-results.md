@@ -353,11 +353,13 @@ Four layers, each with a different job:
 |---|---|---|---|---|
 | Backend unit/service tests | JUnit 5, Mockito, H2, `spring-security-test` | 51 classes, 502 tests | ✅ | The money invariants and business rules |
 | **Backend integration tests** | **Testcontainers + PostgreSQL 16** | **2 classes, 7 tests** | ✅ | **Migrations, constraints, row locking, concurrency** |
-| Mobile unit tests | Jest, React Native Testing Library | 24 suites, 326 tests | ✅ | Cryptography, stores, utilities |
-| Mobile typecheck | `tsc --noEmit` | 410 files | ✅ | Type-level defects invisible to tests and to Metro |
+| Mobile unit tests | Jest, React Native Testing Library | 22 suites, 307 tests | ✅ | Cryptography, stores, utilities |
+| Mobile typecheck | `tsc --noEmit` | 406 files | ✅ | Type-level defects invisible to tests and to Metro |
 | Mobile E2E | Maestro | 20 flows | ❌ | The critical user journeys on a device/emulator |
-| Watch (Swift) | XCTest | 2 classes | ❌ | **Never compiled** — the watchOS platform components are not installed (§7.7) |
 | Web lint + build | ESLint (incl. React Compiler rules), TypeScript, `next build` | 5 apps | ✅ | Compile-time and lint-time defects |
+
+The mobile counts above are current, measured at `af9601f5` (2026-09-08). The comparison
+below is the verification pass exactly as it ran, at `9678fa5a`.
 
 ### Measured results (re-run 2026-09-06 at `9678fa5a`)
 
@@ -559,7 +561,7 @@ Document these as part of the QA strategy — they cover exactly what unit tests
 | **Backend line coverage — whole backend** | **25.64%** (branches 21.23%), was 22.61% | JaCoCo |
 | **Backend line coverage — money classes, original 13** | **63.15%** (branches 47.79%), was 63.31% | JaCoCo — the like-for-like comparison |
 | **Backend line coverage — money classes, current 17** | **61.70%** (branches 47.93%) | JaCoCo, adding `WalletLedger`, `SuperAgentService`, `MerchantFeeCalculator`, `RecurringTransferExecutor` |
-| Mobile tests passing | **326 / 326** (24 suites) | `npm test` |
+| Mobile tests passing | **307 / 307** (22 suites) | `npm test` at `af9601f5` |
 | Mobile typecheck errors | **0** (was 893) | `tsc -p tsconfig.ci.json` |
 | **Mobile coverage — `src/crypto`** | **87.75%** statements, 71.31% branches, 89.18% functions | Jest |
 | Mean CI duration | — | `gh run list --workflow=CI --limit 20` |
@@ -650,15 +652,9 @@ All committed on branch `Home`; see §16.4 for the commit-to-fix mapping.
 8. **`SuperAgentService` is the least-covered money class at 36.6%**, despite 17 dedicated
    tests — it is 603 lines and the tests concentrate on the invariant rather than the
    surface. Named explicitly here so an aggregate cannot hide it (§11.7).
-9. **Nothing has been compiled for watchOS.** The Swift targets have unit tests written
-   (`WalletSnapshotTests`, `QRCodeTests`) but the platform components are not installed in
-   the development Xcode, so neither those tests nor the watch app itself has ever been
-   built. `watchSchemaParity.test.ts` checks the Swift/TypeScript payload contract from the
-   JavaScript side, which is the only automated check currently possible across that
-   boundary (§7.7).
-10. **No check that enum-backed `CHECK` constraints match their Java enums.** Both `V58` and
-    `V64` exist because one drifted from the other, and `V64`'s drift reached production
-    (§10.3). This is a small, well-specified piece of automation that does not exist.
+9. **No check that enum-backed `CHECK` constraints match their Java enums.** Both `V58` and
+   `V64` exist because one drifted from the other, and `V64`'s drift reached production
+   (§10.3). This is a small, well-specified piece of automation that does not exist.
 
 
 ---
@@ -697,7 +693,6 @@ without softening — see §12.4a.
 | Domain | Delivered | Change since 2026-08-21 |
 |---|---|---|
 | Consumer app | 171 screens across 16 feature domains | +1 |
-| watchOS companion | 1 read-only app + 3 WidgetKit complications | **new** |
 | Backend API | 120 controllers | +7 |
 | Business logic | 116 services | +16 |
 | Persistence | 111 entities, 110 repositories, 62 migrations | +6 / +1 / +5 |

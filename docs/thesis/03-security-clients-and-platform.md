@@ -597,11 +597,10 @@ tracking, `AccountClosureRequest`, `DataRequest` for subject access.
 
 # 7. The Mobile Application
 
-The consumer client is the primary artefact: 103,132 lines of TypeScript across 410 files
+The consumer client is the primary artefact: 102,410 lines of TypeScript across 406 files
 and **171 feature screens** under `features/` (plus an animated splash screen in
-`components/ui/`), built with React Native 0.86 and Expo SDK 57. It now also embeds a
-**watchOS companion** (§7.7), which ships inside the iOS build rather than as a separate
-deployable.
+`components/ui/`), built with React Native 0.86 and Expo SDK 57. It builds to a single
+target on each platform, with no app extensions.
 
 ## 7.1 Architecture
 
@@ -611,14 +610,11 @@ aza/src/
 ├── navigation/    Root → Auth | Setup | KYC | MainTabs navigator hierarchy
 ├── providers/     13 React context providers (§7.3)
 ├── store/         32 Zustand stores (§7.4), account-scoped (§7.4a)
-├── hooks/         16 shared hooks (useWallet, useChat, useTransactions, useWatchSync, …)
+├── hooks/         14 shared hooks (useWallet, useChat, useTransactions, …)
 ├── services/      api.ts (axios instance), webrtcService, callAudioService, historySync
 ├── native/        Optional-native-module wrappers (§7.5) — webrtc, incallManager, viewShot
 ├── crypto/        Keystore, media crypto, backup crypto, codecs, CSPRNG, and the
 │                  E2EE decrypt path retained for pre-2026-09-02 history (§6.3)
-├── modules/       aza-watch — a local Expo module bridging WatchConnectivity (§7.7)
-├── targets/       watch, watch-widget, watch-tests — Swift, generated into the Xcode
-│                  project by @bacons/apple-targets at prebuild time (§7.7)
 ├── components/    Shared UI + chat components + miniapp host
 ├── theme/         Design tokens (dark default, lime #B7EE7A accent)
 ├── lib/, utils/   Validation, formatting, error mapping, category inference
@@ -677,8 +673,8 @@ one that feels native, and it is the reason for the tab-spacing fix commits in t
 Thirteen context providers compose the app shell. The interesting property is that they
 are ordered: E2EE cannot initialise before auth resolves a `userId` and `deviceId`, and
 the sockets cannot connect before E2EE has a keystore. `AuthProvider` additionally gates
-account-scoped storage (§7.4a) and the watch bridge (§7.7), both of which need a resolved
-account before they may read or push anything.
+account-scoped storage (§7.4a), which needs a resolved account before it may read or
+write anything.
 
 | Provider | Responsibility |
 |---|---|
@@ -690,7 +686,7 @@ account before they may read or push anything.
 | `NotificationProvider` | FCM registration, Notifee display, deep-link routing |
 | `NetworkProvider` | Connectivity via NetInfo; offline banners and queueing |
 | `KYCProvider`, `ProfileProvider`, `SignUpProvider` | Multi-step flow state that must survive screen changes |
-| `DisplayProvider`, `ToastProvider` | Theme/appearance and transient feedback. `DisplayProvider` also owns `balanceHiddenByDefault`, which travels to the watch in the snapshot (§7.7) |
+| `DisplayProvider`, `ToastProvider` | Theme/appearance and transient feedback. `DisplayProvider` also owns `balanceHiddenByDefault`, rendered as `••••` by `HomeScreen` |
 
 ## 7.4 State management
 
@@ -826,93 +822,6 @@ thesis rather than paraphrased:
 
 The same tokens are the default mini-app theme (`miniapps/types.ts`), so an embedded app
 inherits the host's look unless it opts out.
-
-## 7.7 The watchOS companion
-
-A read-only Apple Watch app plus three WidgetKit complications (`4d31228e`, `90c62548`).
-Scope was fixed in advance and held: **read-only, glanceable, no money movement, no chat, no
-credentials on the wrist.**
-
-### Phone-authoritative architecture
-
-The watch **never authenticates and never calls the API.** The phone pushes a
-`WalletSnapshot` as the WatchConnectivity *application context*, which is the correct
-primitive of the three available and worth justifying explicitly:
-
-| Primitive | Why not |
-|---|---|
-| `transferUserInfo` | Replays a queue in order. We want the newest balance, not every balance the phone ever had |
-| `sendMessage` | Requires the phone app to be reachable in the foreground |
-| **`updateApplicationContext`** | **Latest-value-wins, delivered opportunistically. Exactly the semantics of "current balance"** |
-
-A refresh request from the watch is answered from cache immediately, then forwarded to JS,
-which owns the API client and the react-query cache; the fresher value follows as an
-ordinary context update. Keeping the credential and the network client on the phone is what
-makes "no credentials on the wrist" a structural property rather than a policy.
-
-### The App Group boundary
-
-The watch writes each snapshot into its own App Group container. A WidgetKit complication
-runs in a **separate process** and can read neither the app's memory nor its `WCSession`, so
-persisting through a shared container is what makes the complication a UI addition rather
-than a re-architecture.
-
-Note which device's group it is: App Groups are shared between an app and its extensions on
-**one device**, and the watch is a separate device — so the group belongs to the watch, and
-the phone neither needs nor is granted one. This is the kind of detail that is obvious in
-retrospect and expensive to discover late.
-
-### Two decisions taken from the codebase rather than invented
-
-1. **Balance privacy travels in the snapshot.** The phone already has
-   `balanceHiddenByDefault` (`DisplayProvider`), rendered as `••••` by `HomeScreen`. That
-   preference rides along instead of being asked again, and transaction amounts conceal
-   *with* it — hiding the total while listing every amount beside it would defeat the point.
-   Reveal is per-launch and never persisted.
-2. **watchOS 9.4, matched to the iOS floor of 16.4 rather than raised.** watchOS 10 requires
-   a phone on iOS 17, so a higher floor would strand users the phone app still supports. The
-   watch's minimum is a function of the phone's, not an independent choice.
-
-### The UI states its own staleness
-
-"Updated 09:14", turning orange past fifteen minutes. iOS delivers an application context on
-its own schedule, so a wrist raise hours after the phone last ran shows a balance that old.
-**A stale figure that passes for a live one is worse than one that admits its age** — a
-general principle for glanceable financial UI, and the reason the design does not simply
-show a number.
-
-### Two build-system findings worth recording
-
-Both cost real time and neither is documented anywhere obvious:
-
-1. **`ios/` and `android/` are gitignored and regenerated by `expo prebuild`.** A watch
-   target added by hand in Xcode survives until the next prebuild and never exists in an EAS
-   build at all. The target is therefore *generated* from `targets/watch/` by the
-   `@bacons/apple-targets` config plugin, and verified to survive `expo prebuild --clean`
-   alongside the three existing custom plugins. The original plan document asserted the
-   project was "already bare, which helps"; it was not, and that was the assumption that
-   mattered most.
-2. **A hand-written local Expo module needs a `.podspec` in its `ios/` folder.** Without
-   one, autolinking still finds the module and lists it in
-   `expo-modules-autolinking search`, but CocoaPods never builds it, nothing lands in
-   `Podfile.lock`, and `requireOptionalNativeModule` returns `null` on device — silent in
-   both directions.
-
-### Verification status, stated honestly
-
-`expo prebuild --clean` yields both the `aza` and `watch` targets; `AzaWatch` appears in
-`Podfile.lock` and `ExpoModulesProvider.swift`; the TypeScript half is covered by
-`useWatchSync.test.ts` and `watchSchemaParity.test.ts` — the latter asserting that the
-Swift `WalletSnapshot` and the TypeScript payload agree field-for-field, which is the only
-automated check possible across that language boundary. `WalletSnapshotTests.swift` and
-`QRCodeTests.swift` exist for the Swift side.
-
-**Nothing has been compiled for watchOS.** The platform is not installed in the development
-Xcode (the SDK is present, the platform components are not), which also blocks building the
-iOS scheme now that it embeds a watch app; `xcodebuild -downloadPlatform watchOS` is a
-one-time prerequisite for either. Report this as an untested-on-device component rather than
-implying a shipped watch app — it is the honest position and it is a small, specific
-limitation.
 
 
 ---

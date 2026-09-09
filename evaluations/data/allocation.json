@@ -1,0 +1,4626 @@
+{
+ "title": "Defense Allocation for Computer Science 2026",
+ "rooms": [
+  {
+   "id": "RM 1",
+   "label": "Room 1",
+   "venue": "FF12",
+   "day": "Wednesday",
+   "examiners": [
+    "Prof. Najim",
+    "Dr. Ahene"
+   ]
+  },
+  {
+   "id": "RM 2",
+   "label": "Room 2",
+   "venue": "FF23",
+   "day": "Wednesday",
+   "examiners": [
+    "Prof. Frimpong",
+    "Dr. Rose-Mary"
+   ]
+  },
+  {
+   "id": "RM 3",
+   "label": "Room 3",
+   "venue": "Simulation Lab",
+   "day": "Wednesday",
+   "examiners": [
+    "Prof. Yaw Marfo",
+    "Dr. Eric Opoku"
+   ]
+  },
+  {
+   "id": "RM 4",
+   "label": "Room 4",
+   "venue": "FF12",
+   "day": "Wednesday",
+   "examiners": [
+    "Dr. Gaddafi",
+    "Dr. Kate Takyi"
+   ]
+  },
+  {
+   "id": "RM 5",
+   "label": "Room 5",
+   "venue": "F5",
+   "day": "Wednesday",
+   "examiners": [
+    "Dr. K.O. Peasah",
+    "Dr. Benjamin Tei-Partey"
+   ]
+  }
+ ],
+ "groups": [
+  {
+   "group": 1,
+   "room": "RM 1",
+   "students": [
+    {
+     "name": "ERNEST OPOKU KWAME ASANTE",
+     "index": "3376222",
+     "studentId": "20949135",
+     "supervisor": "DR. BENJAMIN TEI-PARTEY",
+     "id": "g1-3376222"
+    },
+    {
+     "name": "MILDRED DOWUONA OW",
+     "index": "3389622",
+     "studentId": "20950602",
+     "supervisor": "DR. BENJAMIN TEI-PARTEY",
+     "id": "g1-3389622"
+    }
+   ]
+  },
+  {
+   "group": 6,
+   "room": "RM 1",
+   "students": [
+    {
+     "name": "JOSHUA BUBUNE AGBEKE",
+     "index": "3364522",
+     "studentId": "20948245",
+     "supervisor": "DR. BENJAMIN TEI-PARTEY",
+     "id": "g6-3364522"
+    },
+    {
+     "name": "KOFI KORANG ANIM",
+     "index": "3370922",
+     "studentId": "20949966",
+     "supervisor": "DR. BENJAMIN TEI-PARTEY",
+     "id": "g6-3370922"
+    }
+   ]
+  },
+  {
+   "group": 11,
+   "room": "RM 1",
+   "students": [
+    {
+     "name": "ALBERT ARKO ADJEI",
+     "index": "3362822",
+     "studentId": "20948017",
+     "supervisor": "DR. BENJAMIN TEI-PARTEY",
+     "id": "g11-3362822"
+    },
+    {
+     "name": "MICHAEL KWARTENG ANIM",
+     "index": "3371022",
+     "studentId": "20948482",
+     "supervisor": "DR. BENJAMIN TEI-PARTEY",
+     "id": "g11-3371022"
+    }
+   ]
+  },
+  {
+   "group": 16,
+   "room": "RM 1",
+   "students": [
+    {
+     "name": "DAVIS OPOKU",
+     "index": "3406422",
+     "studentId": "20949009",
+     "supervisor": "DR. BENJAMIN TEI-PARTEY",
+     "id": "g16-3406422"
+    },
+    {
+     "name": "OSBORN OJERH TETTEY NARTEY",
+     "index": "3401622",
+     "studentId": "20949673",
+     "supervisor": "DR. BENJAMIN TEI-PARTEY",
+     "id": "g16-3401622"
+    }
+   ]
+  },
+  {
+   "group": 21,
+   "room": "RM 1",
+   "students": [
+    {
+     "name": "PRISCILLA KWOFIE",
+     "index": "3397522",
+     "studentId": "20906753",
+     "supervisor": "DR. KWABENA OWUSU-AGYEMANG",
+     "id": "g21-3397522"
+    },
+    {
+     "name": "JENSEN ASAFO-ADJEI",
+     "index": "3375722",
+     "studentId": "20918864",
+     "supervisor": "DR. KWABENA OWUSU-AGYEMANG",
+     "id": "g21-3375722"
+    }
+   ]
+  },
+  {
+   "group": 26,
+   "room": "RM 1",
+   "students": [
+    {
+     "name": "BADU OWUSU EDMUND",
+     "index": "3381722",
+     "studentId": "20940420",
+     "supervisor": "DR. KWABENA OWUSU-AGYEMANG",
+     "id": "g26-3381722"
+    },
+    {
+     "name": "EMMANUEL AKWASI OPPONG",
+     "index": "3407222",
+     "studentId": "20940830",
+     "supervisor": "DR. KWABENA OWUSU-AGYEMANG",
+     "id": "g26-3407222"
+    }
+   ]
+  },
+  {
+   "group": 31,
+   "room": "RM 1",
+   "students": [
+    {
+     "name": "KELVIN QUARC",
+     "index": "3411522",
+     "studentId": "20939763",
+     "supervisor": "DR. KWABENA OWUSU-AGYEMANG",
+     "id": "g31-3411522"
+    },
+    {
+     "name": "FREDRICK BOAKYE",
+     "index": "3384122",
+     "studentId": "20935256",
+     "supervisor": "DR. KWABENA OWUSU-AGYEMANG",
+     "id": "g31-3384122"
+    },
+    {
+     "name": "MARVINPHIL SEKOH ANNORBAH",
+     "index": "3371622",
+     "studentId": "20937742",
+     "supervisor": "DR. KWABENA OWUSU-AGYEMANG",
+     "id": "g31-3371622"
+    }
+   ]
+  },
+  {
+   "group": 36,
+   "room": "RM 1",
+   "students": [
+    {
+     "name": "SHADRACK ACHEAMPONG",
+     "index": "3361422",
+     "studentId": "20883806",
+     "supervisor": "DR. KWABENA OWUSU-AGYEMANG",
+     "id": "g36-3361422"
+    },
+    {
+     "name": "THOMPSON KOBINA MENSA",
+     "index": "3416122",
+     "studentId": "20938424",
+     "supervisor": "DR. KWABENA OWUSU-AGYEMANG",
+     "id": "g36-3416122"
+    }
+   ]
+  },
+  {
+   "group": 41,
+   "room": "RM 1",
+   "students": [
+    {
+     "name": "Kissi Mercy",
+     "index": "3395222",
+     "studentId": "",
+     "id": "g41-3395222"
+    },
+    {
+     "name": "Amponsah Kumi Cyprian",
+     "index": "3369722",
+     "studentId": "",
+     "id": "g41-3369722"
+    },
+    {
+     "name": "Linda Anima Ohene",
+     "index": "3405822",
+     "studentId": "",
+     "id": "g41-3405822"
+    }
+   ]
+  },
+  {
+   "group": 46,
+   "room": "RM 1",
+   "students": [
+    {
+     "name": "Emmanuel Nana Asare",
+     "index": "3376922",
+     "studentId": "",
+     "id": "g46-3376922"
+    },
+    {
+     "name": "Ezekiel Heward Cofie",
+     "index": "3386222",
+     "studentId": "",
+     "id": "g46-3386222"
+    },
+    {
+     "name": "Kelvin Osei Kuffour",
+     "index": "3396322",
+     "studentId": "",
+     "id": "g46-3396322"
+    }
+   ]
+  },
+  {
+   "group": 51,
+   "room": "RM 1",
+   "students": [
+    {
+     "name": "Abdul Wahab Kalanba Yakubu",
+     "index": "3417522",
+     "studentId": "",
+     "id": "g51-3417522"
+    },
+    {
+     "name": "Kyei-Mensah Akwasi Oduro",
+     "index": "3397822",
+     "studentId": "",
+     "id": "g51-3397822"
+    }
+   ]
+  },
+  {
+   "group": 56,
+   "room": "RM 1",
+   "students": [
+    {
+     "name": "Rahma Eliasu Gariba",
+     "index": "3390622",
+     "studentId": "",
+     "id": "g56-3390622"
+    },
+    {
+     "name": "Desmond Dela Asipunu",
+     "index": "3378222",
+     "studentId": "",
+     "id": "g56-3378222"
+    }
+   ]
+  },
+  {
+   "group": 61,
+   "room": "RM 1",
+   "students": [
+    {
+     "name": "Aryee Godwyll Essel",
+     "index": "3375422",
+     "studentId": "",
+     "id": "g61-3375422"
+    },
+    {
+     "name": "Sika Noah",
+     "index": "3414622",
+     "studentId": "",
+     "id": "g61-3414622"
+    }
+   ]
+  },
+  {
+   "group": 66,
+   "room": "RM 1",
+   "students": [
+    {
+     "name": "Awuntuba Caswell",
+     "index": "3380122",
+     "studentId": "",
+     "id": "g66-3380122"
+    },
+    {
+     "name": "Andoh Kwakye Oliver",
+     "index": "3396922",
+     "studentId": "",
+     "id": "g66-3396922"
+    }
+   ]
+  },
+  {
+   "group": 71,
+   "room": "RM 1",
+   "students": [
+    {
+     "name": "Seyram Sefa Saji",
+     "index": "3412322",
+     "studentId": "",
+     "id": "g71-3412322"
+    },
+    {
+     "name": "Forgor Gideon Kombert",
+     "index": "3391422",
+     "studentId": "",
+     "id": "g71-3391422"
+    }
+   ]
+  },
+  {
+   "group": 76,
+   "room": "RM 1",
+   "students": [
+    {
+     "name": "Kwabena Boateng Konadu",
+     "index": "3395422",
+     "studentId": "",
+     "id": "g76-3395422"
+    },
+    {
+     "name": "Esi Nhyira Bodwewa Andoh",
+     "index": "3370722",
+     "studentId": "",
+     "id": "g76-3370722"
+    },
+    {
+     "name": "Peniel Osei Okrah",
+     "index": "3406022",
+     "studentId": "",
+     "id": "g76-3406022"
+    }
+   ]
+  },
+  {
+   "group": 81,
+   "room": "RM 1",
+   "students": [
+    {
+     "name": "Dagadu John David",
+     "index": "3386922",
+     "studentId": "",
+     "id": "g81-3386922"
+    },
+    {
+     "name": "Owusu-Ansah Menya Jephtha",
+     "index": "3410822",
+     "studentId": "",
+     "id": "g81-3410822"
+    },
+    {
+     "name": "Asare Benedict Nana",
+     "index": "3376822",
+     "studentId": "",
+     "id": "g81-3376822"
+    }
+   ]
+  },
+  {
+   "group": 86,
+   "room": "RM 1",
+   "students": [
+    {
+     "name": "Ebenezer Ntiakoh AGYAPONG",
+     "index": "3365022",
+     "studentId": "20957347",
+     "supervisor": "DR KORNYO OLIVER",
+     "id": "g86-3365022"
+    },
+    {
+     "name": "Emily Maureen AMPAH",
+     "index": "3369422",
+     "studentId": "20962630",
+     "supervisor": "DR KORNYO OLIVER",
+     "id": "g86-3369422"
+    }
+   ]
+  },
+  {
+   "group": 91,
+   "room": "RM 1",
+   "students": [
+    {
+     "name": "Oluwaseyi Praise AWHANSU",
+     "index": "3379122",
+     "studentId": "20960223",
+     "supervisor": "DR KORNYO OLIVER",
+     "id": "g91-3379122"
+    },
+    {
+     "name": "Isaac Nana Sam MENSAH",
+     "index": "3399622",
+     "studentId": "20963256",
+     "supervisor": "DR KORNYO OLIVER",
+     "id": "g91-3399622"
+    }
+   ]
+  },
+  {
+   "group": 96,
+   "room": "RM 1",
+   "students": [
+    {
+     "name": "Maryclare Tariro SAIBERT",
+     "index": "3412222",
+     "studentId": "21457098",
+     "supervisor": "DR KORNYO OLIVER",
+     "id": "g96-3412222"
+    },
+    {
+     "name": "Momodou Wurrie BARRY",
+     "index": "3382222",
+     "studentId": "21459483",
+     "supervisor": "DR KORNYO OLIVER",
+     "id": "g96-3382222"
+    }
+   ]
+  },
+  {
+   "group": 101,
+   "room": "RM 1",
+   "students": [
+    {
+     "name": "David Kwaku Kuffour OWIREDU",
+     "index": "3409022",
+     "studentId": "20963122",
+     "supervisor": "DR KORNYO OLIVER",
+     "id": "g101-3409022"
+    },
+    {
+     "name": "Rodeeyah Akorede TAIWO",
+     "index": "3415022",
+     "studentId": "21460750",
+     "supervisor": "DR KORNYO OLIVER",
+     "id": "g101-3415022"
+    }
+   ]
+  },
+  {
+   "group": 106,
+   "room": "RM 1",
+   "students": [
+    {
+     "name": "Lamptey Emmanuel Nene Adi",
+     "index": "3398022",
+     "studentId": "",
+     "id": "g106-3398022"
+    },
+    {
+     "name": "Gyamera Caleb Charles",
+     "index": "3392822",
+     "studentId": "",
+     "id": "g106-3392822"
+    },
+    {
+     "name": "Yirenkyi Aboagye Samuel",
+     "index": "3418722",
+     "studentId": "",
+     "id": "g106-3418722"
+    }
+   ]
+  },
+  {
+   "group": 111,
+   "room": "RM 1",
+   "students": [
+    {
+     "name": "Osei David Adubofour",
+     "index": "3407622",
+     "studentId": "",
+     "id": "g111-3407622"
+    },
+    {
+     "name": "Apedo Theophilus Ossana",
+     "index": "3373822",
+     "studentId": "",
+     "id": "g111-3373822"
+    },
+    {
+     "name": "Danquah Deborah Anoah",
+     "index": "3387122",
+     "studentId": "",
+     "id": "g111-3387122"
+    }
+   ]
+  },
+  {
+   "group": 116,
+   "room": "RM 1",
+   "students": [
+    {
+     "name": "Kezia Osei Sarpong",
+     "index": "3408322",
+     "studentId": "",
+     "id": "g116-3408322"
+    },
+    {
+     "name": "David Anakpor",
+     "index": "3370222",
+     "studentId": "",
+     "id": "g116-3370222"
+    },
+    {
+     "name": "Elliot Tabil",
+     "index": "3414922",
+     "studentId": "",
+     "id": "g116-3414922"
+    }
+   ]
+  },
+  {
+   "group": 121,
+   "room": "RM 1",
+   "students": [
+    {
+     "name": "Antwi Yaa Asantewaa",
+     "index": "3373522",
+     "studentId": "",
+     "id": "g121-3373522"
+    },
+    {
+     "name": "Antwi Joshua Ohene Yaw",
+     "index": "3373022",
+     "studentId": "",
+     "id": "g121-3373022"
+    }
+   ]
+  },
+  {
+   "group": 126,
+   "room": "RM 1",
+   "students": [
+    {
+     "name": "Darko Leslie Kwadwo",
+     "index": "3387722",
+     "studentId": "",
+     "id": "g126-3387722"
+    },
+    {
+     "name": "Nworu Charles Chijindu",
+     "index": "3403622",
+     "studentId": "",
+     "id": "g126-3403622"
+    }
+   ]
+  },
+  {
+   "group": 131,
+   "room": "RM 1",
+   "students": [
+    {
+     "name": "Roger Kwabena Osafo Adu",
+     "index": "3363522",
+     "studentId": "",
+     "id": "g131-3363522"
+    },
+    {
+     "name": "Tracy Owusua Obiri-Agyei",
+     "index": "3404222",
+     "studentId": "",
+     "id": "g131-3404222"
+    }
+   ]
+  },
+  {
+   "group": 136,
+   "room": "RM 1",
+   "students": [
+    {
+     "name": "Collins Tibilla",
+     "index": "3416222",
+     "studentId": "",
+     "id": "g136-3416222"
+    },
+    {
+     "name": "Jessica Selase Obiri",
+     "index": "3404122",
+     "studentId": "",
+     "id": "g136-3404122"
+    }
+   ]
+  },
+  {
+   "group": 141,
+   "room": "RM 1",
+   "students": [
+    {
+     "name": "Gyabaa Ebenezer",
+     "index": "3392622",
+     "studentId": "20883202",
+     "supervisor": "PROFESSOR NAJIM USSIPH",
+     "id": "g141-3392622"
+    },
+    {
+     "name": "Nsiah Milcah Beatrice Owusuaa",
+     "index": "3402722",
+     "studentId": "20883702",
+     "supervisor": "PROFESSOR NAJIM USSIPH",
+     "id": "g141-3402722"
+    }
+   ]
+  },
+  {
+   "group": 146,
+   "room": "RM 1",
+   "students": [
+    {
+     "name": "Duut Oscar",
+     "index": "8547521",
+     "studentId": "20861977",
+     "supervisor": "PROFESSOR NAJIM USSIPH",
+     "id": "g146-8547521"
+    },
+    {
+     "name": "Patricia Owusu Afriyie",
+     "index": "8565121",
+     "studentId": "20845042",
+     "supervisor": "PROFESSOR NAJIM USSIPH",
+     "id": "g146-8565121"
+    }
+   ]
+  },
+  {
+   "group": 151,
+   "room": "RM 1",
+   "students": [
+    {
+     "name": "Etornam Yaa Lydia Danso",
+     "index": "3387422",
+     "studentId": "20883017",
+     "supervisor": "PROFESSOR NAJIM USSIPH",
+     "id": "g151-3387422"
+    },
+    {
+     "name": "Blessing Winbisisa Anyagri",
+     "index": "3373722",
+     "studentId": "20941279",
+     "supervisor": "PROFESSOR NAJIM USSIPH",
+     "id": "g151-3373722"
+    }
+   ]
+  },
+  {
+   "group": 156,
+   "room": "RM 1",
+   "students": [
+    {
+     "name": "Edwin Paa Kwame Baah-Otu",
+     "index": "3381322",
+     "studentId": "20882931",
+     "supervisor": "PROFESSOR NAJIM USSIPH",
+     "id": "g156-3381322"
+    },
+    {
+     "name": "Michael Isaac Asigre",
+     "index": "8557021",
+     "studentId": "20876209",
+     "supervisor": "PROFESSOR NAJIM USSIPH",
+     "id": "g156-8557021"
+    }
+   ]
+  },
+  {
+   "group": 161,
+   "room": "RM 1",
+   "students": [
+    {
+     "name": "Benjamin Kwaku Bentil",
+     "index": "3383222",
+     "studentId": "20909794",
+     "supervisor": "DR EMMANUEL AHENE",
+     "id": "g161-3383222"
+    },
+    {
+     "name": "Bentil William Ninsin",
+     "index": "3383422",
+     "studentId": "20912455",
+     "supervisor": "DR EMMANUEL AHENE",
+     "id": "g161-3383422"
+    },
+    {
+     "name": "Gideon Awortwe",
+     "index": "3379322",
+     "studentId": "20909659",
+     "supervisor": "DR EMMANUEL AHENE",
+     "id": "g161-3379322"
+    }
+   ]
+  },
+  {
+   "group": 166,
+   "room": "RM 1",
+   "students": [
+    {
+     "name": "Odame Prince",
+     "index": "3404922",
+     "studentId": "20912412",
+     "supervisor": "DR EMMANUEL AHENE",
+     "id": "g166-3404922"
+    },
+    {
+     "name": "Osei Louis",
+     "index": "3408022",
+     "studentId": "20909151",
+     "supervisor": "DR EMMANUEL AHENE",
+     "id": "g166-3408022"
+    },
+    {
+     "name": "Derrick Ofori Appiah",
+     "index": "3374222",
+     "studentId": "20910159",
+     "supervisor": "DR EMMANUEL AHENE",
+     "id": "g166-3374222"
+    }
+   ]
+  },
+  {
+   "group": 171,
+   "room": "RM 1",
+   "students": [
+    {
+     "name": "Bright Anning",
+     "index": "3371522",
+     "studentId": "20911364",
+     "supervisor": "DR EMMANUEL AHENE",
+     "id": "g171-3371522"
+    },
+    {
+     "name": "Barima Owusu Basoah",
+     "index": "3382722",
+     "studentId": "20913028",
+     "supervisor": "DR EMMANUEL AHENE",
+     "id": "g171-3382722"
+    }
+   ]
+  },
+  {
+   "group": 176,
+   "room": "RM 1",
+   "students": [
+    {
+     "name": "Bright Etuah",
+     "index": "3391022",
+     "studentId": "",
+     "id": "g176-3391022"
+    },
+    {
+     "name": "Agyemang Christabel Yaa",
+     "index": "3365822",
+     "studentId": "",
+     "id": "g176-3365822"
+    }
+   ]
+  },
+  {
+   "group": 181,
+   "room": "RM 1",
+   "students": [
+    {
+     "name": "Kelvin Odame Osei-Assibey",
+     "index": "3408522",
+     "studentId": "",
+     "id": "g181-3408522"
+    },
+    {
+     "name": "Bamuoh Ida Nuotama",
+     "index": "3382022",
+     "studentId": "20931997",
+     "supervisor": "DR. KATE TAKYI",
+     "id": "g181-3382022"
+    }
+   ]
+  },
+  {
+   "group": 186,
+   "room": "RM 1",
+   "students": [
+    {
+     "name": "Abdul Rasheed Ruweida",
+     "index": "3359822",
+     "studentId": "20924678",
+     "supervisor": "DR. KATE TAKYI",
+     "id": "g186-3359822"
+    },
+    {
+     "name": "Lois Narh",
+     "index": "3401422",
+     "studentId": "",
+     "id": "g186-3401422"
+    }
+   ]
+  },
+  {
+   "group": 191,
+   "room": "RM 1",
+   "students": [
+    {
+     "name": "Nana Kwame Amoateng Konadu",
+     "index": "3395522",
+     "studentId": "20925651",
+     "supervisor": "DR. KATE TAKYI",
+     "id": "g191-3395522"
+    },
+    {
+     "name": "Dzeble Emmanuel Eli Komla",
+     "index": "3390222",
+     "studentId": "20932653",
+     "supervisor": "DR. KATE TAKYI",
+     "id": "g191-3390222"
+    }
+   ]
+  },
+  {
+   "group": 196,
+   "room": "RM 1",
+   "students": [
+    {
+     "name": "Benjamin Nana Kwofie",
+     "index": "3397322",
+     "studentId": "20943817",
+     "supervisor": "DR. LINDA AMOAKO BANNING",
+     "id": "g196-3397322"
+    },
+    {
+     "name": "Sadiq Ayitey-Adjin",
+     "index": "3380722",
+     "studentId": "20943811",
+     "supervisor": "DR. LINDA AMOAKO BANNING",
+     "id": "g196-3380722"
+    },
+    {
+     "name": "Benjamin Kumah",
+     "index": "3396422",
+     "studentId": "20941781",
+     "supervisor": "DR. LINDA AMOAKO BANNING",
+     "id": "g196-3396422"
+    }
+   ]
+  },
+  {
+   "group": 201,
+   "room": "RM 1",
+   "students": [
+    {
+     "name": "Chris Ntiamoah Bekoe",
+     "index": "3383122",
+     "studentId": "20943241",
+     "supervisor": "DR. LINDA AMOAKO BANNING",
+     "id": "g201-3383122"
+    },
+    {
+     "name": "Henorkam Tetteh MacCarth",
+     "index": "3398722",
+     "studentId": "20943236",
+     "supervisor": "DR. LINDA AMOAKO BANNING",
+     "id": "g201-3398722"
+    },
+    {
+     "name": "Odai samuel Nii Afotey",
+     "index": "3404822",
+     "studentId": "20946650",
+     "supervisor": "DR. LINDA AMOAKO BANNING",
+     "id": "g201-3404822"
+    }
+   ]
+  },
+  {
+   "group": 206,
+   "room": "RM 1",
+   "students": [
+    {
+     "name": "Agyei Michael Addai",
+     "index": "3365522",
+     "studentId": "20918643",
+     "supervisor": "DR. ERIC OPOKU OSEI",
+     "id": "g206-3365522"
+    },
+    {
+     "name": "Akyen Abban Maxwell",
+     "index": "3367722",
+     "studentId": "20921083",
+     "supervisor": "DR. ERIC OPOKU OSEI",
+     "id": "g206-3367722"
+    },
+    {
+     "name": "Ajuitey Prince Awonaab",
+     "index": "3366822",
+     "studentId": "20921418",
+     "supervisor": "DR. ERIC OPOKU OSEI",
+     "id": "g206-3366822"
+    },
+    {
+     "name": "Anorchie Michelle Frimpomaah",
+     "index": "3372122",
+     "studentId": "20919895",
+     "supervisor": "DR. ERIC OPOKU OSEI",
+     "id": "g206-3372122"
+    },
+    {
+     "name": "Opoku Kwaku Kelvin",
+     "index": "3406522",
+     "studentId": "20922337",
+     "supervisor": "DR. ERIC OPOKU OSEI",
+     "id": "g206-3406522"
+    }
+   ]
+  },
+  {
+   "group": 211,
+   "room": "RM 1",
+   "students": [
+    {
+     "name": "Sarkodie-Addo Justice Junior",
+     "index": "3413122",
+     "studentId": "20920998",
+     "supervisor": "DR. ERIC OPOKU OSEI",
+     "id": "g211-3413122"
+    },
+    {
+     "name": "Amissah Gilbert",
+     "index": "3369022",
+     "studentId": "20920710",
+     "supervisor": "DR. ERIC OPOKU OSEI",
+     "id": "g211-3369022"
+    },
+    {
+     "name": "Ocran Leonard",
+     "index": "3404722",
+     "studentId": "20923516",
+     "supervisor": "DR. ERIC OPOKU OSEI",
+     "id": "g211-3404722"
+    },
+    {
+     "name": "Fokuo James Oppong",
+     "index": "3391222",
+     "studentId": "20918600",
+     "supervisor": "DR. ERIC OPOKU OSEI",
+     "id": "g211-3391222"
+    },
+    {
+     "name": "Owusu Afriyie Alfred",
+     "index": "3410722",
+     "studentId": "20920289",
+     "supervisor": "DR. ERIC OPOKU OSEI",
+     "id": "g211-3410722"
+    }
+   ]
+  },
+  {
+   "group": 2,
+   "room": "RM 2",
+   "students": [
+    {
+     "name": "ELTON AMANKONAH-HENNEH",
+     "index": "3368222",
+     "studentId": "20948582",
+     "supervisor": "DR. BENJAMIN TEI-PARTEY",
+     "id": "g2-3368222"
+    },
+    {
+     "name": "EMANUEL LAMPTEY LAWEH",
+     "index": "3398622",
+     "studentId": "20951533",
+     "supervisor": "DR. BENJAMIN TEI-PARTEY",
+     "id": "g2-3398622"
+    }
+   ]
+  },
+  {
+   "group": 7,
+   "room": "RM 2",
+   "students": [
+    {
+     "name": "SAMUEL KATEY AKPANGLO",
+     "index": "3367322",
+     "studentId": "20952219",
+     "supervisor": "DR. BENJAMIN TEI-PARTEY",
+     "id": "g7-3367322"
+    },
+    {
+     "name": "GORMAN FIIFI SHAPHAT",
+     "index": "3392522",
+     "studentId": "20949904",
+     "supervisor": "DR. BENJAMIN TEI-PARTEY",
+     "id": "g7-3392522"
+    }
+   ]
+  },
+  {
+   "group": 12,
+   "room": "RM 2",
+   "students": [
+    {
+     "name": "BISMARK NANA YAW OPOKU ODURO-GYAMINAH",
+     "index": "3405322",
+     "studentId": "20954106",
+     "supervisor": "DR. BENJAMIN TEI-PARTEY",
+     "id": "g12-3405322"
+    },
+    {
+     "name": "HAFIZ HUARU",
+     "index": "3393522",
+     "studentId": "20949115",
+     "supervisor": "DR. BENJAMIN TEI-PARTEY",
+     "id": "g12-3393522"
+    }
+   ]
+  },
+  {
+   "group": 17,
+   "room": "RM 2",
+   "students": [
+    {
+     "name": "GERSHWIN SY AMENUVEVE BOKORDEDZI",
+     "index": "3385122",
+     "studentId": "20950857",
+     "supervisor": "DR. BENJAMIN TEI-PARTEY",
+     "id": "g17-3385122"
+    },
+    {
+     "name": "FADL AGBO ADAMS",
+     "index": "3364622",
+     "studentId": "20954149",
+     "supervisor": "DR. BENJAMIN TEI-PARTEY",
+     "id": "g17-3364622"
+    }
+   ]
+  },
+  {
+   "group": 22,
+   "room": "RM 2",
+   "students": [
+    {
+     "name": "BRIGHT AMOFA MINTAH",
+     "index": "3400622",
+     "studentId": "20938399",
+     "supervisor": "DR. KWABENA OWUSU-AGYEMANG",
+     "id": "g22-3400622"
+    },
+    {
+     "name": "EMMANUELLA ASIEDUA MENSAH",
+     "index": "3399522",
+     "studentId": "20935372",
+     "supervisor": "DR. KWABENA OWUSU-AGYEMANG",
+     "id": "g22-3399522"
+    },
+    {
+     "name": "JONAS ATITSO SEDEM",
+     "index": "3378622",
+     "studentId": "20938505",
+     "supervisor": "DR. KWABENA OWUSU-AGYEMANG",
+     "id": "g22-3378622"
+    }
+   ]
+  },
+  {
+   "group": 27,
+   "room": "RM 2",
+   "students": [
+    {
+     "name": "BENTIL FIIFI AMPOMA",
+     "index": "3383322",
+     "studentId": "20936354",
+     "supervisor": "DR. KWABENA OWUSU-AGYEMANG",
+     "id": "g27-3383322"
+    },
+    {
+     "name": "SETH AMEYAW",
+     "index": "3368922",
+     "studentId": "20940143",
+     "supervisor": "DR. KWABENA OWUSU-AGYEMANG",
+     "id": "g27-3368922"
+    }
+   ]
+  },
+  {
+   "group": 32,
+   "room": "RM 2",
+   "students": [
+    {
+     "name": "ADUSEI CHRISTIAN",
+     "index": "3364122",
+     "studentId": "20938530",
+     "supervisor": "DR. KWABENA OWUSU-AGYEMANG",
+     "id": "g32-3364122"
+    },
+    {
+     "name": "HAMZAH SEIDU",
+     "index": "3413622",
+     "studentId": "20940248",
+     "supervisor": "DR. KWABENA OWUSU-AGYEMANG",
+     "id": "g32-3413622"
+    },
+    {
+     "name": "MANASSEH ANKRAH",
+     "index": "3371322",
+     "studentId": "20940813",
+     "supervisor": "DR. KWABENA OWUSU-AGYEMANG",
+     "id": "g32-3371322"
+    }
+   ]
+  },
+  {
+   "group": 37,
+   "room": "RM 2",
+   "students": [
+    {
+     "name": "Alhassan Abdul Rauf",
+     "index": "3367822",
+     "studentId": "",
+     "id": "g37-3367822"
+    },
+    {
+     "name": "Abdul-Karim Adnaan",
+     "index": "3360022",
+     "studentId": "",
+     "id": "g37-3360022"
+    },
+    {
+     "name": "Alfreda Kyeremaa Yeboah",
+     "index": "3418322",
+     "studentId": "",
+     "id": "g37-3418322"
+    }
+   ]
+  },
+  {
+   "group": 42,
+   "room": "RM 2",
+   "students": [
+    {
+     "name": "Suleiman Baba Mohammed",
+     "index": "3381522",
+     "studentId": "",
+     "id": "g42-3381522"
+    },
+    {
+     "name": "Suraiya Mohammed",
+     "index": "3401022",
+     "studentId": "",
+     "id": "g42-3401022"
+    }
+   ]
+  },
+  {
+   "group": 47,
+   "room": "RM 2",
+   "students": [
+    {
+     "name": "Owusu Eric Kofi",
+     "index": "3409922",
+     "studentId": "",
+     "id": "g47-3409922"
+    },
+    {
+     "name": "Uthman Memuna",
+     "index": "3416922",
+     "studentId": "",
+     "id": "g47-3416922"
+    },
+    {
+     "name": "Addo Chris Anome Paa Yaw",
+     "index": "3362522",
+     "studentId": "",
+     "id": "g47-3362522"
+    }
+   ]
+  },
+  {
+   "group": 52,
+   "room": "RM 2",
+   "students": [
+    {
+     "name": "Jeffery Edem Kojo Djibue",
+     "index": "3388722",
+     "studentId": "",
+     "id": "g52-3388722"
+    },
+    {
+     "name": "Anin Evelyn Sarpong",
+     "index": "3371122",
+     "studentId": "",
+     "id": "g52-3371122"
+    },
+    {
+     "name": "Alhassan Rex",
+     "index": "3368022",
+     "studentId": "",
+     "id": "g52-3368022"
+    }
+   ]
+  },
+  {
+   "group": 57,
+   "room": "RM 2",
+   "students": [
+    {
+     "name": "Asidu Henry Owusu",
+     "index": "3377522",
+     "studentId": "",
+     "id": "g57-3377522"
+    },
+    {
+     "name": "Adu Asante Michael",
+     "index": "3363822",
+     "studentId": "",
+     "id": "g57-3363822"
+    }
+   ]
+  },
+  {
+   "group": 62,
+   "room": "RM 2",
+   "students": [
+    {
+     "name": "Lartey Mensah Emmanuel",
+     "index": "3398522",
+     "studentId": "",
+     "id": "g62-3398522"
+    },
+    {
+     "name": "Iddrisu faadila Wumpini",
+     "index": "3393822",
+     "studentId": "",
+     "id": "g62-3393822"
+    }
+   ]
+  },
+  {
+   "group": 67,
+   "room": "RM 2",
+   "students": [
+    {
+     "name": "Regan Owusu Afrane",
+     "index": "3410422",
+     "studentId": "",
+     "id": "g67-3410422"
+    },
+    {
+     "name": "Elvis Frimpong Aboagye",
+     "index": "3419722",
+     "studentId": "",
+     "id": "g67-3419722"
+    }
+   ]
+  },
+  {
+   "group": 72,
+   "room": "RM 2",
+   "students": [
+    {
+     "name": "Kwame Ampadu Obeng",
+     "index": "3404022",
+     "studentId": "",
+     "id": "g72-3404022"
+    },
+    {
+     "name": "Dumashie Klenam Bruce",
+     "index": "3389922",
+     "studentId": "",
+     "id": "g72-3389922"
+    },
+    {
+     "name": "Prince Amoako Antwi",
+     "index": "3373222",
+     "studentId": "",
+     "id": "g72-3373222"
+    }
+   ]
+  },
+  {
+   "group": 77,
+   "room": "RM 2",
+   "students": [
+    {
+     "name": "Boateng Kwabena Brefo",
+     "index": "3384922",
+     "studentId": "",
+     "id": "g77-3384922"
+    },
+    {
+     "name": "Danquah Samuel Larbi",
+     "index": "3387222",
+     "studentId": "",
+     "id": "g77-3387222"
+    },
+    {
+     "name": "Abigail Yaa Quayson",
+     "index": "3411822",
+     "studentId": "",
+     "id": "g77-3411822"
+    }
+   ]
+  },
+  {
+   "group": 82,
+   "room": "RM 2",
+   "students": [
+    {
+     "name": "Agyemang Nana Akua",
+     "index": "3366122",
+     "studentId": "",
+     "id": "g82-3366122"
+    },
+    {
+     "name": "Kwabena Darko Opong",
+     "index": "3407122",
+     "studentId": "",
+     "id": "g82-3407122"
+    },
+    {
+     "name": "Osei Agyemang Allan",
+     "index": "3408222",
+     "studentId": "",
+     "id": "g82-3408222"
+    }
+   ]
+  },
+  {
+   "group": 87,
+   "room": "RM 2",
+   "students": [
+    {
+     "name": "Abdul Basit MOHAMMED",
+     "index": "3400722",
+     "studentId": "20963242",
+     "supervisor": "DR KORNYO OLIVER",
+     "id": "g87-3400722"
+    },
+    {
+     "name": "Chimezie Brian NWAKANMA",
+     "index": "3403522",
+     "studentId": "21456839",
+     "supervisor": "DR KORNYO OLIVER",
+     "id": "g87-3403522"
+    }
+   ]
+  },
+  {
+   "group": 92,
+   "room": "RM 2",
+   "students": [
+    {
+     "name": "Yahaya Yelpoea ABDUL HAQUE",
+     "index": "3359522",
+     "studentId": "20958508",
+     "supervisor": "DR KORNYO OLIVER",
+     "id": "g92-3359522"
+    },
+    {
+     "name": "Saadatu IBRAHIM",
+     "index": "3393722",
+     "studentId": "20957314",
+     "supervisor": "DR KORNYO OLIVER",
+     "id": "g92-3393722"
+    }
+   ]
+  },
+  {
+   "group": 97,
+   "room": "RM 2",
+   "students": [
+    {
+     "name": "Desmond APPIAH-KUBI",
+     "index": "3374622",
+     "studentId": "20959161",
+     "supervisor": "DR KORNYO OLIVER",
+     "id": "g97-3374622"
+    },
+    {
+     "name": "William Kyemenu CAIQUO",
+     "index": "3385922",
+     "studentId": "20959328",
+     "supervisor": "DR KORNYO OLIVER",
+     "id": "g97-3385922"
+    }
+   ]
+  },
+  {
+   "group": 102,
+   "room": "RM 2",
+   "students": [
+    {
+     "name": "Ange Emmanuel Adou Granger Sidike JEAN",
+     "index": "3394122",
+     "studentId": "21462947",
+     "supervisor": "DR KORNYO OLIVER",
+     "id": "g102-3394122"
+    },
+    {
+     "name": "Kenneth Okoe MENSAH",
+     "index": "3399922",
+     "studentId": "20961333",
+     "supervisor": "DR KORNYO OLIVER",
+     "id": "g102-3399922"
+    }
+   ]
+  },
+  {
+   "group": 107,
+   "room": "RM 2",
+   "students": [
+    {
+     "name": "Ansah Frederick Owusu",
+     "index": "3372322",
+     "studentId": "",
+     "id": "g107-3372322"
+    },
+    {
+     "name": "Emmanuel Ayirifa Asare Bediakoh",
+     "index": "3383022",
+     "studentId": "",
+     "id": "g107-3383022"
+    },
+    {
+     "name": "Emmanuel Akea Gyan",
+     "index": "3393122",
+     "studentId": "",
+     "id": "g107-3393122"
+    }
+   ]
+  },
+  {
+   "group": 112,
+   "room": "RM 2",
+   "students": [
+    {
+     "name": "Desmond Owusu Bobie",
+     "index": "3409422",
+     "studentId": "",
+     "id": "g112-3409422"
+    },
+    {
+     "name": "Francis Cudjoe",
+     "index": "3386422",
+     "studentId": "",
+     "id": "g112-3386422"
+    },
+    {
+     "name": "Gifty Appiah",
+     "index": "3374322",
+     "studentId": "",
+     "id": "g112-3374322"
+    }
+   ]
+  },
+  {
+   "group": 117,
+   "room": "RM 2",
+   "students": [
+    {
+     "name": "Ashong Nii Adote Daniel",
+     "index": "3377322",
+     "studentId": "",
+     "id": "g117-3377322"
+    },
+    {
+     "name": "Allan Paa-Joe Sey",
+     "index": "3414122",
+     "studentId": "",
+     "id": "g117-3414122"
+    },
+    {
+     "name": "Armah John",
+     "index": "3375022",
+     "studentId": "",
+     "id": "g117-3375022"
+    }
+   ]
+  },
+  {
+   "group": 122,
+   "room": "RM 2",
+   "students": [
+    {
+     "name": "Asilevi Andrews Edem Minta",
+     "index": "3378022",
+     "studentId": "",
+     "id": "g122-3378022"
+    },
+    {
+     "name": "Kofi Opoku Yeboah",
+     "index": "3418122",
+     "studentId": "",
+     "id": "g122-3418122"
+    }
+   ]
+  },
+  {
+   "group": 127,
+   "room": "RM 2",
+   "students": [
+    {
+     "name": "Yussif Odoi",
+     "index": "3405022",
+     "studentId": "",
+     "id": "g127-3405022"
+    },
+    {
+     "name": "Stephen Papa Maakeh Sarpey",
+     "index": "3413222",
+     "studentId": "",
+     "id": "g127-3413222"
+    }
+   ]
+  },
+  {
+   "group": 132,
+   "room": "RM 2",
+   "students": [
+    {
+     "name": "Maxwell Effah-Frimpong",
+     "index": "3390522",
+     "studentId": "",
+     "id": "g132-3390522"
+    },
+    {
+     "name": "Prince Baakoh",
+     "index": "3381422",
+     "studentId": "",
+     "id": "g132-3381422"
+    }
+   ]
+  },
+  {
+   "group": 137,
+   "room": "RM 2",
+   "students": [
+    {
+     "name": "Elvis Fosu Owusu",
+     "index": "3409522",
+     "studentId": "",
+     "id": "g137-3409522"
+    },
+    {
+     "name": "Mensah Raphael Teiko",
+     "index": "3400222",
+     "studentId": "",
+     "id": "g137-3400222"
+    },
+    {
+     "name": "Ericson Martey Boye",
+     "index": "3385622",
+     "studentId": "",
+     "id": "g137-3385622"
+    }
+   ]
+  },
+  {
+   "group": 142,
+   "room": "RM 2",
+   "students": [
+    {
+     "name": "Francis Nana Asante Asare-Odei",
+     "index": "3377122",
+     "studentId": "20882038",
+     "supervisor": "PROFESSOR NAJIM USSIPH",
+     "id": "g142-3377122"
+    },
+    {
+     "name": "Elisha Anagi",
+     "index": "8533021",
+     "studentId": "20859006",
+     "supervisor": "PROFESSOR NAJIM USSIPH",
+     "id": "g142-8533021"
+    }
+   ]
+  },
+  {
+   "group": 147,
+   "room": "RM 2",
+   "students": [
+    {
+     "name": "Ahorgbah Fredrick Kofi Sedinam",
+     "index": "8574021",
+     "studentId": "20828297",
+     "supervisor": "PROFESSOR NAJIM USSIPH",
+     "id": "g147-8574021"
+    },
+    {
+     "name": "Owusu Ansah Samuel",
+     "index": "8573021",
+     "studentId": "20847087",
+     "supervisor": "PROFESSOR NAJIM USSIPH",
+     "id": "g147-8573021"
+    }
+   ]
+  },
+  {
+   "group": 152,
+   "room": "RM 2",
+   "students": [
+    {
+     "name": "Adjin Vernon",
+     "index": "3363222",
+     "studentId": "20883338",
+     "supervisor": "PROFESSOR NAJIM USSIPH",
+     "id": "g152-3363222"
+    },
+    {
+     "name": "Kwarteng Marrion Daniel",
+     "index": "8553921",
+     "studentId": "20847720",
+     "supervisor": "PROFESSOR NAJIM USSIPH",
+     "id": "g152-8553921"
+    }
+   ]
+  },
+  {
+   "group": 157,
+   "room": "RM 2",
+   "students": [
+    {
+     "name": "Farouk Sowah Patterson",
+     "index": "3411222",
+     "studentId": "20909788",
+     "supervisor": "DR EMMANUEL AHENE",
+     "id": "g157-3411222"
+    },
+    {
+     "name": "Gladys Agyeman-Duah",
+     "index": "3365722",
+     "studentId": "20923802",
+     "supervisor": "DR EMMANUEL AHENE",
+     "id": "g157-3365722"
+    }
+   ]
+  },
+  {
+   "group": 162,
+   "room": "RM 2",
+   "students": [
+    {
+     "name": "Jayden Fosuhene",
+     "index": "3391822",
+     "studentId": "20909721",
+     "supervisor": "DR EMMANUEL AHENE",
+     "id": "g162-3391822"
+    },
+    {
+     "name": "Alex Junior Ofuatey-Kodjoe",
+     "index": "3405722",
+     "studentId": "20912866",
+     "supervisor": "DR EMMANUEL AHENE",
+     "id": "g162-3405722"
+    },
+    {
+     "name": "Desmond Lawer Kofi Nartey",
+     "index": "3401522",
+     "studentId": "20913005",
+     "supervisor": "DR EMMANUEL AHENE",
+     "id": "g162-3401522"
+    }
+   ]
+  },
+  {
+   "group": 167,
+   "room": "RM 2",
+   "students": [
+    {
+     "name": "Ishmael Evonlah Kakou",
+     "index": "3394322",
+     "studentId": "20912215",
+     "supervisor": "DR EMMANUEL AHENE",
+     "id": "g167-3394322"
+    },
+    {
+     "name": "Senu Seyram Elorm Adzo",
+     "index": "3413922",
+     "studentId": "20912249",
+     "supervisor": "DR EMMANUEL AHENE",
+     "id": "g167-3413922"
+    },
+    {
+     "name": "Rejoice Elike Dogbey",
+     "index": "3389022",
+     "studentId": "20910204",
+     "supervisor": "DR EMMANUEL AHENE",
+     "id": "g167-3389022"
+    }
+   ]
+  },
+  {
+   "group": 172,
+   "room": "RM 2",
+   "students": [
+    {
+     "name": "Marvin Opoku Nti",
+     "index": "3407022",
+     "studentId": "20925778",
+     "supervisor": "DR. KATE TAKYI",
+     "id": "g172-3407022"
+    },
+    {
+     "name": "Eugene Kwasi Sie",
+     "index": "3414522",
+     "studentId": "20926882",
+     "supervisor": "DR. KATE TAKYI",
+     "id": "g172-3414522"
+    }
+   ]
+  },
+  {
+   "group": 177,
+   "room": "RM 2",
+   "students": [
+    {
+     "name": "Benjamin Amoah",
+     "index": "3369222",
+     "studentId": "",
+     "id": "g177-3369222"
+    },
+    {
+     "name": "Samuel Ekow Edzie Junior",
+     "index": "3390422",
+     "studentId": "",
+     "id": "g177-3390422"
+    }
+   ]
+  },
+  {
+   "group": 182,
+   "room": "RM 2",
+   "students": [
+    {
+     "name": "Selby Emmanuel Kweku",
+     "index": "3413722",
+     "studentId": "",
+     "id": "g182-3413722"
+    },
+    {
+     "name": "Eyram Kobbie Aggor",
+     "index": "3364822",
+     "studentId": "",
+     "id": "g182-3364822"
+    }
+   ]
+  },
+  {
+   "group": 187,
+   "room": "RM 2",
+   "students": [
+    {
+     "name": "Okyere-Gyamfi Augustine",
+     "index": "3406122",
+     "studentId": "",
+     "id": "g187-3406122"
+    },
+    {
+     "name": "Owusu Bruce Peprah",
+     "index": "3409322",
+     "studentId": "",
+     "id": "g187-3409322"
+    }
+   ]
+  },
+  {
+   "group": 192,
+   "room": "RM 2",
+   "students": [
+    {
+     "name": "Awarikaro Rudolph Hodds",
+     "index": "3379022",
+     "studentId": "20943425",
+     "supervisor": "DR. LINDA AMOAKO BANNING",
+     "id": "g192-3379022"
+    },
+    {
+     "name": "Yeboah Godfred",
+     "index": "3417922",
+     "studentId": "20942051",
+     "supervisor": "DR. LINDA AMOAKO BANNING",
+     "id": "g192-3417922"
+    },
+    {
+     "name": "Owusu Nelson Osei Tutu",
+     "index": "3410222",
+     "studentId": "20946143",
+     "supervisor": "DR. LINDA AMOAKO BANNING",
+     "id": "g192-3410222"
+    }
+   ]
+  },
+  {
+   "group": 197,
+   "room": "RM 2",
+   "students": [
+    {
+     "name": "Donatus Zagla",
+     "index": "3419222",
+     "studentId": "20946890",
+     "supervisor": "DR. LINDA AMOAKO BANNING",
+     "id": "g197-3419222"
+    },
+    {
+     "name": "Caleb Azumah Asakwin",
+     "index": "3380922",
+     "studentId": "20945751",
+     "supervisor": "DR. LINDA AMOAKO BANNING",
+     "id": "g197-3380922"
+    },
+    {
+     "name": "Joshua Dodofoli",
+     "index": "3388822",
+     "studentId": "20941486",
+     "supervisor": "DR. LINDA AMOAKO BANNING",
+     "id": "g197-3388822"
+    }
+   ]
+  },
+  {
+   "group": 202,
+   "room": "RM 2",
+   "students": [
+    {
+     "name": "Twum Clement",
+     "index": "3416722",
+     "studentId": "20942832",
+     "supervisor": "DR. LINDA AMOAKO BANNING",
+     "id": "g202-3416722"
+    },
+    {
+     "name": "Abdul-Salam Nto Mustapha",
+     "index": "3401222",
+     "studentId": "20947414",
+     "supervisor": "DR. LINDA AMOAKO BANNING",
+     "id": "g202-3401222"
+    },
+    {
+     "name": "Jonathan Ofori tweneboah",
+     "index": "3416622",
+     "studentId": "20942932",
+     "supervisor": "DR. LINDA AMOAKO BANNING",
+     "id": "g202-3416622"
+    }
+   ]
+  },
+  {
+   "group": 207,
+   "room": "RM 2",
+   "students": [
+    {
+     "name": "Nyarko Samuel Okyere",
+     "index": "3403822",
+     "studentId": "20923907",
+     "supervisor": "DR. ERIC OPOKU OSEI",
+     "id": "g207-3403822"
+    },
+    {
+     "name": "Tay-Worgbale Stevestan Mawudekakomayor",
+     "index": "3415322",
+     "studentId": "20917793",
+     "supervisor": "DR. ERIC OPOKU OSEI",
+     "id": "g207-3415322"
+    },
+    {
+     "name": "Nkansah Benedicta Kerren Mawusene",
+     "index": "3402022",
+     "studentId": "20919068",
+     "supervisor": "DR. ERIC OPOKU OSEI",
+     "id": "g207-3402022"
+    },
+    {
+     "name": "Ernest Kwadwo Mikado",
+     "index": "3400522",
+     "studentId": "20934630",
+     "supervisor": "DR. ERIC OPOKU OSEI",
+     "id": "g207-3400522"
+    },
+    {
+     "name": "Raqib Ansinmwini Abdul-Karim",
+     "index": "3360122",
+     "studentId": "20924488",
+     "supervisor": "DR. ERIC OPOKU OSEI",
+     "id": "g207-3360122"
+    }
+   ]
+  },
+  {
+   "group": 212,
+   "room": "RM 2",
+   "students": [
+    {
+     "name": "Asiedu Rabbi Perez Kwakoa",
+     "index": "3377722",
+     "studentId": "20922290",
+     "supervisor": "DR. ERIC OPOKU OSEI",
+     "id": "g212-3377722"
+    },
+    {
+     "name": "Adu Nyarko Andy",
+     "index": "3363722",
+     "studentId": "20922992",
+     "supervisor": "DR. ERIC OPOKU OSEI",
+     "id": "g212-3363722"
+    },
+    {
+     "name": "Akuaku Jeremiah Narteh",
+     "index": "3367422",
+     "studentId": "20917864",
+     "supervisor": "DR. ERIC OPOKU OSEI",
+     "id": "g212-3367422"
+    },
+    {
+     "name": "Anokye Osei Cornelius",
+     "index": "3371722",
+     "studentId": "20924307",
+     "supervisor": "DR. ERIC OPOKU OSEI",
+     "id": "g212-3371722"
+    },
+    {
+     "name": "Ataara Aboagye Nkansah",
+     "index": "3378422",
+     "studentId": "20921085",
+     "supervisor": "DR. ERIC OPOKU OSEI",
+     "id": "g212-3378422"
+    }
+   ]
+  },
+  {
+   "group": 3,
+   "room": "RM 3",
+   "students": [
+    {
+     "name": "PHILIP CUDJOE",
+     "index": "3386622",
+     "studentId": "20951609",
+     "supervisor": "DR. BENJAMIN TEI-PARTEY",
+     "id": "g3-3386622"
+    },
+    {
+     "name": "KINGSLEY BAID",
+     "index": "3381922",
+     "studentId": "20949265",
+     "supervisor": "DR. BENJAMIN TEI-PARTEY",
+     "id": "g3-3381922"
+    }
+   ]
+  },
+  {
+   "group": 8,
+   "room": "RM 3",
+   "students": [
+    {
+     "name": "FRANCIS ANSAH",
+     "index": "3372222",
+     "studentId": "20948079",
+     "supervisor": "DR. BENJAMIN TEI-PARTEY",
+     "id": "g8-3372222"
+    },
+    {
+     "name": "EMMANUEL OPOKU ABOAGYE",
+     "index": "3360822",
+     "studentId": "20951169",
+     "supervisor": "DR. BENJAMIN TEI-PARTEY",
+     "id": "g8-3360822"
+    }
+   ]
+  },
+  {
+   "group": 13,
+   "room": "RM 3",
+   "students": [
+    {
+     "name": "ISAAC ADDAI",
+     "index": "3362322",
+     "studentId": "20954328",
+     "supervisor": "DR. BENJAMIN TEI-PARTEY",
+     "id": "g13-3362322"
+    },
+    {
+     "name": "OWUAYEBI ERICA AMA DANSOWAA",
+     "index": "3409122",
+     "studentId": "20950261",
+     "supervisor": "DR. BENJAMIN TEI-PARTEY",
+     "id": "g13-3409122"
+    }
+   ]
+  },
+  {
+   "group": 18,
+   "room": "RM 3",
+   "students": [
+    {
+     "name": "DIVINE ELIKEM ACKAH",
+     "index": "3361522",
+     "studentId": "20954179",
+     "supervisor": "DR. BENJAMIN TEI-PARTEY",
+     "id": "g18-3361522"
+    },
+    {
+     "name": "NANA ADWOA SERWAA BONSU",
+     "index": "3385322",
+     "studentId": "20951005",
+     "supervisor": "DR. BENJAMIN TEI-PARTEY",
+     "id": "g18-3385322"
+    }
+   ]
+  },
+  {
+   "group": 23,
+   "room": "RM 3",
+   "students": [
+    {
+     "name": "SALIM SHAIBU",
+     "index": "3414222",
+     "studentId": "20937081",
+     "supervisor": "DR. KWABENA OWUSU-AGYEMANG",
+     "id": "g23-3414222"
+    },
+    {
+     "name": "LAWRENCE NII ARMAH",
+     "index": "3375222",
+     "studentId": "20939860",
+     "supervisor": "DR. KWABENA OWUSU-AGYEMANG",
+     "id": "g23-3375222"
+    }
+   ]
+  },
+  {
+   "group": 28,
+   "room": "RM 3",
+   "students": [
+    {
+     "name": "ESSANDOH PRINCE TAKYI",
+     "index": "3390922",
+     "studentId": "20940308",
+     "supervisor": "DR. KWABENA OWUSU-AGYEMANG",
+     "id": "g28-3390922"
+    },
+    {
+     "name": "HARUNA BAWUMIA FAHAD",
+     "index": "3393222",
+     "studentId": "20939596",
+     "supervisor": "DR. KWABENA OWUSU-AGYEMANG",
+     "id": "g28-3393222"
+    }
+   ]
+  },
+  {
+   "group": 33,
+   "room": "RM 3",
+   "students": [
+    {
+     "name": "ACQUAH GIDEON",
+     "index": "3361622",
+     "studentId": "20938987",
+     "supervisor": "DR. KWABENA OWUSU-AGYEMANG",
+     "id": "g33-3361622"
+    },
+    {
+     "name": "KENNETH RYKE KWOFIE",
+     "index": "3397422",
+     "studentId": "20941017",
+     "supervisor": "DR. KWABENA OWUSU-AGYEMANG",
+     "id": "g33-3397422"
+    }
+   ]
+  },
+  {
+   "group": 38,
+   "room": "RM 3",
+   "students": [
+    {
+     "name": "John Agyemang",
+     "index": "3365922",
+     "studentId": "",
+     "id": "g38-3365922"
+    },
+    {
+     "name": "Kwame Agyeman Baffour Yeboah",
+     "index": "3418222",
+     "studentId": "",
+     "id": "g38-3418222"
+    }
+   ]
+  },
+  {
+   "group": 43,
+   "room": "RM 3",
+   "students": [
+    {
+     "name": "Samuel Antwi-Adjei",
+     "index": "3373622",
+     "studentId": "",
+     "id": "g43-3373622"
+    },
+    {
+     "name": "Appiagyei Reindolf Akwasi",
+     "index": "3373922",
+     "studentId": "",
+     "id": "g43-3373922"
+    },
+    {
+     "name": "Duah Jephthah",
+     "index": "3389722",
+     "studentId": "",
+     "id": "g43-3389722"
+    }
+   ]
+  },
+  {
+   "group": 48,
+   "room": "RM 3",
+   "students": [
+    {
+     "name": "Domi Adzo Gifty",
+     "index": "3389322",
+     "studentId": "",
+     "id": "g48-3389322"
+    },
+    {
+     "name": "Kwaku Seyere Owusu-Mensah",
+     "index": "3411022",
+     "studentId": "",
+     "id": "g48-3411022"
+    },
+    {
+     "name": "Doe Terry Elikplim Kwaku",
+     "index": "3388922",
+     "studentId": "",
+     "id": "g48-3388922"
+    }
+   ]
+  },
+  {
+   "group": 53,
+   "room": "RM 3",
+   "students": [
+    {
+     "name": "Albert Mends",
+     "index": "3399422",
+     "studentId": "",
+     "id": "g53-3399422"
+    },
+    {
+     "name": "David Zahene Yeboah",
+     "index": "3417622",
+     "studentId": "",
+     "id": "g53-3417622"
+    }
+   ]
+  },
+  {
+   "group": 58,
+   "room": "RM 3",
+   "students": [
+    {
+     "name": "Asigbee Jilon Elorm Kwame",
+     "index": "3377922",
+     "studentId": "",
+     "id": "g58-3377922"
+    },
+    {
+     "name": "Samuel Owusu Gyamfi",
+     "index": "3393022",
+     "studentId": "",
+     "id": "g58-3393022"
+    }
+   ]
+  },
+  {
+   "group": 63,
+   "room": "RM 3",
+   "students": [
+    {
+     "name": "Ansu Godfred",
+     "index": "3372522",
+     "studentId": "",
+     "id": "g63-3372522"
+    },
+    {
+     "name": "Sackey Abednego",
+     "index": "3411922",
+     "studentId": "",
+     "id": "g63-3411922"
+    }
+   ]
+  },
+  {
+   "group": 68,
+   "room": "RM 3",
+   "students": [
+    {
+     "name": "Darren Larnyoh Oboubi",
+     "index": "3404422",
+     "studentId": "",
+     "id": "g68-3404422"
+    },
+    {
+     "name": "Osbert Joseph Nii Aflah Sackey",
+     "index": "3412022",
+     "studentId": "",
+     "id": "g68-3412022"
+    }
+   ]
+  },
+  {
+   "group": 73,
+   "room": "RM 3",
+   "students": [
+    {
+     "name": "Franklin Gilbert Boateng",
+     "index": "3384622",
+     "studentId": "",
+     "id": "g73-3384622"
+    },
+    {
+     "name": "Gyambibi Wycliffe Kwame",
+     "index": "3392722",
+     "studentId": "",
+     "id": "g73-3392722"
+    },
+    {
+     "name": "Nuhu Kofi Essuman",
+     "index": "3390922",
+     "studentId": "",
+     "id": "g73-3390922"
+    }
+   ]
+  },
+  {
+   "group": 78,
+   "room": "RM 3",
+   "students": [
+    {
+     "name": "Michael Anang",
+     "index": "3370422",
+     "studentId": "",
+     "id": "g78-3370422"
+    },
+    {
+     "name": "Awurabena Agyeiwaa Amponsah-Mensah",
+     "index": "3370022",
+     "studentId": "",
+     "id": "g78-3370022"
+    },
+    {
+     "name": "Bernard Kwarko",
+     "index": "3397222",
+     "studentId": "",
+     "id": "g78-3397222"
+    }
+   ]
+  },
+  {
+   "group": 83,
+   "room": "RM 3",
+   "students": [
+    {
+     "name": "Godfred Abora",
+     "index": "3361022",
+     "studentId": "",
+     "id": "g83-3361022"
+    },
+    {
+     "name": "Selase Arku",
+     "index": "3374822",
+     "studentId": "",
+     "id": "g83-3374822"
+    },
+    {
+     "name": "Shadrach Martin Kwofie",
+     "index": "3397622",
+     "studentId": "",
+     "id": "g83-3397622"
+    }
+   ]
+  },
+  {
+   "group": 88,
+   "room": "RM 3",
+   "students": [
+    {
+     "name": "Saverena BOAKYE-ANSAH",
+     "index": "3384422",
+     "studentId": "20962826",
+     "supervisor": "DR KORNYO OLIVER",
+     "id": "g88-3384422"
+    },
+    {
+     "name": "Burjwok Paulo Deng AJANG",
+     "index": "3366722",
+     "studentId": "21460110",
+     "supervisor": "DR KORNYO OLIVER",
+     "id": "g88-3366722"
+    }
+   ]
+  },
+  {
+   "group": 93,
+   "room": "RM 3",
+   "students": [
+    {
+     "name": "Queenster Adomah OWUSU",
+     "index": "3410322",
+     "studentId": "20957585",
+     "supervisor": "DR KORNYO OLIVER",
+     "id": "g93-3410322"
+    },
+    {
+     "name": "Randy DEVINE",
+     "index": "3388522",
+     "studentId": "20955654",
+     "supervisor": "DR KORNYO OLIVER",
+     "id": "g93-3388522"
+    }
+   ]
+  },
+  {
+   "group": 98,
+   "room": "RM 3",
+   "students": [
+    {
+     "name": "Joel BOAMAH",
+     "index": "3384522",
+     "studentId": "20959552",
+     "supervisor": "DR KORNYO OLIVER",
+     "id": "g98-3384522"
+    },
+    {
+     "name": "Evans NIMAKO",
+     "index": "3401822",
+     "studentId": "20961171",
+     "supervisor": "DR KORNYO OLIVER",
+     "id": "g98-3401822"
+    }
+   ]
+  },
+  {
+   "group": 103,
+   "room": "RM 3",
+   "students": [
+    {
+     "name": "Bismark AKWAH",
+     "index": "3367622",
+     "studentId": "20959239",
+     "supervisor": "DR KORNYO OLIVER",
+     "id": "g103-3367622"
+    },
+    {
+     "name": "Felix ADU MENSAH AMOFAH",
+     "index": "3363622",
+     "studentId": "20956721",
+     "supervisor": "DR KORNYO OLIVER",
+     "id": "g103-3363622"
+    }
+   ]
+  },
+  {
+   "group": 108,
+   "room": "RM 3",
+   "students": [
+    {
+     "name": "ASUO EDINAM KOFI",
+     "index": "3378322",
+     "studentId": "",
+     "id": "g108-3378322"
+    },
+    {
+     "name": "OCRAN CHRIS MARFO",
+     "index": "3404622",
+     "studentId": "",
+     "id": "g108-3404622"
+    },
+    {
+     "name": "WIAFE OBED ANNOR",
+     "index": "3417222",
+     "studentId": "",
+     "id": "g108-3417222"
+    }
+   ]
+  },
+  {
+   "group": 113,
+   "room": "RM 3",
+   "students": [
+    {
+     "name": "Yaw Barima Tawiah Bosompem",
+     "index": "3385522",
+     "studentId": "",
+     "id": "g113-3385522"
+    },
+    {
+     "name": "Kevin-Bernard Kofi Asimeng",
+     "index": "3378122",
+     "studentId": "",
+     "id": "g113-3378122"
+    },
+    {
+     "name": "Akanlu Brian Webadua",
+     "index": "3366922",
+     "studentId": "",
+     "id": "g113-3366922"
+    }
+   ]
+  },
+  {
+   "group": 118,
+   "room": "RM 3",
+   "students": [
+    {
+     "name": "Daniel Bubu Mawuena",
+     "index": "3399322",
+     "studentId": "",
+     "id": "g118-3399322"
+    },
+    {
+     "name": "Winifred Anokye",
+     "index": "3371822",
+     "studentId": "",
+     "id": "g118-3371822"
+    }
+   ]
+  },
+  {
+   "group": 123,
+   "room": "RM 3",
+   "students": [
+    {
+     "name": "Opoku Ofori Yaw Barimah Nana",
+     "index": "3406622",
+     "studentId": "",
+     "id": "g123-3406622"
+    },
+    {
+     "name": "Akua Afrakoma",
+     "index": "3364422",
+     "studentId": "",
+     "id": "g123-3364422"
+    }
+   ]
+  },
+  {
+   "group": 128,
+   "room": "RM 3",
+   "students": [
+    {
+     "name": "Prince Fordjour",
+     "index": "3391322",
+     "studentId": "",
+     "id": "g128-3391322"
+    },
+    {
+     "name": "Yeboah Frank Dickson",
+     "index": "3417822",
+     "studentId": "",
+     "id": "g128-3417822"
+    }
+   ]
+  },
+  {
+   "group": 133,
+   "room": "RM 3",
+   "students": [
+    {
+     "name": "Addai Nana Yaw",
+     "index": "3362422",
+     "studentId": "",
+     "id": "g133-3362422"
+    },
+    {
+     "name": "Abatey David Alegre",
+     "index": "3359122",
+     "studentId": "",
+     "id": "g133-3359122"
+    }
+   ]
+  },
+  {
+   "group": 138,
+   "room": "RM 3",
+   "students": [
+    {
+     "name": "Dzorsah Elisha Palmer Eyram",
+     "index": "3390322",
+     "studentId": "",
+     "id": "g138-3390322"
+    }
+   ]
+  },
+  {
+   "group": 143,
+   "room": "RM 3",
+   "students": [
+    {
+     "name": "Mary Nsiah",
+     "index": "3402622",
+     "studentId": "20881918",
+     "supervisor": "PROFESSOR NAJIM USSIPH",
+     "id": "g143-3402622"
+    },
+    {
+     "name": "Nana Oduro Twumasi-Ankrah",
+     "index": "3416822",
+     "studentId": "20882382",
+     "supervisor": "PROFESSOR NAJIM USSIPH",
+     "id": "g143-3416822"
+    }
+   ]
+  },
+  {
+   "group": 148,
+   "room": "RM 3",
+   "students": [
+    {
+     "name": "Afesey Mabel Delali",
+     "index": "3364222",
+     "studentId": "20882814",
+     "supervisor": "PROFESSOR NAJIM USSIPH",
+     "id": "g148-3364222"
+    },
+    {
+     "name": "Michael Narh Tetteh",
+     "index": "3415922",
+     "studentId": "20881533",
+     "supervisor": "PROFESSOR NAJIM USSIPH",
+     "id": "g148-3415922"
+    }
+   ]
+  },
+  {
+   "group": 153,
+   "room": "RM 3",
+   "students": [
+    {
+     "name": "Austin Godsmark",
+     "index": "5311920",
+     "studentId": "20776238",
+     "supervisor": "PROFESSOR NAJIM USSIPH",
+     "id": "g153-5311920"
+    }
+   ]
+  },
+  {
+   "group": 158,
+   "room": "RM 3",
+   "students": [
+    {
+     "name": "Nana Osei Assibey Antwi",
+     "index": "3373122",
+     "studentId": "20913132",
+     "supervisor": "DR EMMANUEL AHENE",
+     "id": "g158-3373122"
+    },
+    {
+     "name": "Franklin Ofori Asante",
+     "index": "3405422",
+     "studentId": "20910788",
+     "supervisor": "DR EMMANUEL AHENE",
+     "id": "g158-3405422"
+    }
+   ]
+  },
+  {
+   "group": 163,
+   "room": "RM 3",
+   "students": [
+    {
+     "name": "Kwaah Samuel",
+     "index": "3396622",
+     "studentId": "20910522",
+     "supervisor": "DR EMMANUEL AHENE",
+     "id": "g163-3396622"
+    },
+    {
+     "name": "Frank Darkoh",
+     "index": "3387822",
+     "studentId": "20911160",
+     "supervisor": "DR EMMANUEL AHENE",
+     "id": "g163-3387822"
+    },
+    {
+     "name": "Kyei Baffour Asiedu",
+     "index": "3377622",
+     "studentId": "20910022",
+     "supervisor": "DR EMMANUEL AHENE",
+     "id": "g163-3377622"
+    }
+   ]
+  },
+  {
+   "group": 168,
+   "room": "RM 3",
+   "students": [
+    {
+     "name": "Batabe Stacy Akiwele",
+     "index": "3382822",
+     "studentId": "20912390",
+     "supervisor": "DR EMMANUEL AHENE",
+     "id": "g168-3382822"
+    },
+    {
+     "name": "Quarc Daniel Joseph",
+     "index": "3411422",
+     "studentId": "20910236",
+     "supervisor": "DR EMMANUEL AHENE",
+     "id": "g168-3411422"
+    },
+    {
+     "name": "Gomado Bill Horla",
+     "index": "3392422",
+     "studentId": "20912920",
+     "supervisor": "DR EMMANUEL AHENE",
+     "id": "g168-3392422"
+    }
+   ]
+  },
+  {
+   "group": 173,
+   "room": "RM 3",
+   "students": [
+    {
+     "name": "Torkpo Robert Kweku",
+     "index": "3416422",
+     "studentId": "",
+     "id": "g173-3416422"
+    }
+   ]
+  },
+  {
+   "group": 178,
+   "room": "RM 3",
+   "students": [
+    {
+     "name": "Acquandoh Esther Efua",
+     "index": "3361822",
+     "studentId": "20931721",
+     "supervisor": "DR. KATE TAKYI",
+     "id": "g178-3361822"
+    },
+    {
+     "name": "Fredrick Andoh",
+     "index": "3370622",
+     "studentId": "20932387",
+     "supervisor": "DR. KATE TAKYI",
+     "id": "g178-3370622"
+    }
+   ]
+  },
+  {
+   "group": 183,
+   "room": "RM 3",
+   "students": [
+    {
+     "name": "Osei Isaac Gyasi",
+     "index": "3407822",
+     "studentId": "",
+     "id": "g183-3407822"
+    },
+    {
+     "name": "Nimako Obed Afari",
+     "index": "3401922",
+     "studentId": "",
+     "id": "g183-3401922"
+    }
+   ]
+  },
+  {
+   "group": 188,
+   "room": "RM 3",
+   "students": [
+    {
+     "name": "Dennis Opoku Amponsah",
+     "index": "3388322",
+     "studentId": "20929289",
+     "supervisor": "DR. KATE TAKYI",
+     "id": "g188-3388322"
+    },
+    {
+     "name": "Okoi Ampomaa Judith",
+     "index": "3405922",
+     "studentId": "20930371",
+     "supervisor": "DR. KATE TAKYI",
+     "id": "g188-3405922"
+    }
+   ]
+  },
+  {
+   "group": 193,
+   "room": "RM 3",
+   "students": [
+    {
+     "name": "Akwasi Poku Ofori Agyei",
+     "index": "3365222",
+     "studentId": "20943728",
+     "supervisor": "DR. LINDA AMOAKO BANNING",
+     "id": "g193-3365222"
+    },
+    {
+     "name": "Sampson Aid",
+     "index": "3366622",
+     "studentId": "20942504",
+     "supervisor": "DR. LINDA AMOAKO BANNING",
+     "id": "g193-3366622"
+    },
+    {
+     "name": "Kelvin Ankamah Adjei",
+     "index": "3363022",
+     "studentId": "20943941",
+     "supervisor": "DR. LINDA AMOAKO BANNING",
+     "id": "g193-3363022"
+    }
+   ]
+  },
+  {
+   "group": 198,
+   "room": "RM 3",
+   "students": [
+    {
+     "name": "Judah Jackson",
+     "index": "3394022",
+     "studentId": "20945252",
+     "supervisor": "DR. LINDA AMOAKO BANNING",
+     "id": "g198-3394022"
+    },
+    {
+     "name": "Yahaya Alidu Faisal",
+     "index": "3417422",
+     "studentId": "20946497",
+     "supervisor": "DR. LINDA AMOAKO BANNING",
+     "id": "g198-3417422"
+    },
+    {
+     "name": "Jude kwakye Boateng",
+     "index": "3396822",
+     "studentId": "20947492",
+     "supervisor": "DR. LINDA AMOAKO BANNING",
+     "id": "g198-3396822"
+    }
+   ]
+  },
+  {
+   "group": 203,
+   "room": "RM 3",
+   "students": [
+    {
+     "name": "Nukporti Collins Korbla",
+     "index": "3403322",
+     "studentId": "20942066",
+     "supervisor": "DR. LINDA AMOAKO BANNING",
+     "id": "g203-3403322"
+    },
+    {
+     "name": "Segbedzi Livingston",
+     "index": "3413522",
+     "studentId": "20946096",
+     "supervisor": "DR. LINDA AMOAKO BANNING",
+     "id": "g203-3413522"
+    },
+    {
+     "name": "Scott Kankam Ampong",
+     "index": "3369622",
+     "studentId": "20945476",
+     "supervisor": "DR. LINDA AMOAKO BANNING",
+     "id": "g203-3369622"
+    }
+   ]
+  },
+  {
+   "group": 208,
+   "room": "RM 3",
+   "students": [
+    {
+     "name": "Bartimeus Manuel Nii Osabu",
+     "index": "3382422",
+     "studentId": "20917643",
+     "supervisor": "DR. ERIC OPOKU OSEI",
+     "id": "g208-3382422"
+    },
+    {
+     "name": "Oti Wisdom Boakye",
+     "index": "3419922",
+     "studentId": "20917447",
+     "supervisor": "DR. ERIC OPOKU OSEI",
+     "id": "g208-3419922"
+    },
+    {
+     "name": "Manu Richeal Pokuah",
+     "index": "3398922",
+     "studentId": "20921191",
+     "supervisor": "DR. ERIC OPOKU OSEI",
+     "id": "g208-3398922"
+    },
+    {
+     "name": "Karikari David Kweku",
+     "index": "3394522",
+     "studentId": "20920718",
+     "supervisor": "DR. ERIC OPOKU OSEI",
+     "id": "g208-3394522"
+    },
+    {
+     "name": "Antwi Jeffrey Twum",
+     "index": "3372922",
+     "studentId": "20923656",
+     "supervisor": "DR. ERIC OPOKU OSEI",
+     "id": "g208-3372922"
+    }
+   ]
+  },
+  {
+   "group": 213,
+   "room": "RM 3",
+   "students": [
+    {
+     "name": "Anane Eric Ankamah",
+     "index": "3370322",
+     "studentId": "20922313",
+     "supervisor": "DR. ERIC OPOKU OSEI",
+     "id": "g213-3370322"
+    },
+    {
+     "name": "Oduro Yeboah Sarfo",
+     "index": "3413022",
+     "studentId": "20921117",
+     "supervisor": "DR. ERIC OPOKU OSEI",
+     "id": "g213-3413022"
+    },
+    {
+     "name": "Annan George Junior",
+     "index": "3419822",
+     "studentId": "20918758",
+     "supervisor": "DR. ERIC OPOKU OSEI",
+     "id": "g213-3419822"
+    },
+    {
+     "name": "Donkoh Benjamin Kwesi",
+     "index": "3389422",
+     "studentId": "20923860",
+     "supervisor": "DR. ERIC OPOKU OSEI",
+     "id": "g213-3389422"
+    }
+   ]
+  },
+  {
+   "group": 4,
+   "room": "RM 4",
+   "students": [
+    {
+     "name": "NHYIRA AKUA GODSON",
+     "index": "3392322",
+     "studentId": "20901740",
+     "supervisor": "DR. BENJAMIN TEI-PARTEY",
+     "id": "g4-3392322"
+    },
+    {
+     "name": "MARTIN OBIRI DANSO",
+     "index": "3387522",
+     "studentId": "20889448",
+     "supervisor": "DR. BENJAMIN TEI-PARTEY",
+     "id": "g4-3387522"
+    }
+   ]
+  },
+  {
+   "group": 9,
+   "room": "RM 4",
+   "students": [
+    {
+     "name": "CHRISTIAN NII ANTIAYE ADDY",
+     "index": "3362722",
+     "studentId": "20948514",
+     "supervisor": "DR. BENJAMIN TEI-PARTEY",
+     "id": "g9-3362722"
+    },
+    {
+     "name": "CALED OFORI AWUAH",
+     "index": "3379422",
+     "studentId": "20948853",
+     "supervisor": "DR. BENJAMIN TEI-PARTEY",
+     "id": "g9-3379422"
+    }
+   ]
+  },
+  {
+   "group": 14,
+   "room": "RM 4",
+   "students": [
+    {
+     "name": "DOREEN TECHIE",
+     "index": "3415422",
+     "studentId": "20948686",
+     "supervisor": "DR. BENJAMIN TEI-PARTEY",
+     "id": "g14-3415422"
+    },
+    {
+     "name": "ETORNAM KORDZO AHIATAKU",
+     "index": "3366422",
+     "studentId": "20954788",
+     "supervisor": "DR. BENJAMIN TEI-PARTEY",
+     "id": "g14-3366422"
+    }
+   ]
+  },
+  {
+   "group": 19,
+   "room": "RM 4",
+   "students": [
+    {
+     "name": "JOSEPH DADZIE",
+     "index": "3386822",
+     "studentId": "20952128",
+     "supervisor": "DR. BENJAMIN TEI-PARTEY",
+     "id": "g19-3386822"
+    },
+    {
+     "name": "MICHAEL ASAMOAH NKETIAH",
+     "index": "3402222",
+     "studentId": "20948761",
+     "supervisor": "DR. BENJAMIN TEI-PARTEY",
+     "id": "g19-3402222"
+    }
+   ]
+  },
+  {
+   "group": 24,
+   "room": "RM 4",
+   "students": [
+    {
+     "name": "STEPHEN OWUSU AMPONSEM",
+     "index": "3370122",
+     "studentId": "20940474",
+     "supervisor": "DR. KWABENA OWUSU-AGYEMANG",
+     "id": "g24-3370122"
+    },
+    {
+     "name": "KEVIN TORKORN",
+     "index": "3416322",
+     "studentId": "20939088",
+     "supervisor": "DR. KWABENA OWUSU-AGYEMANG",
+     "id": "g24-3416322"
+    }
+   ]
+  },
+  {
+   "group": 29,
+   "room": "RM 4",
+   "students": [
+    {
+     "name": "RUTH AFIVI SEWORDOR",
+     "index": "3414022",
+     "studentId": "20935079",
+     "supervisor": "DR. KWABENA OWUSU-AGYEMANG",
+     "id": "g29-3414022"
+    },
+    {
+     "name": "JUDITH NKRUMAH ATUAHENE",
+     "index": "3378822",
+     "studentId": "20940702",
+     "supervisor": "DR. KWABENA OWUSU-AGYEMANG",
+     "id": "g29-3378822"
+    }
+   ]
+  },
+  {
+   "group": 34,
+   "room": "RM 4",
+   "students": [
+    {
+     "name": "ANDAM-COBBOLD PAAPA KOBINA",
+     "index": "3370522",
+     "studentId": "20896200",
+     "supervisor": "DR. KWABENA OWUSU-AGYEMANG",
+     "id": "g34-3370522"
+    },
+    {
+     "name": "CALEB DUSSEY SEMEKOR",
+     "index": "3390022",
+     "studentId": "20911755",
+     "supervisor": "DR. KWABENA OWUSU-AGYEMANG",
+     "id": "g34-3390022"
+    }
+   ]
+  },
+  {
+   "group": 39,
+   "room": "RM 4",
+   "students": [
+    {
+     "name": "Edmond Yeboah",
+     "index": "3417722",
+     "studentId": "",
+     "id": "g39-3417722"
+    },
+    {
+     "name": "Dogbey Senanu Carl Jesse",
+     "index": "3389122",
+     "studentId": "",
+     "id": "g39-3389122"
+    }
+   ]
+  },
+  {
+   "group": 44,
+   "room": "RM 4",
+   "students": [
+    {
+     "name": "Micheal Ofosu Ampofo",
+     "index": "3369522",
+     "studentId": "",
+     "id": "g44-3369522"
+    },
+    {
+     "name": "karikari Osei Ansah",
+     "index": "3394722",
+     "studentId": "",
+     "id": "g44-3394722"
+    },
+    {
+     "name": "Obiri-Yeboah Sylvester",
+     "index": "3404322",
+     "studentId": "",
+     "id": "g44-3404322"
+    }
+   ]
+  },
+  {
+   "group": 49,
+   "room": "RM 4",
+   "students": [
+    {
+     "name": "Ibrahim Edem Ishmael",
+     "index": "3393622",
+     "studentId": "",
+     "id": "g49-3393622"
+    },
+    {
+     "name": "David Ameyaw Asante",
+     "index": "3368622",
+     "studentId": "",
+     "id": "g49-3368622"
+    }
+   ]
+  },
+  {
+   "group": 54,
+   "room": "RM 4",
+   "students": [
+    {
+     "name": "Sallo Samuel",
+     "index": "3412522",
+     "studentId": "",
+     "id": "g54-3412522"
+    },
+    {
+     "name": "Samiru Nasser Jadagwa",
+     "index": "3412722",
+     "studentId": "",
+     "id": "g54-3412722"
+    }
+   ]
+  },
+  {
+   "group": 59,
+   "room": "RM 4",
+   "students": [
+    {
+     "name": "Eric Asante",
+     "index": "3376122",
+     "studentId": "",
+     "id": "g59-3376122"
+    },
+    {
+     "name": "Badd Jeremiah Nii Adotei",
+     "index": "3381622",
+     "studentId": "",
+     "id": "g59-3381622"
+    }
+   ]
+  },
+  {
+   "group": 64,
+   "room": "RM 4",
+   "students": [
+    {
+     "name": "Ahado Ronald Ofoe",
+     "index": "3366322",
+     "studentId": "",
+     "id": "g64-3366322"
+    },
+    {
+     "name": "Yfi Ashon",
+     "index": "3377222",
+     "studentId": "",
+     "id": "g64-3377222"
+    }
+   ]
+  },
+  {
+   "group": 69,
+   "room": "RM 4",
+   "students": [
+    {
+     "name": "Marfo Felix Owusu Akwasi",
+     "index": "3399122",
+     "studentId": "",
+     "id": "g69-3399122"
+    },
+    {
+     "name": "Destine Kofi Honu",
+     "index": "3393322",
+     "studentId": "",
+     "id": "g69-3393322"
+    }
+   ]
+  },
+  {
+   "group": 74,
+   "room": "RM 4",
+   "students": [
+    {
+     "name": "Mardiyatu Zoumburi Tahiru",
+     "index": "3419422",
+     "studentId": "",
+     "id": "g74-3419422"
+    },
+    {
+     "name": "David Foli Quarshie",
+     "index": "3411622",
+     "studentId": "",
+     "id": "g74-3411622"
+    },
+    {
+     "name": "Salifu Danse Godwin Wusunapi",
+     "index": "3412422",
+     "studentId": "",
+     "id": "g74-3412422"
+    }
+   ]
+  },
+  {
+   "group": 79,
+   "room": "RM 4",
+   "students": [
+    {
+     "name": "Selikem Kwasi Amegashie",
+     "index": "3368522",
+     "studentId": "",
+     "id": "g79-3368522"
+    },
+    {
+     "name": "Asante Kwabena Sefa",
+     "index": "3376522",
+     "studentId": "",
+     "id": "g79-3376522"
+    },
+    {
+     "name": "Antwi Samuella",
+     "index": "3373422",
+     "studentId": "",
+     "id": "g79-3373422"
+    }
+   ]
+  },
+  {
+   "group": 84,
+   "room": "RM 4",
+   "students": [
+    {
+     "name": "Awuakye Sarpong Bright",
+     "index": "3379822",
+     "studentId": "",
+     "id": "g84-3379822"
+    }
+   ]
+  },
+  {
+   "group": 89,
+   "room": "RM 4",
+   "students": [
+    {
+     "name": "Mohammed ZULFAWU",
+     "index": "3419522",
+     "studentId": "20960000",
+     "supervisor": "DR KORNYO OLIVER",
+     "id": "g89-3419522"
+    },
+    {
+     "name": "Kofi Abordo BENYAH",
+     "index": "3383522",
+     "studentId": "20959993",
+     "supervisor": "DR KORNYO OLIVER",
+     "id": "g89-3383522"
+    }
+   ]
+  },
+  {
+   "group": 94,
+   "room": "RM 4",
+   "students": [
+    {
+     "name": "Iman ALHASSAN DIASSO",
+     "index": "3367922",
+     "studentId": "20958038",
+     "supervisor": "DR KORNYO OLIVER",
+     "id": "g94-3367922"
+    },
+    {
+     "name": "Kelvin SEFA",
+     "index": "3413422",
+     "studentId": "20958964",
+     "supervisor": "DR KORNYO OLIVER",
+     "id": "g94-3413422"
+    }
+   ]
+  },
+  {
+   "group": 99,
+   "room": "RM 4",
+   "students": [
+    {
+     "name": "Jalali-Din Wuni-Zaligu ABDULAI",
+     "index": "3360422",
+     "studentId": "20959145",
+     "supervisor": "DR KORNYO OLIVER",
+     "id": "g99-3360422"
+    },
+    {
+     "name": "Heinrich Owusu OSEI",
+     "index": "3407722",
+     "studentId": "20959480",
+     "supervisor": "DR KORNYO OLIVER",
+     "id": "g99-3407722"
+    }
+   ]
+  },
+  {
+   "group": 104,
+   "room": "RM 4",
+   "students": [
+    {
+     "name": "Tony WILLS",
+     "index": "3417322",
+     "studentId": "20956461",
+     "supervisor": "DR KORNYO OLIVER",
+     "id": "g104-3417322"
+    },
+    {
+     "name": "Jaffar OWUSU",
+     "index": "3409822",
+     "studentId": "20958994",
+     "supervisor": "DR KORNYO OLIVER",
+     "id": "g104-3409822"
+    }
+   ]
+  },
+  {
+   "group": 109,
+   "room": "RM 4",
+   "students": [
+    {
+     "name": "Lamptey Kwaku Abednego",
+     "index": "3398122",
+     "studentId": "",
+     "id": "g109-3398122"
+    },
+    {
+     "name": "Tugbah Lily Ama Mawuena",
+     "index": "3416522",
+     "studentId": "",
+     "id": "g109-3416522"
+    },
+    {
+     "name": "Korli Larry Addo",
+     "index": "3395922",
+     "studentId": "",
+     "id": "g109-3395922"
+    }
+   ]
+  },
+  {
+   "group": 114,
+   "room": "RM 4",
+   "students": [
+    {
+     "name": "KARIKARI FELIX KUFFOUR",
+     "index": "3394622",
+     "studentId": "",
+     "id": "g114-3394622"
+    },
+    {
+     "name": "NANA ADJOA AKYIMFOA AUSTIN",
+     "index": "3378922",
+     "studentId": "",
+     "id": "g114-3378922"
+    },
+    {
+     "name": "AHLIYAH AZEEZ",
+     "index": "3380822",
+     "studentId": "",
+     "id": "g114-3380822"
+    }
+   ]
+  },
+  {
+   "group": 119,
+   "room": "RM 4",
+   "students": [
+    {
+     "name": "Ayeh-Paye Yaw Ayeh",
+     "index": "3380322",
+     "studentId": "",
+     "id": "g119-3380322"
+    },
+    {
+     "name": "Sarfo Isaac Kwaku",
+     "index": "3412922",
+     "studentId": "",
+     "id": "g119-3412922"
+    }
+   ]
+  },
+  {
+   "group": 124,
+   "room": "RM 4",
+   "students": [
+    {
+     "name": "Joshua Kissi",
+     "index": "3395122",
+     "studentId": "",
+     "id": "g124-3395122"
+    },
+    {
+     "name": "Clifford Oppong Peprah",
+     "index": "3407522",
+     "studentId": "",
+     "id": "g124-3407522"
+    }
+   ]
+  },
+  {
+   "group": 129,
+   "room": "RM 4",
+   "students": [
+    {
+     "name": "Danso Daniel Osafo",
+     "index": "3387322",
+     "studentId": "",
+     "id": "g129-3387322"
+    },
+    {
+     "name": "Baah Beatrice Darkoa",
+     "index": "3381022",
+     "studentId": "",
+     "id": "g129-3381022"
+    }
+   ]
+  },
+  {
+   "group": 134,
+   "room": "RM 4",
+   "students": [
+    {
+     "name": "Fosu Francis Boateng",
+     "index": "3391622",
+     "studentId": "",
+     "id": "g134-3391622"
+    },
+    {
+     "name": "Darkwah Martha Kinih",
+     "index": "3387922",
+     "studentId": "",
+     "id": "g134-3387922"
+    }
+   ]
+  },
+  {
+   "group": 139,
+   "room": "RM 4",
+   "students": [
+    {
+     "name": "Ayertey Danny Ayeh",
+     "index": "3380422",
+     "studentId": "20881599",
+     "supervisor": "PROFESSOR NAJIM USSIPH",
+     "id": "g139-3380422"
+    },
+    {
+     "name": "Dimmie Niduokhansumah Ishmael",
+     "index": "8545921",
+     "studentId": "20830764",
+     "supervisor": "PROFESSOR NAJIM USSIPH",
+     "id": "g139-8545921"
+    }
+   ]
+  },
+  {
+   "group": 144,
+   "room": "RM 4",
+   "students": [
+    {
+     "name": "David Nii Lartey",
+     "index": "3398222",
+     "studentId": "20881773",
+     "supervisor": "PROFESSOR NAJIM USSIPH",
+     "id": "g144-3398222"
+    },
+    {
+     "name": "Reagan Akwetey Atipah",
+     "index": "3378522",
+     "studentId": "20883572",
+     "supervisor": "PROFESSOR NAJIM USSIPH",
+     "id": "g144-3378522"
+    }
+   ]
+  },
+  {
+   "group": 149,
+   "room": "RM 4",
+   "students": [
+    {
+     "name": "Baryeh Samuel",
+     "index": "3382522",
+     "studentId": "20883619",
+     "supervisor": "PROFESSOR NAJIM USSIPH",
+     "id": "g149-3382522"
+    }
+   ]
+  },
+  {
+   "group": 154,
+   "room": "RM 4",
+   "students": [
+    {
+     "name": "Ayor Obed Otu",
+     "index": "8540021",
+     "studentId": "20851244",
+     "supervisor": "PROFESSOR NAJIM USSIPH",
+     "id": "g154-8540021"
+    },
+    {
+     "name": "Appiah Bridget Mensah",
+     "index": "8535821",
+     "studentId": "20873970",
+     "supervisor": "PROFESSOR NAJIM USSIPH",
+     "id": "g154-8535821"
+    }
+   ]
+  },
+  {
+   "group": 159,
+   "room": "RM 4",
+   "students": [
+    {
+     "name": "Opoku Bandoh Nketia",
+     "index": "3402122",
+     "studentId": "20909954",
+     "supervisor": "DR EMMANUEL AHENE",
+     "id": "g159-3402122"
+    },
+    {
+     "name": "Nana Ameyaw Kwadwo Kwakye",
+     "index": "3397022",
+     "studentId": "20912488",
+     "supervisor": "DR EMMANUEL AHENE",
+     "id": "g159-3397022"
+    },
+    {
+     "name": "Akua Afriyie Owiredu",
+     "index": "3408922",
+     "studentId": "20910939",
+     "supervisor": "DR EMMANUEL AHENE",
+     "id": "g159-3408922"
+    }
+   ]
+  },
+  {
+   "group": 164,
+   "room": "RM 4",
+   "students": [
+    {
+     "name": "Christiana Afia Appiah",
+     "index": "3374122",
+     "studentId": "20911280",
+     "supervisor": "DR EMMANUEL AHENE",
+     "id": "g164-3374122"
+    },
+    {
+     "name": "Calvin Mawulorm Fiakpornu",
+     "index": "3391122",
+     "studentId": "20911907",
+     "supervisor": "DR EMMANUEL AHENE",
+     "id": "g164-3391122"
+    }
+   ]
+  },
+  {
+   "group": 169,
+   "room": "RM 4",
+   "students": [
+    {
+     "name": "Paul Nii Bortey Bletcher",
+     "index": "3383722",
+     "studentId": "20912652",
+     "supervisor": "DR EMMANUEL AHENE",
+     "id": "g169-3383722"
+    },
+    {
+     "name": "Gideon Adjei",
+     "index": "3362922",
+     "studentId": "20909312",
+     "supervisor": "DR EMMANUEL AHENE",
+     "id": "g169-3362922"
+    },
+    {
+     "name": "Edward Moses Appiah",
+     "index": "3374422",
+     "studentId": "20911743",
+     "supervisor": "DR EMMANUEL AHENE",
+     "id": "g169-3374422"
+    }
+   ]
+  },
+  {
+   "group": 174,
+   "room": "RM 4",
+   "students": [
+    {
+     "name": "Prince Yekunya",
+     "index": "3418522",
+     "studentId": "20928015",
+     "supervisor": "DR. KATE TAKYI",
+     "id": "g174-3418522"
+    },
+    {
+     "name": "Terry Mensah Pepra",
+     "index": "3400422",
+     "studentId": "20933353",
+     "supervisor": "DR. KATE TAKYI",
+     "id": "g174-3400422"
+    }
+   ]
+  },
+  {
+   "group": 179,
+   "room": "RM 4",
+   "students": [
+    {
+     "name": "Manasseh Asaah",
+     "index": "3375522",
+     "studentId": "",
+     "id": "g179-3375522"
+    },
+    {
+     "name": "Jeddy Paa Kojo Abban",
+     "index": "3359222",
+     "studentId": "",
+     "id": "g179-3359222"
+    }
+   ]
+  },
+  {
+   "group": 184,
+   "room": "RM 4",
+   "students": [
+    {
+     "name": "Francis Acheampong",
+     "index": "3361222",
+     "studentId": "20929071",
+     "supervisor": "DR. KATE TAKYI",
+     "id": "g184-3361222"
+    }
+   ]
+  },
+  {
+   "group": 189,
+   "room": "RM 4",
+   "students": [
+    {
+     "name": "Ocansey Tetteh Robert",
+     "index": "3404522",
+     "studentId": "",
+     "id": "g189-3404522"
+    },
+    {
+     "name": "Richmond Delasi Tamakloe",
+     "index": "3415222",
+     "studentId": "20932690",
+     "supervisor": "DR. KATE TAKYI",
+     "id": "g189-3415222"
+    }
+   ]
+  },
+  {
+   "group": 194,
+   "room": "RM 4",
+   "students": [
+    {
+     "name": "Amy Ami Enam Ziggah",
+     "index": "3419322",
+     "studentId": "20944927",
+     "supervisor": "DR. LINDA AMOAKO BANNING",
+     "id": "g194-3419322"
+    },
+    {
+     "name": "Adarkwa Boakye Godfred",
+     "index": "3362122",
+     "studentId": "20944659",
+     "supervisor": "DR. LINDA AMOAKO BANNING",
+     "id": "g194-3362122"
+    },
+    {
+     "name": "Philip Tenzagh",
+     "index": "3415722",
+     "studentId": "20943387",
+     "supervisor": "DR. LINDA AMOAKO BANNING",
+     "id": "g194-3415722"
+    }
+   ]
+  },
+  {
+   "group": 199,
+   "room": "RM 4",
+   "students": [
+    {
+     "name": "Awuah Kelvin",
+     "index": "3379522",
+     "studentId": "20943609",
+     "supervisor": "DR. LINDA AMOAKO BANNING",
+     "id": "g199-3379522"
+    },
+    {
+     "name": "Abdulai Abdul-Latif",
+     "index": "3360322",
+     "studentId": "20941908",
+     "supervisor": "DR. LINDA AMOAKO BANNING",
+     "id": "g199-3360322"
+    },
+    {
+     "name": "Nana Ama Dansowaa Nuamah",
+     "index": "3403222",
+     "studentId": "20942305",
+     "supervisor": "DR. LINDA AMOAKO BANNING",
+     "id": "g199-3403222"
+    }
+   ]
+  },
+  {
+   "group": 204,
+   "room": "RM 4",
+   "students": [
+    {
+     "name": "Boadu Obiri Yeboah Kwame",
+     "index": "3383922",
+     "studentId": "20942206",
+     "supervisor": "DR. LINDA AMOAKO BANNING",
+     "id": "g204-3383922"
+    },
+    {
+     "name": "Antwi Frank Oteng",
+     "index": "3372722",
+     "studentId": "20942640",
+     "supervisor": "DR. LINDA AMOAKO BANNING",
+     "id": "g204-3372722"
+    }
+   ]
+  },
+  {
+   "group": 209,
+   "room": "RM 4",
+   "students": [
+    {
+     "name": "Amarh Evans Amartei",
+     "index": "3368322",
+     "studentId": "20918111",
+     "supervisor": "DR. ERIC OPOKU OSEI",
+     "id": "g209-3368322"
+    },
+    {
+     "name": "Adu-Brempong Nana Kojo",
+     "index": "3363922",
+     "studentId": "20921110",
+     "supervisor": "DR. ERIC OPOKU OSEI",
+     "id": "g209-3363922"
+    },
+    {
+     "name": "Bashiru Yerima Sadat",
+     "index": "3382622",
+     "studentId": "20919092",
+     "supervisor": "DR. ERIC OPOKU OSEI",
+     "id": "g209-3382622"
+    },
+    {
+     "name": "Asante Kwame Junior",
+     "index": "3376622",
+     "studentId": "20941299",
+     "supervisor": "DR. ERIC OPOKU OSEI",
+     "id": "g209-3376622"
+    },
+    {
+     "name": "Akorsu Emmanuella Amenuveve",
+     "index": "3367122",
+     "studentId": "20924066",
+     "supervisor": "DR. ERIC OPOKU OSEI",
+     "id": "g209-3367122"
+    }
+   ]
+  },
+  {
+   "group": 5,
+   "room": "RM 5",
+   "students": [
+    {
+     "name": "KELVIN ANKOMAH",
+     "index": "3371222",
+     "studentId": "20948238",
+     "supervisor": "DR. BENJAMIN TEI-PARTEY",
+     "id": "g5-3371222"
+    },
+    {
+     "name": "MAHFUZ AGBOR SEIDU",
+     "index": "3364722",
+     "studentId": "20953083",
+     "supervisor": "DR. BENJAMIN TEI-PARTEY",
+     "id": "g5-3364722"
+    }
+   ]
+  },
+  {
+   "group": 10,
+   "room": "RM 5",
+   "students": [
+    {
+     "name": "BENJAMIN SERDEM ODUM",
+     "index": "3405122",
+     "studentId": "20954676",
+     "supervisor": "DR. BENJAMIN TEI-PARTEY",
+     "id": "g10-3405122"
+    },
+    {
+     "name": "IGNATIUS NKRUMAH PEPRAH",
+     "index": "3402522",
+     "studentId": "20952293",
+     "supervisor": "DR. BENJAMIN TEI-PARTEY",
+     "id": "g10-3402522"
+    }
+   ]
+  },
+  {
+   "group": 15,
+   "room": "RM 5",
+   "students": [
+    {
+     "name": "PERRY OPOKU",
+     "index": "3406722",
+     "studentId": "20949809",
+     "supervisor": "DR. BENJAMIN TEI-PARTEY",
+     "id": "g15-3406722"
+    },
+    {
+     "name": "UMAR TIJANI ABDULAI",
+     "index": "3360522",
+     "studentId": "20948813",
+     "supervisor": "DR. BENJAMIN TEI-PARTEY",
+     "id": "g15-3360522"
+    }
+   ]
+  },
+  {
+   "group": 20,
+   "room": "RM 5",
+   "students": [
+    {
+     "name": "ENOCH MARTEY KORLEY",
+     "index": "3399222",
+     "studentId": "20951781",
+     "supervisor": "DR. BENJAMIN TEI-PARTEY",
+     "id": "g20-3399222"
+    },
+    {
+     "name": "ROLAND TEYE AMARTEY",
+     "index": "3368422",
+     "studentId": "20953558",
+     "supervisor": "DR. BENJAMIN TEI-PARTEY",
+     "id": "g20-3368422"
+    }
+   ]
+  },
+  {
+   "group": 25,
+   "room": "RM 5",
+   "students": [
+    {
+     "name": "BEDIAKO KWAKYE ERNEST",
+     "index": "3396722",
+     "studentId": "20935239",
+     "supervisor": "DR. KWABENA OWUSU-AGYEMANG",
+     "id": "g25-3396722"
+    },
+    {
+     "name": "FYNN-SACKEY EMMANUEL OPOKU",
+     "index": "3392022",
+     "studentId": "20935187",
+     "supervisor": "DR. KWABENA OWUSU-AGYEMANG",
+     "id": "g25-3392022"
+    }
+   ]
+  },
+  {
+   "group": 30,
+   "room": "RM 5",
+   "students": [
+    {
+     "name": "WILLIAM JOHNSON",
+     "index": "3394222",
+     "studentId": "20938022",
+     "supervisor": "DR. KWABENA OWUSU-AGYEMANG",
+     "id": "g30-3394222"
+    },
+    {
+     "name": "KPENTEY KANKSON KOMLA EWOENAM",
+     "index": "3396222",
+     "studentId": "20940297",
+     "supervisor": "DR. KWABENA OWUSU-AGYEMANG",
+     "id": "g30-3396222"
+    }
+   ]
+  },
+  {
+   "group": 35,
+   "room": "RM 5",
+   "students": [
+    {
+     "name": "SAMUEL AKOTO NARTEY",
+     "index": "3401722",
+     "studentId": "20903243",
+     "supervisor": "DR. KWABENA OWUSU-AGYEMANG",
+     "id": "g35-3401722"
+    }
+   ]
+  },
+  {
+   "group": 40,
+   "room": "RM 5",
+   "students": [
+    {
+     "name": "Abboah Festus",
+     "index": "3359422",
+     "studentId": "",
+     "id": "g40-3359422"
+    },
+    {
+     "name": "Adama Abdul-Samed",
+     "index": "3360222",
+     "studentId": "",
+     "id": "g40-3360222"
+    },
+    {
+     "name": "Adomako John Kwaku",
+     "index": "3363322",
+     "studentId": "",
+     "id": "g40-3363322"
+    }
+   ]
+  },
+  {
+   "group": 45,
+   "room": "RM 5",
+   "students": [
+    {
+     "name": "Owusu Adolph Kwabena",
+     "index": "3409222",
+     "studentId": "",
+     "id": "g45-3409222"
+    },
+    {
+     "name": "Faustina F. A. Asante",
+     "index": "3376322",
+     "studentId": "",
+     "id": "g45-3376322"
+    },
+    {
+     "name": "Ephraim Kofi Ayi Kwapong",
+     "index": "3397122",
+     "studentId": "",
+     "id": "g45-3397122"
+    }
+   ]
+  },
+  {
+   "group": 50,
+   "room": "RM 5",
+   "students": [
+    {
+     "name": "Gerald Addey Amoatey",
+     "index": "3369322",
+     "studentId": "",
+     "id": "g50-3369322"
+    },
+    {
+     "name": "Opoku Agyin Denzil",
+     "index": "3406922",
+     "studentId": "",
+     "id": "g50-3406922"
+    },
+    {
+     "name": "Addo-Gyamfi Kwaku",
+     "index": "3362622",
+     "studentId": "",
+     "id": "g50-3362622"
+    }
+   ]
+  },
+  {
+   "group": 55,
+   "room": "RM 5",
+   "students": [
+    {
+     "name": "Agotse Mawuena Kofi Samuel",
+     "index": "3364922",
+     "studentId": "",
+     "id": "g55-3364922"
+    },
+    {
+     "name": "Kwame Kesse Ofori",
+     "index": "3395022",
+     "studentId": "",
+     "id": "g55-3395022"
+    }
+   ]
+  },
+  {
+   "group": 60,
+   "room": "RM 5",
+   "students": [
+    {
+     "name": "Ofori Kwansah Wendy Sedinam",
+     "index": "3405522",
+     "studentId": "",
+     "id": "g60-3405522"
+    },
+    {
+     "name": "Chris Baffour",
+     "index": "3381822",
+     "studentId": "",
+     "id": "g60-3381822"
+    }
+   ]
+  },
+  {
+   "group": 65,
+   "room": "RM 5",
+   "students": [
+    {
+     "name": "Richard Appiah",
+     "index": "3374522",
+     "studentId": "",
+     "id": "g65-3374522"
+    },
+    {
+     "name": "Abdul Karim Abdul Latif",
+     "index": "3359622",
+     "studentId": "",
+     "id": "g65-3359622"
+    }
+   ]
+  },
+  {
+   "group": 70,
+   "room": "RM 5",
+   "students": [
+    {
+     "name": "Judah Lartey",
+     "index": "3398322",
+     "studentId": "",
+     "id": "g70-3398322"
+    },
+    {
+     "name": "Robert Asamoah",
+     "index": "3375922",
+     "studentId": "",
+     "id": "g70-3375922"
+    }
+   ]
+  },
+  {
+   "group": 75,
+   "room": "RM 5",
+   "students": [
+    {
+     "name": "Dede Mary Ampaw",
+     "index": "3388122",
+     "studentId": "",
+     "id": "g75-3388122"
+    },
+    {
+     "name": "Ankrah Nii Kpakpo Oti Caleb",
+     "index": "3371422",
+     "studentId": "",
+     "id": "g75-3371422"
+    },
+    {
+     "name": "Awuah-Tabiri Ransford",
+     "index": "3379722",
+     "studentId": "",
+     "id": "g75-3379722"
+    }
+   ]
+  },
+  {
+   "group": 80,
+   "room": "RM 5",
+   "students": [
+    {
+     "name": "Emmanuel Mawuli Wetta",
+     "index": "3417122",
+     "studentId": "",
+     "id": "g80-3417122"
+    },
+    {
+     "name": "Ransford Appiah Enchill",
+     "index": "3390722",
+     "studentId": "",
+     "id": "g80-3390722"
+    },
+    {
+     "name": "Nemenlah Erzuah Freeman",
+     "index": "3391922",
+     "studentId": "",
+     "id": "g80-3391922"
+    }
+   ]
+  },
+  {
+   "group": 85,
+   "room": "RM 5",
+   "students": [
+    {
+     "name": "Vincent Kwaku KPEMLIE",
+     "index": "3396122",
+     "studentId": "20958507",
+     "supervisor": "DR KORNYO OLIVER",
+     "id": "g85-3396122"
+    },
+    {
+     "name": "Melike ARKUTU",
+     "index": "3374922",
+     "studentId": "20960313",
+     "supervisor": "DR KORNYO OLIVER",
+     "id": "g85-3374922"
+    }
+   ]
+  },
+  {
+   "group": 90,
+   "room": "RM 5",
+   "students": [
+    {
+     "name": "Desmond Jeffery KATA",
+     "index": "3394922",
+     "studentId": "20960382",
+     "supervisor": "DR KORNYO OLIVER",
+     "id": "g90-3394922"
+    },
+    {
+     "name": "Kennedy Akweteh MENSAH",
+     "index": "3399822",
+     "studentId": "20961339",
+     "supervisor": "DR KORNYO OLIVER",
+     "id": "g90-3399822"
+    }
+   ]
+  },
+  {
+   "group": 95,
+   "room": "RM 5",
+   "students": [
+    {
+     "name": "Frank Annor ARTHUR",
+     "index": "3375322",
+     "studentId": "20957659",
+     "supervisor": "DR KORNYO OLIVER",
+     "id": "g95-3375322"
+    },
+    {
+     "name": "James KUSI",
+     "index": "3396522",
+     "studentId": "20959778",
+     "supervisor": "DR KORNYO OLIVER",
+     "id": "g95-3396522"
+    }
+   ]
+  },
+  {
+   "group": 100,
+   "room": "RM 5",
+   "students": [
+    {
+     "name": "Prince Kweku Adu DETTOH",
+     "index": "3388422",
+     "studentId": "20956697",
+     "supervisor": "DR KORNYO OLIVER",
+     "id": "g100-3388422"
+    },
+    {
+     "name": "Shamsudeen ABDUL RAFIU",
+     "index": "3359722",
+     "studentId": "20958028",
+     "supervisor": "DR KORNYO OLIVER",
+     "id": "g100-3359722"
+    }
+   ]
+  },
+  {
+   "group": 105,
+   "room": "RM 5",
+   "students": [
+    {
+     "name": "Sarpong Nana DAPAAH",
+     "index": "3387622",
+     "studentId": "20961823",
+     "supervisor": "DR KORNYO OLIVER",
+     "id": "g105-3387622"
+    },
+    {
+     "name": "Kingsley HOVOR",
+     "index": "3393422",
+     "studentId": "20960739",
+     "supervisor": "DR KORNYO OLIVER",
+     "id": "g105-3393422"
+    }
+   ]
+  },
+  {
+   "group": 110,
+   "room": "RM 5",
+   "students": [
+    {
+     "name": "Samuel Baah",
+     "index": "3381122",
+     "studentId": "",
+     "id": "g110-3381122"
+    },
+    {
+     "name": "Bawa Benjamin",
+     "index": "3382922",
+     "studentId": "",
+     "id": "g110-3382922"
+    },
+    {
+     "name": "Richel Nhyira Takyiwaa Antwi",
+     "index": "3373322",
+     "studentId": "",
+     "id": "g110-3373322"
+    }
+   ]
+  },
+  {
+   "group": 115,
+   "room": "RM 5",
+   "students": [
+    {
+     "name": "Eugene Amponsah Asabere",
+     "index": "3375622",
+     "studentId": "",
+     "id": "g115-3375622"
+    },
+    {
+     "name": "Akisi Leonard Awonwie",
+     "index": "3367022",
+     "studentId": "",
+     "id": "g115-3367022"
+    },
+    {
+     "name": "Idrissu Mohammed Awal",
+     "index": "3393922",
+     "studentId": "",
+     "id": "g115-3393922"
+    }
+   ]
+  },
+  {
+   "group": 120,
+   "room": "RM 5",
+   "students": [
+    {
+     "name": "Abdul Rashid Mujahid",
+     "index": "3359922",
+     "studentId": "",
+     "id": "g120-3359922"
+    },
+    {
+     "name": "Mustapha Shafihu",
+     "index": "3401322",
+     "studentId": "",
+     "id": "g120-3401322"
+    }
+   ]
+  },
+  {
+   "group": 125,
+   "room": "RM 5",
+   "students": [
+    {
+     "name": "Ntibim Helena",
+     "index": "3402922",
+     "studentId": "",
+     "id": "g125-3402922"
+    },
+    {
+     "name": "Siaw Emmanuel Asante",
+     "index": "3414422",
+     "studentId": "",
+     "id": "g125-3414422"
+    }
+   ]
+  },
+  {
+   "group": 130,
+   "room": "RM 5",
+   "students": [
+    {
+     "name": "Acquah Kelvin Anii",
+     "index": "3361722",
+     "studentId": "",
+     "id": "g130-3361722"
+    },
+    {
+     "name": "Amoafo Caleb Frimpong",
+     "index": "3369122",
+     "studentId": "",
+     "id": "g130-3369122"
+    }
+   ]
+  },
+  {
+   "group": 135,
+   "room": "RM 5",
+   "students": [
+    {
+     "name": "Asare Fredinald Owusu",
+     "index": "3377022",
+     "studentId": "",
+     "id": "g135-3377022"
+    },
+    {
+     "name": "Korsah Bennett Abeiku",
+     "index": "3396022",
+     "studentId": "",
+     "id": "g135-3396022"
+    }
+   ]
+  },
+  {
+   "group": 140,
+   "room": "RM 5",
+   "students": [
+    {
+     "name": "William Kofi Owusu",
+     "index": "3410522",
+     "studentId": "20882019",
+     "supervisor": "PROFESSOR NAJIM USSIPH",
+     "id": "g140-3410522"
+    },
+    {
+     "name": "Anokye Yaw Mark",
+     "index": "3371922",
+     "studentId": "20882969",
+     "supervisor": "PROFESSOR NAJIM USSIPH",
+     "id": "g140-3371922"
+    }
+   ]
+  },
+  {
+   "group": 145,
+   "room": "RM 5",
+   "students": [
+    {
+     "name": "Milla Esinam",
+     "index": "8557121",
+     "studentId": "20857664",
+     "supervisor": "PROFESSOR NAJIM USSIPH",
+     "id": "g145-8557121"
+    },
+    {
+     "name": "Allwin Wellington",
+     "index": "4231820",
+     "studentId": "20749749",
+     "supervisor": "PROFESSOR NAJIM USSIPH",
+     "id": "g145-4231820"
+    }
+   ]
+  },
+  {
+   "group": 150,
+   "room": "RM 5",
+   "students": [
+    {
+     "name": "Dinko Nazeer Mohammed",
+     "index": "3388622",
+     "studentId": "20936942",
+     "supervisor": "PROFESSOR NAJIM USSIPH",
+     "id": "g150-3388622"
+    },
+    {
+     "name": "Prince Adams",
+     "index": "3361922",
+     "studentId": "20881892",
+     "supervisor": "PROFESSOR NAJIM USSIPH",
+     "id": "g150-3361922"
+    }
+   ]
+  },
+  {
+   "group": 155,
+   "room": "RM 5",
+   "students": [
+    {
+     "name": "Tenkorang Bishop Duah",
+     "index": "3415622",
+     "studentId": "20883875",
+     "supervisor": "PROFESSOR NAJIM USSIPH",
+     "id": "g155-3415622"
+    }
+   ]
+  },
+  {
+   "group": 160,
+   "room": "RM 5",
+   "students": [
+    {
+     "name": "Duku Polycarp Nkpadewie",
+     "index": "3389822",
+     "studentId": "20912094",
+     "supervisor": "DR EMMANUEL AHENE",
+     "id": "g160-3389822"
+    },
+    {
+     "name": "Silas Arkoh",
+     "index": "3374722",
+     "studentId": "20908974",
+     "supervisor": "DR EMMANUEL AHENE",
+     "id": "g160-3374722"
+    }
+   ]
+  },
+  {
+   "group": 165,
+   "room": "RM 5",
+   "students": [
+    {
+     "name": "Anguah Henry Fynn Otchere",
+     "index": "3370822",
+     "studentId": "20911054",
+     "supervisor": "DR EMMANUEL AHENE",
+     "id": "g165-3370822"
+    },
+    {
+     "name": "Nathaniel Akwessey Nketsiah",
+     "index": "3402422",
+     "studentId": "20908726",
+     "supervisor": "DR EMMANUEL AHENE",
+     "id": "g165-3402422"
+    },
+    {
+     "name": "Maranatha Aku Yovon",
+     "index": "3418822",
+     "studentId": "20909614",
+     "supervisor": "DR EMMANUEL AHENE",
+     "id": "g165-3418822"
+    }
+   ]
+  },
+  {
+   "group": 170,
+   "room": "RM 5",
+   "students": [
+    {
+     "name": "Asamoah Clinton",
+     "index": "3375822",
+     "studentId": "",
+     "id": "g170-3375822"
+    },
+    {
+     "name": "Ayesu Philip Odame",
+     "index": "3380522",
+     "studentId": "",
+     "id": "g170-3380522"
+    }
+   ]
+  },
+  {
+   "group": 175,
+   "room": "RM 5",
+   "students": [
+    {
+     "name": "Brew Eliza Anim",
+     "index": "3385822",
+     "studentId": "20930032",
+     "supervisor": "DR. KATE TAKYI",
+     "id": "g175-3385822"
+    },
+    {
+     "name": "Doku Clifford Nii Adjei",
+     "index": "3389222",
+     "studentId": "20932831",
+     "supervisor": "DR. KATE TAKYI",
+     "id": "g175-3389222"
+    }
+   ]
+  },
+  {
+   "group": 180,
+   "room": "RM 5",
+   "students": [
+    {
+     "name": "Daniel Owusu Otis",
+     "index": "3408622",
+     "studentId": "",
+     "id": "g180-3408622"
+    },
+    {
+     "name": "Ayitey Dennis Tiam",
+     "index": "3380622",
+     "studentId": "",
+     "id": "g180-3380622"
+    }
+   ]
+  },
+  {
+   "group": 185,
+   "room": "RM 5",
+   "students": [
+    {
+     "name": "Emile Chamoun",
+     "index": "3386022",
+     "studentId": "20924551",
+     "supervisor": "DR. KATE TAKYI",
+     "id": "g185-3386022"
+    },
+    {
+     "name": "Eunice Semekor",
+     "index": "3413822",
+     "studentId": "20931447",
+     "supervisor": "DR. KATE TAKYI",
+     "id": "g185-3413822"
+    }
+   ]
+  },
+  {
+   "group": 190,
+   "room": "RM 5",
+   "students": [
+    {
+     "name": "Theophilus Etornam Soetor",
+     "index": "3414722",
+     "studentId": "20926432",
+     "supervisor": "DR. KATE TAKYI",
+     "id": "g190-3414722"
+    },
+    {
+     "name": "Sulemana Kaisaan Anamzoya",
+     "index": "3414822",
+     "studentId": "20927090",
+     "supervisor": "DR. KATE TAKYI",
+     "id": "g190-3414822"
+    }
+   ]
+  },
+  {
+   "group": 195,
+   "room": "RM 5",
+   "students": [
+    {
+     "name": "Dowuona Nortei Daniel",
+     "index": "3389522",
+     "studentId": "20944024",
+     "supervisor": "DR. LINDA AMOAKO BANNING",
+     "id": "g195-3389522"
+    },
+    {
+     "name": "Tetteh Mark Addo",
+     "index": "3415822",
+     "studentId": "20889323",
+     "supervisor": "DR. LINDA AMOAKO BANNING",
+     "id": "g195-3415822"
+    },
+    {
+     "name": "Kyereh Jeffery",
+     "index": "3397922",
+     "studentId": "20944995",
+     "supervisor": "DR. LINDA AMOAKO BANNING",
+     "id": "g195-3397922"
+    }
+   ]
+  },
+  {
+   "group": 200,
+   "room": "RM 5",
+   "students": [
+    {
+     "name": "Nelson Nti Yeboah",
+     "index": "3418422",
+     "studentId": "20945191",
+     "supervisor": "DR. LINDA AMOAKO BANNING",
+     "id": "g200-3418422"
+    },
+    {
+     "name": "Agyemang Badu Daniel",
+     "index": "3366222",
+     "studentId": "20944358",
+     "supervisor": "DR. LINDA AMOAKO BANNING",
+     "id": "g200-3366222"
+    },
+    {
+     "name": "Papa Yaw Anokye-Mensah",
+     "index": "3372022",
+     "studentId": "20941916",
+     "supervisor": "DR. LINDA AMOAKO BANNING",
+     "id": "g200-3372022"
+    }
+   ]
+  },
+  {
+   "group": 205,
+   "room": "RM 5",
+   "students": [
+    {
+     "name": "Justin Mensah",
+     "index": "3399722",
+     "studentId": "20946593",
+     "supervisor": "DR. LINDA AMOAKO BANNING",
+     "id": "g205-3399722"
+    },
+    {
+     "name": "Nhyiraba Daniel koranteng",
+     "index": "3395822",
+     "studentId": "20946791",
+     "supervisor": "DR. LINDA AMOAKO BANNING",
+     "id": "g205-3395822"
+    }
+   ]
+  },
+  {
+   "group": 210,
+   "room": "RM 5",
+   "students": [
+    {
+     "name": "Oheneba Kwaku Tawiah Ntim",
+     "index": "3403022",
+     "studentId": "20923785",
+     "supervisor": "DR. ERIC OPOKU OSEI",
+     "id": "g210-3403022"
+    },
+    {
+     "name": "Ahiekpor Jude Kekeli Yaw",
+     "index": "3366522",
+     "studentId": "20920037",
+     "supervisor": "DR. ERIC OPOKU OSEI",
+     "id": "g210-3366522"
+    },
+    {
+     "name": "Temple Evangelina",
+     "index": "3415522",
+     "studentId": "20917568",
+     "supervisor": "DR. ERIC OPOKU OSEI",
+     "id": "g210-3415522"
+    },
+    {
+     "name": "Teye Victoria",
+     "index": "3416022",
+     "studentId": "20920301",
+     "supervisor": "DR. ERIC OPOKU OSEI",
+     "id": "g210-3416022"
+    },
+    {
+     "name": "Kyei Christian Junior",
+     "index": "3397722",
+     "studentId": "20923927",
+     "supervisor": "DR. ERIC OPOKU OSEI",
+     "id": "g210-3397722"
+    }
+   ]
+  }
+ ]
+}
