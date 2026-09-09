@@ -15,7 +15,7 @@ export type SlideMeta = {
   ref?: string;
 };
 
-export type TrackId = "investor" | "academic" | "partner";
+export type TrackId = "defence" | "investor" | "academic" | "partner";
 
 export type Track = {
   id: TrackId;
@@ -29,6 +29,28 @@ export type Track = {
   duration: string;
   slides: SlideMeta[];
 };
+
+/**
+ * The seven-minute running order. Not a subset of ACADEMIC — the slides are their
+ * own components, because condensing eighteen slides into nine is a rewrite rather
+ * than a filter. ACADEMIC is kept intact alongside it as the long-form deck and as
+ * the deep-linkable Q&A backup.
+ *
+ * Budgeted at roughly 45 seconds a slide, which leaves a little air on the cover
+ * and the close.
+ */
+const DEFENCE: SlideMeta[] = [
+  { id: "cover", label: "Cover" },
+  { id: "problem", label: "The problem", ref: "§1.1" },
+  { id: "response", label: "Gap & scope", ref: "§1.2–1.5" },
+  { id: "built", label: "What we built", ref: "§1.7" },
+  { id: "money-engine", label: "Money engine", ref: "§5.3–5.4" },
+  { id: "e2ee", label: "Withdrawn property", ref: "§12.4a" },
+  { id: "business-model", label: "How it earns" },
+  { id: "controls", label: "Controls & licence" },
+  { id: "results", label: "Results", ref: "§12–13" },
+  { id: "close", label: "Close" },
+];
 
 const INVESTOR: SlideMeta[] = [
   { id: "cover", label: "Cover" },
@@ -84,6 +106,15 @@ const PARTNER: SlideMeta[] = [
 ];
 
 export const TRACKS: Record<TrackId, Track> = {
+  defence: {
+    id: "defence",
+    name: "Defence · 7 min",
+    promise: "The presentation",
+    blurb:
+      "The examined deck, cut to a seven-minute slot: problem, scope, the artefact, the money engine, the withdrawn E2EE property, how it earns, the licensing position, and the limitations — stated rather than conceded.",
+    duration: "≈7 min · 10 slides",
+    slides: DEFENCE,
+  },
   investor: {
     id: "investor",
     name: "Investor",
@@ -113,10 +144,12 @@ export const TRACKS: Record<TrackId, Track> = {
   },
 };
 
-export const TRACK_ORDER: TrackId[] = ["investor", "partner", "academic"];
+export const TRACK_ORDER: TrackId[] = ["defence", "academic", "investor", "partner"];
 
 export function isTrackId(value: string | null | undefined): value is TrackId {
-  return value === "investor" || value === "academic" || value === "partner";
+  return (
+    value === "defence" || value === "investor" || value === "academic" || value === "partner"
+  );
 }
 
 export const AUTHORS = "Dussey Caleb Semekor · Andam-Cobbold Paapa Kobbina";

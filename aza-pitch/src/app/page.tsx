@@ -1,5 +1,16 @@
 import { DeckShell } from "@/components/deck/DeckShell";
 
+import { CoverSlide as DefenceCover } from "@/components/slides/defence/CoverSlide";
+import { ProblemSlide as DefenceProblem } from "@/components/slides/defence/ProblemSlide";
+import { ResponseSlide as DefenceResponse } from "@/components/slides/defence/ResponseSlide";
+import { BuiltSlide as DefenceBuilt } from "@/components/slides/defence/BuiltSlide";
+import { MoneyEngineSlide as DefenceMoneyEngine } from "@/components/slides/defence/MoneyEngineSlide";
+import { E2eeSlide as DefenceE2ee } from "@/components/slides/defence/E2eeSlide";
+import { BusinessModelSlide as DefenceBusinessModel } from "@/components/slides/defence/BusinessModelSlide";
+import { ControlsSlide as DefenceControls } from "@/components/slides/defence/ControlsSlide";
+import { ResultsSlide as DefenceResults } from "@/components/slides/defence/ResultsSlide";
+import { CloseSlide as DefenceClose } from "@/components/slides/defence/CloseSlide";
+
 import { CoverSlide as InvestorCover } from "@/components/slides/investor/CoverSlide";
 import { ProblemSlide as InvestorProblem } from "@/components/slides/investor/ProblemSlide";
 import { ProductSlide } from "@/components/slides/investor/ProductSlide";
@@ -48,13 +59,27 @@ import { LimitationsSlide } from "@/components/slides/academic/LimitationsSlide"
 import { CloseSlide as AcademicClose } from "@/components/slides/academic/CloseSlide";
 
 /**
- * Three running orders. Each must stay in step with its array in `src/lib/deck.ts` —
+ * Four running orders. Each must stay in step with its array in `src/lib/deck.ts` —
  * that list drives the rail, the counter and the keyboard jumps, and it matches these
  * by position, not by id.
  */
 export default function Page() {
   return (
     <DeckShell
+      defence={
+        <>
+          <DefenceCover />
+          <DefenceProblem />
+          <DefenceResponse />
+          <DefenceBuilt />
+          <DefenceMoneyEngine />
+          <DefenceE2ee />
+          <DefenceBusinessModel />
+          <DefenceControls />
+          <DefenceResults />
+          <DefenceClose />
+        </>
+      }
       investor={
         <>
           <InvestorCover />
