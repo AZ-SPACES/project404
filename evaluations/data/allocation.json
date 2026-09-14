@@ -1,7 +1,7 @@
 {
  "title": "DEFENSE ALLOCATION FOR COMPUTER SCIENCE 2026",
  "generated": "2026-09-14",
- "source": "database prodsnap",
+ "source": "database defense",
  "rooms": [
   {
    "id": "RM 1",
@@ -26,7 +26,7 @@
   {
    "id": "RM 3",
    "label": "Room 3",
-   "venue": "Simulation Lab",
+   "venue": "FF7",
    "day": "Wednesday",
    "examiners": [
     "Prof. Yaw Marfo",
@@ -36,10 +36,10 @@
   {
    "id": "RM 4",
    "label": "Room 4",
-   "venue": "FF12",
+   "venue": "FF17",
    "day": "Wednesday",
    "examiners": [
-    "Dr. Kornyo",
+    "Dr. Oliver Kornyo",
     "Dr. Kate Takyi"
    ]
   },
@@ -4748,6 +4748,13 @@
      "studentId": "20937813",
      "supervisor": "Dr. Kwabena Owusu-Agyemang",
      "id": "g211-3400922"
+    },
+    {
+     "name": "Bimpong Clinton",
+     "index": "3383622",
+     "studentId": "20938275",
+     "supervisor": "Dr. Kwabena Owusu-Agyemang",
+     "id": "g211-3383622"
     }
    ]
   },
@@ -4924,13 +4931,6 @@
    "studentId": "20895108",
    "supervisor": "Prof. Yaw Marfo Missah",
    "id": "sup-3379922"
-  },
-  {
-   "name": "BIMPONG Clinton",
-   "index": "3383622",
-   "studentId": "20938275",
-   "supervisor": "Dr. Kwabena Owusu-Agyemang",
-   "id": "sup-3383622"
   },
   {
    "name": "BOATENG Joel Owusu",

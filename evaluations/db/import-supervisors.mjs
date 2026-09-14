@@ -33,7 +33,7 @@ const clean = (v) => (v == null ? "" : String(v).trim());
 // The examiner row is renamed rather than re-keyed: `scores` points at its id, so
 // replacing the row would detach every ballot already recorded against it.
 const PANEL_SUBSTITUTIONS = [
-  { room: "rm-4", was: "gaddafi", now: "Dr. Kornyo" },
+  { room: "rm-4", was: "gaddafi", now: "Dr. Oliver Kornyo" },
 ];
 
 /**
