@@ -1,0 +1,3740 @@
+{
+  "source": "CS4-PROJECT_ALLOCATION-2025-2026.docx",
+  "generated": "2026-09-14",
+  "supervisors": [
+    {
+      "id": "dr-benjamin-tei-partey",
+      "name": "Dr. Benjamin Tei-Partey",
+      "sort": 0,
+      "students": 40
+    },
+    {
+      "id": "dr-emmanuel-ahene",
+      "name": "Dr. Emmanuel Ahene",
+      "sort": 1,
+      "students": 40
+    },
+    {
+      "id": "dr-eric-opoku-osei",
+      "name": "Dr. Eric Opoku Osei",
+      "sort": 2,
+      "students": 40
+    },
+    {
+      "id": "dr-gaddafi-abdul-salaam",
+      "name": "Dr. Gaddafi Abdul-Salaam",
+      "sort": 3,
+      "students": 40
+    },
+    {
+      "id": "dr-k-o-peasah",
+      "name": "Dr. K. O. Peasah",
+      "sort": 4,
+      "students": 40
+    },
+    {
+      "id": "dr-kate-takyi",
+      "name": "Dr. Kate Takyi",
+      "sort": 5,
+      "students": 40
+    },
+    {
+      "id": "dr-kornyo-oliver",
+      "name": "Dr. Kornyo Oliver",
+      "sort": 6,
+      "students": 42
+    },
+    {
+      "id": "dr-kwabena-owusu-agyemang",
+      "name": "Dr. Kwabena Owusu-Agyemang",
+      "sort": 7,
+      "students": 40
+    },
+    {
+      "id": "dr-linda-amoako-banning",
+      "name": "Dr. Linda Amoako Banning",
+      "sort": 8,
+      "students": 40
+    },
+    {
+      "id": "dr-rose-mary-owusuaa-mensah",
+      "name": "Dr. Rose-Mary Owusuaa Mensah",
+      "sort": 9,
+      "students": 40
+    },
+    {
+      "id": "prof-frimpong-twum",
+      "name": "Prof. Frimpong Twum",
+      "sort": 10,
+      "students": 40
+    },
+    {
+      "id": "prof-najim-ussiph",
+      "name": "Prof. Najim Ussiph",
+      "sort": 11,
+      "students": 40
+    },
+    {
+      "id": "prof-yaw-marfo-missah",
+      "name": "Prof. Yaw Marfo Missah",
+      "sort": 12,
+      "students": 40
+    }
+  ],
+  "assignments": [
+    {
+      "supervisor": "Prof. Najim Ussiph",
+      "supervisorId": "prof-najim-ussiph",
+      "studentId": "20739247",
+      "indexNo": "4236420",
+      "name": "ABDUL-SALAAM Ishaque Marfo"
+    },
+    {
+      "supervisor": "Prof. Najim Ussiph",
+      "supervisorId": "prof-najim-ussiph",
+      "studentId": "20749749",
+      "indexNo": "4231820",
+      "name": "WELLINGTON Allwin Nii Darku"
+    },
+    {
+      "supervisor": "Prof. Najim Ussiph",
+      "supervisorId": "prof-najim-ussiph",
+      "studentId": "20773901",
+      "indexNo": "4206020",
+      "name": "DAPAAH Peter Atuahene"
+    },
+    {
+      "supervisor": "Prof. Najim Ussiph",
+      "supervisorId": "prof-najim-ussiph",
+      "studentId": "20776238",
+      "indexNo": "5311920",
+      "name": "AUSTIN Godsmark Orkwe"
+    },
+    {
+      "supervisor": "Prof. Najim Ussiph",
+      "supervisorId": "prof-najim-ussiph",
+      "studentId": "20828297",
+      "indexNo": "8574021",
+      "name": "AHORGBAH Fredrick Kofi Sedinam"
+    },
+    {
+      "supervisor": "Prof. Najim Ussiph",
+      "supervisorId": "prof-najim-ussiph",
+      "studentId": "20830764",
+      "indexNo": "8545921",
+      "name": "DIMMIE Niduokhansumah Ishmael"
+    },
+    {
+      "supervisor": "Prof. Najim Ussiph",
+      "supervisorId": "prof-najim-ussiph",
+      "studentId": "20845042",
+      "indexNo": "8565121",
+      "name": "OWUSU AFRIYIE Patricia"
+    },
+    {
+      "supervisor": "Prof. Najim Ussiph",
+      "supervisorId": "prof-najim-ussiph",
+      "studentId": "20846851",
+      "indexNo": "8534921",
+      "name": "ANSAH King Edmund"
+    },
+    {
+      "supervisor": "Prof. Najim Ussiph",
+      "supervisorId": "prof-najim-ussiph",
+      "studentId": "20847087",
+      "indexNo": "8573021",
+      "name": "ANSAH OWUSU Samuel"
+    },
+    {
+      "supervisor": "Prof. Najim Ussiph",
+      "supervisorId": "prof-najim-ussiph",
+      "studentId": "20847720",
+      "indexNo": "8553921",
+      "name": "KWARTENG Marrion Daniel"
+    },
+    {
+      "supervisor": "Prof. Najim Ussiph",
+      "supervisorId": "prof-najim-ussiph",
+      "studentId": "20851244",
+      "indexNo": "8540021",
+      "name": "AYOR Obed Otu"
+    },
+    {
+      "supervisor": "Prof. Najim Ussiph",
+      "supervisorId": "prof-najim-ussiph",
+      "studentId": "20852125",
+      "indexNo": "8527021",
+      "name": "ADU BOAHEN Isaac"
+    },
+    {
+      "supervisor": "Prof. Najim Ussiph",
+      "supervisorId": "prof-najim-ussiph",
+      "studentId": "20852220",
+      "indexNo": "8562921",
+      "name": "OSEI Esther Baffour"
+    },
+    {
+      "supervisor": "Prof. Najim Ussiph",
+      "supervisorId": "prof-najim-ussiph",
+      "studentId": "20857664",
+      "indexNo": "8557121",
+      "name": "MILLA Esinam Ama"
+    },
+    {
+      "supervisor": "Prof. Najim Ussiph",
+      "supervisorId": "prof-najim-ussiph",
+      "studentId": "20858091",
+      "indexNo": "8557721",
+      "name": "MORDEN Jonathan"
+    },
+    {
+      "supervisor": "Prof. Najim Ussiph",
+      "supervisorId": "prof-najim-ussiph",
+      "studentId": "20859006",
+      "indexNo": "8533021",
+      "name": "ANAGI Elisha"
+    },
+    {
+      "supervisor": "Prof. Najim Ussiph",
+      "supervisorId": "prof-najim-ussiph",
+      "studentId": "20861977",
+      "indexNo": "8547521",
+      "name": "DUUT Oscar"
+    },
+    {
+      "supervisor": "Prof. Najim Ussiph",
+      "supervisorId": "prof-najim-ussiph",
+      "studentId": "20873970",
+      "indexNo": "8535821",
+      "name": "APPIAH Bridget Mensah"
+    },
+    {
+      "supervisor": "Prof. Najim Ussiph",
+      "supervisorId": "prof-najim-ussiph",
+      "studentId": "20876209",
+      "indexNo": "8557021",
+      "name": "MICHAEL ISAAC Asigre"
+    },
+    {
+      "supervisor": "Prof. Najim Ussiph",
+      "supervisorId": "prof-najim-ussiph",
+      "studentId": "20881533",
+      "indexNo": "3415922",
+      "name": "TETTEH Michael Narh"
+    },
+    {
+      "supervisor": "Prof. Najim Ussiph",
+      "supervisorId": "prof-najim-ussiph",
+      "studentId": "20881599",
+      "indexNo": "3380422",
+      "name": "AYERTEY Danny Ayeh"
+    },
+    {
+      "supervisor": "Prof. Najim Ussiph",
+      "supervisorId": "prof-najim-ussiph",
+      "studentId": "20881773",
+      "indexNo": "3398222",
+      "name": "LARTEY David Nii"
+    },
+    {
+      "supervisor": "Prof. Najim Ussiph",
+      "supervisorId": "prof-najim-ussiph",
+      "studentId": "20881892",
+      "indexNo": "3361922",
+      "name": "ADAMS Prince"
+    },
+    {
+      "supervisor": "Prof. Najim Ussiph",
+      "supervisorId": "prof-najim-ussiph",
+      "studentId": "20881918",
+      "indexNo": "3402622",
+      "name": "NSIAH Mary"
+    },
+    {
+      "supervisor": "Prof. Najim Ussiph",
+      "supervisorId": "prof-najim-ussiph",
+      "studentId": "20882019",
+      "indexNo": "3410522",
+      "name": "OWUSU William Kofi"
+    },
+    {
+      "supervisor": "Prof. Najim Ussiph",
+      "supervisorId": "prof-najim-ussiph",
+      "studentId": "20882038",
+      "indexNo": "3377122",
+      "name": "ASARE-ODEI Francis Nana Asante"
+    },
+    {
+      "supervisor": "Prof. Najim Ussiph",
+      "supervisorId": "prof-najim-ussiph",
+      "studentId": "20882256",
+      "indexNo": "3359322",
+      "name": "ABBEY DARKO Samuel Desmond"
+    },
+    {
+      "supervisor": "Prof. Najim Ussiph",
+      "supervisorId": "prof-najim-ussiph",
+      "studentId": "20882382",
+      "indexNo": "3416822",
+      "name": "TWUMASI-ANKRAH Nana Oduro"
+    },
+    {
+      "supervisor": "Prof. Najim Ussiph",
+      "supervisorId": "prof-najim-ussiph",
+      "studentId": "20882814",
+      "indexNo": "3364222",
+      "name": "AFESEY Mabel Delali"
+    },
+    {
+      "supervisor": "Prof. Najim Ussiph",
+      "supervisorId": "prof-najim-ussiph",
+      "studentId": "20882931",
+      "indexNo": "3381322",
+      "name": "BAAH-OTU Edwin Paa Kwame"
+    },
+    {
+      "supervisor": "Prof. Najim Ussiph",
+      "supervisorId": "prof-najim-ussiph",
+      "studentId": "20882969",
+      "indexNo": "3371922",
+      "name": "ANOKYE Yaw Mark"
+    },
+    {
+      "supervisor": "Prof. Najim Ussiph",
+      "supervisorId": "prof-najim-ussiph",
+      "studentId": "20883017",
+      "indexNo": "3387422",
+      "name": "DANSO Etornam Yaa Lydia"
+    },
+    {
+      "supervisor": "Prof. Najim Ussiph",
+      "supervisorId": "prof-najim-ussiph",
+      "studentId": "20883202",
+      "indexNo": "3392622",
+      "name": "GYABAA Ebenezer"
+    },
+    {
+      "supervisor": "Prof. Najim Ussiph",
+      "supervisorId": "prof-najim-ussiph",
+      "studentId": "20883338",
+      "indexNo": "3363222",
+      "name": "ADJIN Vernon"
+    },
+    {
+      "supervisor": "Prof. Najim Ussiph",
+      "supervisorId": "prof-najim-ussiph",
+      "studentId": "20883572",
+      "indexNo": "3378522",
+      "name": "ATIPAH Reagan Akwetey"
+    },
+    {
+      "supervisor": "Prof. Najim Ussiph",
+      "supervisorId": "prof-najim-ussiph",
+      "studentId": "20883619",
+      "indexNo": "3382522",
+      "name": "BARYEH Samuel"
+    },
+    {
+      "supervisor": "Prof. Najim Ussiph",
+      "supervisorId": "prof-najim-ussiph",
+      "studentId": "20883702",
+      "indexNo": "3402722",
+      "name": "NSIAH Milcah Beatrice Owusuaa"
+    },
+    {
+      "supervisor": "Prof. Najim Ussiph",
+      "supervisorId": "prof-najim-ussiph",
+      "studentId": "20883875",
+      "indexNo": "3415622",
+      "name": "TENKORANG Bishop Duah"
+    },
+    {
+      "supervisor": "Prof. Najim Ussiph",
+      "supervisorId": "prof-najim-ussiph",
+      "studentId": "20936942",
+      "indexNo": "3388622",
+      "name": "DINKO Nazeer Mohammed"
+    },
+    {
+      "supervisor": "Prof. Najim Ussiph",
+      "supervisorId": "prof-najim-ussiph",
+      "studentId": "20941279",
+      "indexNo": "3373722",
+      "name": "ANYAGRI Blessing Winbisisa"
+    },
+    {
+      "supervisor": "Prof. Frimpong Twum",
+      "supervisorId": "prof-frimpong-twum",
+      "studentId": "20884394",
+      "indexNo": "3418322",
+      "name": "YEBOAH Kyeremaa Alfreda"
+    },
+    {
+      "supervisor": "Prof. Frimpong Twum",
+      "supervisorId": "prof-frimpong-twum",
+      "studentId": "20884603",
+      "indexNo": "3397122",
+      "name": "KWAPONG Ephraim Kofi Ayi"
+    },
+    {
+      "supervisor": "Prof. Frimpong Twum",
+      "supervisorId": "prof-frimpong-twum",
+      "studentId": "20884768",
+      "indexNo": "3406922",
+      "name": "OPOKU AGYIN Denzil"
+    },
+    {
+      "supervisor": "Prof. Frimpong Twum",
+      "supervisorId": "prof-frimpong-twum",
+      "studentId": "20884793",
+      "indexNo": "3363322",
+      "name": "ADOMAKO John Kwaku"
+    },
+    {
+      "supervisor": "Prof. Frimpong Twum",
+      "supervisorId": "prof-frimpong-twum",
+      "studentId": "20885001",
+      "indexNo": "3417722",
+      "name": "YEBOAH Edmond"
+    },
+    {
+      "supervisor": "Prof. Frimpong Twum",
+      "supervisorId": "prof-frimpong-twum",
+      "studentId": "20885096",
+      "indexNo": "3376322",
+      "name": "ASANTE Faustina Frimpongmaa Ama"
+    },
+    {
+      "supervisor": "Prof. Frimpong Twum",
+      "supervisorId": "prof-frimpong-twum",
+      "studentId": "20885484",
+      "indexNo": "3376922",
+      "name": "ASARE Emmanuel Nana"
+    },
+    {
+      "supervisor": "Prof. Frimpong Twum",
+      "supervisorId": "prof-frimpong-twum",
+      "studentId": "20885632",
+      "indexNo": "3365922",
+      "name": "AGYEMANG John"
+    },
+    {
+      "supervisor": "Prof. Frimpong Twum",
+      "supervisorId": "prof-frimpong-twum",
+      "studentId": "20885667",
+      "indexNo": "3396322",
+      "name": "KUFFOUR Kelvin Osei"
+    },
+    {
+      "supervisor": "Prof. Frimpong Twum",
+      "supervisorId": "prof-frimpong-twum",
+      "studentId": "20885701",
+      "indexNo": "3360022",
+      "name": "ABDUL-KARIM Adnaan"
+    },
+    {
+      "supervisor": "Prof. Frimpong Twum",
+      "supervisorId": "prof-frimpong-twum",
+      "studentId": "20885780",
+      "indexNo": "3388922",
+      "name": "DOE Terry Elikplim Kwaku"
+    },
+    {
+      "supervisor": "Prof. Frimpong Twum",
+      "supervisorId": "prof-frimpong-twum",
+      "studentId": "20885827",
+      "indexNo": "3369722",
+      "name": "AMPONSAH Cyprian Kumi"
+    },
+    {
+      "supervisor": "Prof. Frimpong Twum",
+      "supervisorId": "prof-frimpong-twum",
+      "studentId": "20885880",
+      "indexNo": "3373622",
+      "name": "ANTWI-ADJEI Samuel"
+    },
+    {
+      "supervisor": "Prof. Frimpong Twum",
+      "supervisorId": "prof-frimpong-twum",
+      "studentId": "20886274",
+      "indexNo": "3409922",
+      "name": "OWUSU Eric Kofi"
+    },
+    {
+      "supervisor": "Prof. Frimpong Twum",
+      "supervisorId": "prof-frimpong-twum",
+      "studentId": "20886373",
+      "indexNo": "3416922",
+      "name": "UTHMAN Memuna"
+    },
+    {
+      "supervisor": "Prof. Frimpong Twum",
+      "supervisorId": "prof-frimpong-twum",
+      "studentId": "20886503",
+      "indexNo": "3389722",
+      "name": "DUAH Jephthah"
+    },
+    {
+      "supervisor": "Prof. Frimpong Twum",
+      "supervisorId": "prof-frimpong-twum",
+      "studentId": "20886524",
+      "indexNo": "3367822",
+      "name": "ALHASSAN Abdul Rauf"
+    },
+    {
+      "supervisor": "Prof. Frimpong Twum",
+      "supervisorId": "prof-frimpong-twum",
+      "studentId": "20886860",
+      "indexNo": "3405822",
+      "name": "OHENE Linda Anima"
+    },
+    {
+      "supervisor": "Prof. Frimpong Twum",
+      "supervisorId": "prof-frimpong-twum",
+      "studentId": "20886895",
+      "indexNo": "3389122",
+      "name": "DOGBEY Senanu Carl Jesse"
+    },
+    {
+      "supervisor": "Prof. Frimpong Twum",
+      "supervisorId": "prof-frimpong-twum",
+      "studentId": "20886951",
+      "indexNo": "3393622",
+      "name": "IBRAHIM Edem Ishmael"
+    },
+    {
+      "supervisor": "Prof. Frimpong Twum",
+      "supervisorId": "prof-frimpong-twum",
+      "studentId": "20887040",
+      "indexNo": "3368622",
+      "name": "AMEYAW David Asante"
+    },
+    {
+      "supervisor": "Prof. Frimpong Twum",
+      "supervisorId": "prof-frimpong-twum",
+      "studentId": "20887259",
+      "indexNo": "3362522",
+      "name": "ADDO Chris Anome Paa Yaw"
+    },
+    {
+      "supervisor": "Prof. Frimpong Twum",
+      "supervisorId": "prof-frimpong-twum",
+      "studentId": "20887644",
+      "indexNo": "3360222",
+      "name": "ABDUL-SAMED Adama"
+    },
+    {
+      "supervisor": "Prof. Frimpong Twum",
+      "supervisorId": "prof-frimpong-twum",
+      "studentId": "20887813",
+      "indexNo": "3397822",
+      "name": "KYEI-MENSAH Akwasi Oduro"
+    },
+    {
+      "supervisor": "Prof. Frimpong Twum",
+      "supervisorId": "prof-frimpong-twum",
+      "studentId": "20887952",
+      "indexNo": "3369322",
+      "name": "AMOATEY Gerald Addey"
+    },
+    {
+      "supervisor": "Prof. Frimpong Twum",
+      "supervisorId": "prof-frimpong-twum",
+      "studentId": "20888118",
+      "indexNo": "3418222",
+      "name": "YEBOAH Kwame Agyeman Baffour"
+    },
+    {
+      "supervisor": "Prof. Frimpong Twum",
+      "supervisorId": "prof-frimpong-twum",
+      "studentId": "20888147",
+      "indexNo": "3404322",
+      "name": "OBIRI-YEBOAH Sylvester"
+    },
+    {
+      "supervisor": "Prof. Frimpong Twum",
+      "supervisorId": "prof-frimpong-twum",
+      "studentId": "20888212",
+      "indexNo": "3369522",
+      "name": "AMPOFO Ofosu Michael"
+    },
+    {
+      "supervisor": "Prof. Frimpong Twum",
+      "supervisorId": "prof-frimpong-twum",
+      "studentId": "20888250",
+      "indexNo": "3401022",
+      "name": "MOHAMMED Suraiya"
+    },
+    {
+      "supervisor": "Prof. Frimpong Twum",
+      "supervisorId": "prof-frimpong-twum",
+      "studentId": "20888550",
+      "indexNo": "3359422",
+      "name": "ABBOAH Festus"
+    },
+    {
+      "supervisor": "Prof. Frimpong Twum",
+      "supervisorId": "prof-frimpong-twum",
+      "studentId": "20888696",
+      "indexNo": "3386222",
+      "name": "COFIE Ezekiel Heward"
+    },
+    {
+      "supervisor": "Prof. Frimpong Twum",
+      "supervisorId": "prof-frimpong-twum",
+      "studentId": "20888880",
+      "indexNo": "3395222",
+      "name": "KISSI Mercy"
+    },
+    {
+      "supervisor": "Prof. Frimpong Twum",
+      "supervisorId": "prof-frimpong-twum",
+      "studentId": "20889017",
+      "indexNo": "3362622",
+      "name": "ADDO-GYAMFI Kwaku"
+    },
+    {
+      "supervisor": "Prof. Frimpong Twum",
+      "supervisorId": "prof-frimpong-twum",
+      "studentId": "20889050",
+      "indexNo": "3373922",
+      "name": "APPIAGYEI Reindolf Akwasi"
+    },
+    {
+      "supervisor": "Prof. Frimpong Twum",
+      "supervisorId": "prof-frimpong-twum",
+      "studentId": "20889089",
+      "indexNo": "3409222",
+      "name": "OWUSU Adolph Kwabena"
+    },
+    {
+      "supervisor": "Prof. Frimpong Twum",
+      "supervisorId": "prof-frimpong-twum",
+      "studentId": "20889155",
+      "indexNo": "3417522",
+      "name": "YAKUBU Abdul Wahab Kalanba"
+    },
+    {
+      "supervisor": "Prof. Frimpong Twum",
+      "supervisorId": "prof-frimpong-twum",
+      "studentId": "20889200",
+      "indexNo": "3394722",
+      "name": "KARIKARI Osei Ansah"
+    },
+    {
+      "supervisor": "Prof. Frimpong Twum",
+      "supervisorId": "prof-frimpong-twum",
+      "studentId": "20889263",
+      "indexNo": "3381522",
+      "name": "BABA MOHAMMED Suleiman"
+    },
+    {
+      "supervisor": "Prof. Frimpong Twum",
+      "supervisorId": "prof-frimpong-twum",
+      "studentId": "20889302",
+      "indexNo": "3411022",
+      "name": "OWUSU-MENSAH Kwaku Sekyere"
+    },
+    {
+      "supervisor": "Prof. Frimpong Twum",
+      "supervisorId": "prof-frimpong-twum",
+      "studentId": "20947848",
+      "indexNo": "3389322",
+      "name": "DOMI Gifty Adzo"
+    },
+    {
+      "supervisor": "Prof. Yaw Marfo Missah",
+      "supervisorId": "prof-yaw-marfo-missah",
+      "studentId": "20889412",
+      "indexNo": "3406622",
+      "name": "OPOKU Ofori Yaw Barimah Nana"
+    },
+    {
+      "supervisor": "Prof. Yaw Marfo Missah",
+      "supervisorId": "prof-yaw-marfo-missah",
+      "studentId": "20889444",
+      "indexNo": "3391322",
+      "name": "FORDJOUR Prince"
+    },
+    {
+      "supervisor": "Prof. Yaw Marfo Missah",
+      "supervisorId": "prof-yaw-marfo-missah",
+      "studentId": "20889468",
+      "indexNo": "3405022",
+      "name": "ODOI Yussif Odokwei"
+    },
+    {
+      "supervisor": "Prof. Yaw Marfo Missah",
+      "supervisorId": "prof-yaw-marfo-missah",
+      "studentId": "20889568",
+      "indexNo": "3391622",
+      "name": "FOSU Francis Boateng"
+    },
+    {
+      "supervisor": "Prof. Yaw Marfo Missah",
+      "supervisorId": "prof-yaw-marfo-missah",
+      "studentId": "20889569",
+      "indexNo": "3362422",
+      "name": "ADDAI Nana Yaw"
+    },
+    {
+      "supervisor": "Prof. Yaw Marfo Missah",
+      "supervisorId": "prof-yaw-marfo-missah",
+      "studentId": "20889623",
+      "indexNo": "3413222",
+      "name": "SARPEY Stephen Papa Maakeh"
+    },
+    {
+      "supervisor": "Prof. Yaw Marfo Missah",
+      "supervisorId": "prof-yaw-marfo-missah",
+      "studentId": "20889746",
+      "indexNo": "3396022",
+      "name": "KORSAH Bennett Abeiku"
+    },
+    {
+      "supervisor": "Prof. Yaw Marfo Missah",
+      "supervisorId": "prof-yaw-marfo-missah",
+      "studentId": "20890017",
+      "indexNo": "3381022",
+      "name": "BAAH Beatrice Darkoa"
+    },
+    {
+      "supervisor": "Prof. Yaw Marfo Missah",
+      "supervisorId": "prof-yaw-marfo-missah",
+      "studentId": "20890176",
+      "indexNo": "3364422",
+      "name": "AFRAKOMA Akua"
+    },
+    {
+      "supervisor": "Prof. Yaw Marfo Missah",
+      "supervisorId": "prof-yaw-marfo-missah",
+      "studentId": "20890241",
+      "indexNo": "3404222",
+      "name": "OBIRI-AGYEI Tracy Owusua"
+    },
+    {
+      "supervisor": "Prof. Yaw Marfo Missah",
+      "supervisorId": "prof-yaw-marfo-missah",
+      "studentId": "20890458",
+      "indexNo": "3378022",
+      "name": "ASILEVI Andrews Edem Minta"
+    },
+    {
+      "supervisor": "Prof. Yaw Marfo Missah",
+      "supervisorId": "prof-yaw-marfo-missah",
+      "studentId": "20890629",
+      "indexNo": "3369122",
+      "name": "AMOAFO Caleb Frimpong"
+    },
+    {
+      "supervisor": "Prof. Yaw Marfo Missah",
+      "supervisorId": "prof-yaw-marfo-missah",
+      "studentId": "20890683",
+      "indexNo": "3395122",
+      "name": "KISSI Joshua"
+    },
+    {
+      "supervisor": "Prof. Yaw Marfo Missah",
+      "supervisorId": "prof-yaw-marfo-missah",
+      "studentId": "20890690",
+      "indexNo": "3387722",
+      "name": "DARKO Leslie Kwadwo"
+    },
+    {
+      "supervisor": "Prof. Yaw Marfo Missah",
+      "supervisorId": "prof-yaw-marfo-missah",
+      "studentId": "20890900",
+      "indexNo": "3402922",
+      "name": "NTIBIM Helena"
+    },
+    {
+      "supervisor": "Prof. Yaw Marfo Missah",
+      "supervisorId": "prof-yaw-marfo-missah",
+      "studentId": "20891039",
+      "indexNo": "3390522",
+      "name": "EFFAH-FRIMPONG Maxwell"
+    },
+    {
+      "supervisor": "Prof. Yaw Marfo Missah",
+      "supervisorId": "prof-yaw-marfo-missah",
+      "studentId": "20891185",
+      "indexNo": "3414422",
+      "name": "SIAW Emmanuel Asante"
+    },
+    {
+      "supervisor": "Prof. Yaw Marfo Missah",
+      "supervisorId": "prof-yaw-marfo-missah",
+      "studentId": "20891445",
+      "indexNo": "3417822",
+      "name": "YEBOAH Frank Dickson"
+    },
+    {
+      "supervisor": "Prof. Yaw Marfo Missah",
+      "supervisorId": "prof-yaw-marfo-missah",
+      "studentId": "20891777",
+      "indexNo": "3373522",
+      "name": "ANTWI Yaa Asantewaa"
+    },
+    {
+      "supervisor": "Prof. Yaw Marfo Missah",
+      "supervisorId": "prof-yaw-marfo-missah",
+      "studentId": "20892080",
+      "indexNo": "3404122",
+      "name": "OBIRI Jessica Selase"
+    },
+    {
+      "supervisor": "Prof. Yaw Marfo Missah",
+      "supervisorId": "prof-yaw-marfo-missah",
+      "studentId": "20892807",
+      "indexNo": "3407522",
+      "name": "OPPONG PEPRAH Clifford"
+    },
+    {
+      "supervisor": "Prof. Yaw Marfo Missah",
+      "supervisorId": "prof-yaw-marfo-missah",
+      "studentId": "20892891",
+      "indexNo": "3409522",
+      "name": "OWUSU Elvis Fosu"
+    },
+    {
+      "supervisor": "Prof. Yaw Marfo Missah",
+      "supervisorId": "prof-yaw-marfo-missah",
+      "studentId": "20893265",
+      "indexNo": "3402322",
+      "name": "NKETSIAH Naomi"
+    },
+    {
+      "supervisor": "Prof. Yaw Marfo Missah",
+      "supervisorId": "prof-yaw-marfo-missah",
+      "studentId": "20893492",
+      "indexNo": "3363522",
+      "name": "ADU Roger Osafo Kwabena"
+    },
+    {
+      "supervisor": "Prof. Yaw Marfo Missah",
+      "supervisorId": "prof-yaw-marfo-missah",
+      "studentId": "20893634",
+      "indexNo": "3401322",
+      "name": "MUSTAPHA Shafihu"
+    },
+    {
+      "supervisor": "Prof. Yaw Marfo Missah",
+      "supervisorId": "prof-yaw-marfo-missah",
+      "studentId": "20893797",
+      "indexNo": "3373022",
+      "name": "ANTWI Joshua Ohene Yaw"
+    },
+    {
+      "supervisor": "Prof. Yaw Marfo Missah",
+      "supervisorId": "prof-yaw-marfo-missah",
+      "studentId": "20893816",
+      "indexNo": "3387922",
+      "name": "DARKWAH Martha Kinih"
+    },
+    {
+      "supervisor": "Prof. Yaw Marfo Missah",
+      "supervisorId": "prof-yaw-marfo-missah",
+      "studentId": "20894252",
+      "indexNo": "3400222",
+      "name": "MENSAH Raphael Teiko"
+    },
+    {
+      "supervisor": "Prof. Yaw Marfo Missah",
+      "supervisorId": "prof-yaw-marfo-missah",
+      "studentId": "20894697",
+      "indexNo": "3385622",
+      "name": "BOYE Ericson Martey"
+    },
+    {
+      "supervisor": "Prof. Yaw Marfo Missah",
+      "supervisorId": "prof-yaw-marfo-missah",
+      "studentId": "20894720",
+      "indexNo": "3403622",
+      "name": "NWORU Charles Chijindu"
+    },
+    {
+      "supervisor": "Prof. Yaw Marfo Missah",
+      "supervisorId": "prof-yaw-marfo-missah",
+      "studentId": "20894854",
+      "indexNo": "3381422",
+      "name": "BAAKOH Prince"
+    },
+    {
+      "supervisor": "Prof. Yaw Marfo Missah",
+      "supervisorId": "prof-yaw-marfo-missah",
+      "studentId": "20894918",
+      "indexNo": "3387322",
+      "name": "DANSO Daniel Osafo"
+    },
+    {
+      "supervisor": "Prof. Yaw Marfo Missah",
+      "supervisorId": "prof-yaw-marfo-missah",
+      "studentId": "20895059",
+      "indexNo": "3361722",
+      "name": "ACQUAH Kelvin Anii"
+    },
+    {
+      "supervisor": "Prof. Yaw Marfo Missah",
+      "supervisorId": "prof-yaw-marfo-missah",
+      "studentId": "20895108",
+      "indexNo": "3379922",
+      "name": "AWUDJA Kelvin Daniel Nana Yaw"
+    },
+    {
+      "supervisor": "Prof. Yaw Marfo Missah",
+      "supervisorId": "prof-yaw-marfo-missah",
+      "studentId": "20895472",
+      "indexNo": "3359122",
+      "name": "ABATEY David Alegre"
+    },
+    {
+      "supervisor": "Prof. Yaw Marfo Missah",
+      "supervisorId": "prof-yaw-marfo-missah",
+      "studentId": "20895820",
+      "indexNo": "3359922",
+      "name": "ABDUL RASHID Mujahid"
+    },
+    {
+      "supervisor": "Prof. Yaw Marfo Missah",
+      "supervisorId": "prof-yaw-marfo-missah",
+      "studentId": "20895937",
+      "indexNo": "3416222",
+      "name": "TIBILLA Collins"
+    },
+    {
+      "supervisor": "Prof. Yaw Marfo Missah",
+      "supervisorId": "prof-yaw-marfo-missah",
+      "studentId": "20896026",
+      "indexNo": "3377022",
+      "name": "ASARE Fredinald Owusu Achiaw"
+    },
+    {
+      "supervisor": "Prof. Yaw Marfo Missah",
+      "supervisorId": "prof-yaw-marfo-missah",
+      "studentId": "20941382",
+      "indexNo": "3390322",
+      "name": "DZORSAH Palmer Elisha"
+    },
+    {
+      "supervisor": "Prof. Yaw Marfo Missah",
+      "supervisorId": "prof-yaw-marfo-missah",
+      "studentId": "20954883",
+      "indexNo": "3418122",
+      "name": "YEBOAH Kofi Opoku"
+    },
+    {
+      "supervisor": "Dr. Gaddafi Abdul-Salaam",
+      "supervisorId": "dr-gaddafi-abdul-salaam",
+      "studentId": "20896782",
+      "indexNo": "3407122",
+      "name": "OPONG Kwabena Darko"
+    },
+    {
+      "supervisor": "Dr. Gaddafi Abdul-Salaam",
+      "supervisorId": "dr-gaddafi-abdul-salaam",
+      "studentId": "20896841",
+      "indexNo": "3361022",
+      "name": "ABORA Godfred"
+    },
+    {
+      "supervisor": "Dr. Gaddafi Abdul-Salaam",
+      "supervisorId": "dr-gaddafi-abdul-salaam",
+      "studentId": "20896858",
+      "indexNo": "3391422",
+      "name": "FORGOR Gideon Kombert"
+    },
+    {
+      "supervisor": "Dr. Gaddafi Abdul-Salaam",
+      "supervisorId": "dr-gaddafi-abdul-salaam",
+      "studentId": "20896928",
+      "indexNo": "3411822",
+      "name": "QUAYSON Abigail Yaa"
+    },
+    {
+      "supervisor": "Dr. Gaddafi Abdul-Salaam",
+      "supervisorId": "dr-gaddafi-abdul-salaam",
+      "studentId": "20896973",
+      "indexNo": "3392722",
+      "name": "GYAMBIBI Wycliffe Kwame"
+    },
+    {
+      "supervisor": "Dr. Gaddafi Abdul-Salaam",
+      "supervisorId": "dr-gaddafi-abdul-salaam",
+      "studentId": "20897141",
+      "indexNo": "3376522",
+      "name": "ASANTE Kwabena Sefa"
+    },
+    {
+      "supervisor": "Dr. Gaddafi Abdul-Salaam",
+      "supervisorId": "dr-gaddafi-abdul-salaam",
+      "studentId": "20897398",
+      "indexNo": "3373422",
+      "name": "ANTWI Samuella"
+    },
+    {
+      "supervisor": "Dr. Gaddafi Abdul-Salaam",
+      "supervisorId": "dr-gaddafi-abdul-salaam",
+      "studentId": "20897419",
+      "indexNo": "3408222",
+      "name": "OSEI AGYEMANG Allan"
+    },
+    {
+      "supervisor": "Dr. Gaddafi Abdul-Salaam",
+      "supervisorId": "dr-gaddafi-abdul-salaam",
+      "studentId": "20897449",
+      "indexNo": "3404022",
+      "name": "OBENG Kwame Ampadu"
+    },
+    {
+      "supervisor": "Dr. Gaddafi Abdul-Salaam",
+      "supervisorId": "dr-gaddafi-abdul-salaam",
+      "studentId": "20897628",
+      "indexNo": "3412422",
+      "name": "SALIFU DANSE Godwin Wusunapi"
+    },
+    {
+      "supervisor": "Dr. Gaddafi Abdul-Salaam",
+      "supervisorId": "dr-gaddafi-abdul-salaam",
+      "studentId": "20897968",
+      "indexNo": "3397222",
+      "name": "KWARKO Bernard"
+    },
+    {
+      "supervisor": "Dr. Gaddafi Abdul-Salaam",
+      "supervisorId": "dr-gaddafi-abdul-salaam",
+      "studentId": "20898064",
+      "indexNo": "3386922",
+      "name": "DAGADU John David"
+    },
+    {
+      "supervisor": "Dr. Gaddafi Abdul-Salaam",
+      "supervisorId": "dr-gaddafi-abdul-salaam",
+      "studentId": "20898289",
+      "indexNo": "3391922",
+      "name": "FREEMAN Nemenlah Erzuah"
+    },
+    {
+      "supervisor": "Dr. Gaddafi Abdul-Salaam",
+      "supervisorId": "dr-gaddafi-abdul-salaam",
+      "studentId": "20898367",
+      "indexNo": "3388122",
+      "name": "DEDE Mary Ampaw"
+    },
+    {
+      "supervisor": "Dr. Gaddafi Abdul-Salaam",
+      "supervisorId": "dr-gaddafi-abdul-salaam",
+      "studentId": "20898392",
+      "indexNo": "3417122",
+      "name": "WETTA Emmanuel Mawuli"
+    },
+    {
+      "supervisor": "Dr. Gaddafi Abdul-Salaam",
+      "supervisorId": "dr-gaddafi-abdul-salaam",
+      "studentId": "20898550",
+      "indexNo": "3410822",
+      "name": "OWUSU-ANSAH Jephtha Menya"
+    },
+    {
+      "supervisor": "Dr. Gaddafi Abdul-Salaam",
+      "supervisorId": "dr-gaddafi-abdul-salaam",
+      "studentId": "20898721",
+      "indexNo": "3419422",
+      "name": "ZOUMBURI TAHIRU Mardiyatu"
+    },
+    {
+      "supervisor": "Dr. Gaddafi Abdul-Salaam",
+      "supervisorId": "dr-gaddafi-abdul-salaam",
+      "studentId": "20898775",
+      "indexNo": "3376822",
+      "name": "ASARE Benedict Nana"
+    },
+    {
+      "supervisor": "Dr. Gaddafi Abdul-Salaam",
+      "supervisorId": "dr-gaddafi-abdul-salaam",
+      "studentId": "20898934",
+      "indexNo": "3370022",
+      "name": "AMPONSAH-MENSAH Awurabena Agyeiwaa"
+    },
+    {
+      "supervisor": "Dr. Gaddafi Abdul-Salaam",
+      "supervisorId": "dr-gaddafi-abdul-salaam",
+      "studentId": "20899057",
+      "indexNo": "3387222",
+      "name": "DANQUAH Larbi Samuel"
+    },
+    {
+      "supervisor": "Dr. Gaddafi Abdul-Salaam",
+      "supervisorId": "dr-gaddafi-abdul-salaam",
+      "studentId": "20899345",
+      "indexNo": "3412322",
+      "name": "SAJI Seyram Sefa"
+    },
+    {
+      "supervisor": "Dr. Gaddafi Abdul-Salaam",
+      "supervisorId": "dr-gaddafi-abdul-salaam",
+      "studentId": "20899505",
+      "indexNo": "3390722",
+      "name": "ENCHILL Ransford Appiah"
+    },
+    {
+      "supervisor": "Dr. Gaddafi Abdul-Salaam",
+      "supervisorId": "dr-gaddafi-abdul-salaam",
+      "studentId": "20899853",
+      "indexNo": "3374822",
+      "name": "ARKU Selase"
+    },
+    {
+      "supervisor": "Dr. Gaddafi Abdul-Salaam",
+      "supervisorId": "dr-gaddafi-abdul-salaam",
+      "studentId": "20899963",
+      "indexNo": "3406022",
+      "name": "OKRAH Peniel Osei"
+    },
+    {
+      "supervisor": "Dr. Gaddafi Abdul-Salaam",
+      "supervisorId": "dr-gaddafi-abdul-salaam",
+      "studentId": "20900030",
+      "indexNo": "3390922",
+      "name": "ESSUMAN Nuhu Kofi"
+    },
+    {
+      "supervisor": "Dr. Gaddafi Abdul-Salaam",
+      "supervisorId": "dr-gaddafi-abdul-salaam",
+      "studentId": "20900077",
+      "indexNo": "3371422",
+      "name": "ANKRAH Nii Kpakpo Oti"
+    },
+    {
+      "supervisor": "Dr. Gaddafi Abdul-Salaam",
+      "supervisorId": "dr-gaddafi-abdul-salaam",
+      "studentId": "20900492",
+      "indexNo": "3368522",
+      "name": "AMEGASHIE Selikem Kwasi"
+    },
+    {
+      "supervisor": "Dr. Gaddafi Abdul-Salaam",
+      "supervisorId": "dr-gaddafi-abdul-salaam",
+      "studentId": "20900533",
+      "indexNo": "3373222",
+      "name": "ANTWI Prince Amoako"
+    },
+    {
+      "supervisor": "Dr. Gaddafi Abdul-Salaam",
+      "supervisorId": "dr-gaddafi-abdul-salaam",
+      "studentId": "20900949",
+      "indexNo": "3379822",
+      "name": "AWUAKYE Bright Sarpong"
+    },
+    {
+      "supervisor": "Dr. Gaddafi Abdul-Salaam",
+      "supervisorId": "dr-gaddafi-abdul-salaam",
+      "studentId": "20900978",
+      "indexNo": "3411622",
+      "name": "QUARSHIE David Foli"
+    },
+    {
+      "supervisor": "Dr. Gaddafi Abdul-Salaam",
+      "supervisorId": "dr-gaddafi-abdul-salaam",
+      "studentId": "20901006",
+      "indexNo": "3395422",
+      "name": "KONADU Kwabena Boateng"
+    },
+    {
+      "supervisor": "Dr. Gaddafi Abdul-Salaam",
+      "supervisorId": "dr-gaddafi-abdul-salaam",
+      "studentId": "20901191",
+      "indexNo": "3384922",
+      "name": "BOATENG Kwabena Brefo"
+    },
+    {
+      "supervisor": "Dr. Gaddafi Abdul-Salaam",
+      "supervisorId": "dr-gaddafi-abdul-salaam",
+      "studentId": "20901569",
+      "indexNo": "3379722",
+      "name": "AWUAH-TABIRI Ransford"
+    },
+    {
+      "supervisor": "Dr. Gaddafi Abdul-Salaam",
+      "supervisorId": "dr-gaddafi-abdul-salaam",
+      "studentId": "20901727",
+      "indexNo": "3370422",
+      "name": "ANANG Michael"
+    },
+    {
+      "supervisor": "Dr. Gaddafi Abdul-Salaam",
+      "supervisorId": "dr-gaddafi-abdul-salaam",
+      "studentId": "20901896",
+      "indexNo": "3370722",
+      "name": "ANDOH Nhyira Esi Bodwewa"
+    },
+    {
+      "supervisor": "Dr. Gaddafi Abdul-Salaam",
+      "supervisorId": "dr-gaddafi-abdul-salaam",
+      "studentId": "20901988",
+      "indexNo": "3366122",
+      "name": "AGYEMANG Nana Akua"
+    },
+    {
+      "supervisor": "Dr. Gaddafi Abdul-Salaam",
+      "supervisorId": "dr-gaddafi-abdul-salaam",
+      "studentId": "20901999",
+      "indexNo": "3397622",
+      "name": "KWOFIE Shadrach Martin"
+    },
+    {
+      "supervisor": "Dr. Gaddafi Abdul-Salaam",
+      "supervisorId": "dr-gaddafi-abdul-salaam",
+      "studentId": "20902079",
+      "indexNo": "3389922",
+      "name": "DUMASHIE Bruce Klenam"
+    },
+    {
+      "supervisor": "Dr. Gaddafi Abdul-Salaam",
+      "supervisorId": "dr-gaddafi-abdul-salaam",
+      "studentId": "20902081",
+      "indexNo": "3384622",
+      "name": "BOATENG Franklin Gilbert"
+    },
+    {
+      "supervisor": "Dr. Gaddafi Abdul-Salaam",
+      "supervisorId": "dr-gaddafi-abdul-salaam",
+      "studentId": "20955238",
+      "indexNo": "3385722",
+      "name": "BREMPONG Delassie Efua Cutie"
+    },
+    {
+      "supervisor": "Dr. K. O. Peasah",
+      "supervisorId": "dr-k-o-peasah",
+      "studentId": "20939705",
+      "indexNo": "3370222",
+      "name": "ANAKPOR David"
+    },
+    {
+      "supervisor": "Dr. K. O. Peasah",
+      "supervisorId": "dr-k-o-peasah",
+      "studentId": "20934881",
+      "indexNo": "3394622",
+      "name": "KARIKARI Kuffour Felix"
+    },
+    {
+      "supervisor": "Dr. K. O. Peasah",
+      "supervisorId": "dr-k-o-peasah",
+      "studentId": "20902126",
+      "indexNo": "3395922",
+      "name": "KORLI Larry Addo"
+    },
+    {
+      "supervisor": "Dr. K. O. Peasah",
+      "supervisorId": "dr-k-o-peasah",
+      "studentId": "20902143",
+      "indexNo": "3414922",
+      "name": "TABIL Elliot Ebo"
+    },
+    {
+      "supervisor": "Dr. K. O. Peasah",
+      "supervisorId": "dr-k-o-peasah",
+      "studentId": "20902955",
+      "indexNo": "3392822",
+      "name": "GYAMERA Charles Caleb"
+    },
+    {
+      "supervisor": "Dr. K. O. Peasah",
+      "supervisorId": "dr-k-o-peasah",
+      "studentId": "20903027",
+      "indexNo": "3407622",
+      "name": "OSEI David Adubofour"
+    },
+    {
+      "supervisor": "Dr. K. O. Peasah",
+      "supervisorId": "dr-k-o-peasah",
+      "studentId": "20903266",
+      "indexNo": "3385522",
+      "name": "BOSOMPEM Yaw Barima Tawiah"
+    },
+    {
+      "supervisor": "Dr. K. O. Peasah",
+      "supervisorId": "dr-k-o-peasah",
+      "studentId": "20903414",
+      "indexNo": "3378122",
+      "name": "ASIMENG Kevin-Bernard Kofi"
+    },
+    {
+      "supervisor": "Dr. K. O. Peasah",
+      "supervisorId": "dr-k-o-peasah",
+      "studentId": "20903509",
+      "indexNo": "3398122",
+      "name": "LAMPTEY Kwaku Abednego"
+    },
+    {
+      "supervisor": "Dr. K. O. Peasah",
+      "supervisorId": "dr-k-o-peasah",
+      "studentId": "20903569",
+      "indexNo": "3380822",
+      "name": "AZEEZ Ahliyah"
+    },
+    {
+      "supervisor": "Dr. K. O. Peasah",
+      "supervisorId": "dr-k-o-peasah",
+      "studentId": "20903698",
+      "indexNo": "3366922",
+      "name": "AKANLU Brian Webadua"
+    },
+    {
+      "supervisor": "Dr. K. O. Peasah",
+      "supervisorId": "dr-k-o-peasah",
+      "studentId": "20903850",
+      "indexNo": "3375622",
+      "name": "ASABERE Eugene Amponsah"
+    },
+    {
+      "supervisor": "Dr. K. O. Peasah",
+      "supervisorId": "dr-k-o-peasah",
+      "studentId": "20903852",
+      "indexNo": "3398022",
+      "name": "LAMPTEY Emmanuel Nene Adi"
+    },
+    {
+      "supervisor": "Dr. K. O. Peasah",
+      "supervisorId": "dr-k-o-peasah",
+      "studentId": "20903928",
+      "indexNo": "3414122",
+      "name": "SEY Allan Paa-Joe"
+    },
+    {
+      "supervisor": "Dr. K. O. Peasah",
+      "supervisorId": "dr-k-o-peasah",
+      "studentId": "20904405",
+      "indexNo": "3404622",
+      "name": "OCRAN Chris Marfo"
+    },
+    {
+      "supervisor": "Dr. K. O. Peasah",
+      "supervisorId": "dr-k-o-peasah",
+      "studentId": "20904691",
+      "indexNo": "3408322",
+      "name": "OSEI SARPONG Kezia"
+    },
+    {
+      "supervisor": "Dr. K. O. Peasah",
+      "supervisorId": "dr-k-o-peasah",
+      "studentId": "20904871",
+      "indexNo": "3412922",
+      "name": "SARFO Isaac Kwaku"
+    },
+    {
+      "supervisor": "Dr. K. O. Peasah",
+      "supervisorId": "dr-k-o-peasah",
+      "studentId": "20905104",
+      "indexNo": "3372322",
+      "name": "ANSAH Fredrick Owusu"
+    },
+    {
+      "supervisor": "Dr. K. O. Peasah",
+      "supervisorId": "dr-k-o-peasah",
+      "studentId": "20905229",
+      "indexNo": "3387122",
+      "name": "DANQUAH Deborah Anoah"
+    },
+    {
+      "supervisor": "Dr. K. O. Peasah",
+      "supervisorId": "dr-k-o-peasah",
+      "studentId": "20905239",
+      "indexNo": "3373322",
+      "name": "ANTWI Richel Nhyira Takyiwaa"
+    },
+    {
+      "supervisor": "Dr. K. O. Peasah",
+      "supervisorId": "dr-k-o-peasah",
+      "studentId": "20905273",
+      "indexNo": "3417222",
+      "name": "WIAFE Obed Annor"
+    },
+    {
+      "supervisor": "Dr. K. O. Peasah",
+      "supervisorId": "dr-k-o-peasah",
+      "studentId": "20905442",
+      "indexNo": "3418722",
+      "name": "YIRENKYI Samuel Aboagye"
+    },
+    {
+      "supervisor": "Dr. K. O. Peasah",
+      "supervisorId": "dr-k-o-peasah",
+      "studentId": "20905504",
+      "indexNo": "3383022",
+      "name": "BEDIAKOH Emmanuel Ayirifa Asare"
+    },
+    {
+      "supervisor": "Dr. K. O. Peasah",
+      "supervisorId": "dr-k-o-peasah",
+      "studentId": "20905695",
+      "indexNo": "3378922",
+      "name": "AUSTIN Nana Adjoa Akyimfoa"
+    },
+    {
+      "supervisor": "Dr. K. O. Peasah",
+      "supervisorId": "dr-k-o-peasah",
+      "studentId": "20905905",
+      "indexNo": "3377322",
+      "name": "ASHONG Daniel Nii Adote"
+    },
+    {
+      "supervisor": "Dr. K. O. Peasah",
+      "supervisorId": "dr-k-o-peasah",
+      "studentId": "20905931",
+      "indexNo": "3399322",
+      "name": "MAWUENA Daniel Bubu"
+    },
+    {
+      "supervisor": "Dr. K. O. Peasah",
+      "supervisorId": "dr-k-o-peasah",
+      "studentId": "20905972",
+      "indexNo": "3374322",
+      "name": "APPIAH Gifty"
+    },
+    {
+      "supervisor": "Dr. K. O. Peasah",
+      "supervisorId": "dr-k-o-peasah",
+      "studentId": "20906034",
+      "indexNo": "3382922",
+      "name": "BAWA Benjamin Kwesi"
+    },
+    {
+      "supervisor": "Dr. K. O. Peasah",
+      "supervisorId": "dr-k-o-peasah",
+      "studentId": "20906102",
+      "indexNo": "3367022",
+      "name": "AKISI Leonard Awonwie"
+    },
+    {
+      "supervisor": "Dr. K. O. Peasah",
+      "supervisorId": "dr-k-o-peasah",
+      "studentId": "20907123",
+      "indexNo": "3381122",
+      "name": "BAAH Samuel"
+    },
+    {
+      "supervisor": "Dr. K. O. Peasah",
+      "supervisorId": "dr-k-o-peasah",
+      "studentId": "20907154",
+      "indexNo": "3371822",
+      "name": "ANOKYE Winifred"
+    },
+    {
+      "supervisor": "Dr. K. O. Peasah",
+      "supervisorId": "dr-k-o-peasah",
+      "studentId": "20907163",
+      "indexNo": "3373822",
+      "name": "APEDO Theophilus Ossana"
+    },
+    {
+      "supervisor": "Dr. K. O. Peasah",
+      "supervisorId": "dr-k-o-peasah",
+      "studentId": "20907209",
+      "indexNo": "3380322",
+      "name": "AYEH-PAYE Yaw Ayeh"
+    },
+    {
+      "supervisor": "Dr. K. O. Peasah",
+      "supervisorId": "dr-k-o-peasah",
+      "studentId": "20907955",
+      "indexNo": "3378322",
+      "name": "ASUO Edinam Kofi"
+    },
+    {
+      "supervisor": "Dr. K. O. Peasah",
+      "supervisorId": "dr-k-o-peasah",
+      "studentId": "20908110",
+      "indexNo": "3393922",
+      "name": "IDDRISU Mohammed Awal"
+    },
+    {
+      "supervisor": "Dr. K. O. Peasah",
+      "supervisorId": "dr-k-o-peasah",
+      "studentId": "20908192",
+      "indexNo": "3375022",
+      "name": "ARMAH John"
+    },
+    {
+      "supervisor": "Dr. K. O. Peasah",
+      "supervisorId": "dr-k-o-peasah",
+      "studentId": "20908205",
+      "indexNo": "3409422",
+      "name": "OWUSU Desmond Bobie"
+    },
+    {
+      "supervisor": "Dr. K. O. Peasah",
+      "supervisorId": "dr-k-o-peasah",
+      "studentId": "20908270",
+      "indexNo": "3393122",
+      "name": "GYAN Emmanuel Akyea"
+    },
+    {
+      "supervisor": "Dr. K. O. Peasah",
+      "supervisorId": "dr-k-o-peasah",
+      "studentId": "20908289",
+      "indexNo": "3416522",
+      "name": "TUGBAH Lily Ama Mawuena"
+    },
+    {
+      "supervisor": "Dr. K. O. Peasah",
+      "supervisorId": "dr-k-o-peasah",
+      "studentId": "20908469",
+      "indexNo": "3386422",
+      "name": "CUDJOE Francis"
+    },
+    {
+      "supervisor": "Dr. Emmanuel Ahene",
+      "supervisorId": "dr-emmanuel-ahene",
+      "studentId": "20908726",
+      "indexNo": "3402422",
+      "name": "NKETSIAH Nathaniel Akwessey"
+    },
+    {
+      "supervisor": "Dr. Emmanuel Ahene",
+      "supervisorId": "dr-emmanuel-ahene",
+      "studentId": "20908974",
+      "indexNo": "3374722",
+      "name": "ARKOH Silas"
+    },
+    {
+      "supervisor": "Dr. Emmanuel Ahene",
+      "supervisorId": "dr-emmanuel-ahene",
+      "studentId": "20909151",
+      "indexNo": "3408022",
+      "name": "OSEI Louis"
+    },
+    {
+      "supervisor": "Dr. Emmanuel Ahene",
+      "supervisorId": "dr-emmanuel-ahene",
+      "studentId": "20909312",
+      "indexNo": "3362922",
+      "name": "ADJEI Gideon"
+    },
+    {
+      "supervisor": "Dr. Emmanuel Ahene",
+      "supervisorId": "dr-emmanuel-ahene",
+      "studentId": "20909614",
+      "indexNo": "3418822",
+      "name": "YOVONOO Maranatha Aku"
+    },
+    {
+      "supervisor": "Dr. Emmanuel Ahene",
+      "supervisorId": "dr-emmanuel-ahene",
+      "studentId": "20909659",
+      "indexNo": "3379322",
+      "name": "AWORTWE Gideon"
+    },
+    {
+      "supervisor": "Dr. Emmanuel Ahene",
+      "supervisorId": "dr-emmanuel-ahene",
+      "studentId": "20909721",
+      "indexNo": "3391822",
+      "name": "FOSUHENE Jayden"
+    },
+    {
+      "supervisor": "Dr. Emmanuel Ahene",
+      "supervisorId": "dr-emmanuel-ahene",
+      "studentId": "20909788",
+      "indexNo": "3411222",
+      "name": "PATTERSON Farouk Sowah"
+    },
+    {
+      "supervisor": "Dr. Emmanuel Ahene",
+      "supervisorId": "dr-emmanuel-ahene",
+      "studentId": "20909794",
+      "indexNo": "3383222",
+      "name": "BENTIL Benjamin Kwaku"
+    },
+    {
+      "supervisor": "Dr. Emmanuel Ahene",
+      "supervisorId": "dr-emmanuel-ahene",
+      "studentId": "20909954",
+      "indexNo": "3402122",
+      "name": "NKETIA Opoku Bandoh"
+    },
+    {
+      "supervisor": "Dr. Emmanuel Ahene",
+      "supervisorId": "dr-emmanuel-ahene",
+      "studentId": "20910022",
+      "indexNo": "3377622",
+      "name": "ASIEDU Kyei Baffour"
+    },
+    {
+      "supervisor": "Dr. Emmanuel Ahene",
+      "supervisorId": "dr-emmanuel-ahene",
+      "studentId": "20910159",
+      "indexNo": "3374222",
+      "name": "APPIAH Derrick Ofori"
+    },
+    {
+      "supervisor": "Dr. Emmanuel Ahene",
+      "supervisorId": "dr-emmanuel-ahene",
+      "studentId": "20910204",
+      "indexNo": "3389022",
+      "name": "DOGBEY Rejoice Elike"
+    },
+    {
+      "supervisor": "Dr. Emmanuel Ahene",
+      "supervisorId": "dr-emmanuel-ahene",
+      "studentId": "20910236",
+      "indexNo": "3411422",
+      "name": "QUARCOO Daniel Joseph Nii Anoi"
+    },
+    {
+      "supervisor": "Dr. Emmanuel Ahene",
+      "supervisorId": "dr-emmanuel-ahene",
+      "studentId": "20910522",
+      "indexNo": "3396622",
+      "name": "KWAAH Samuel"
+    },
+    {
+      "supervisor": "Dr. Emmanuel Ahene",
+      "supervisorId": "dr-emmanuel-ahene",
+      "studentId": "20910788",
+      "indexNo": "3405422",
+      "name": "OFORI ASANTE Franklin"
+    },
+    {
+      "supervisor": "Dr. Emmanuel Ahene",
+      "supervisorId": "dr-emmanuel-ahene",
+      "studentId": "20910939",
+      "indexNo": "3408922",
+      "name": "OWIREDU Akua Afriyie"
+    },
+    {
+      "supervisor": "Dr. Emmanuel Ahene",
+      "supervisorId": "dr-emmanuel-ahene",
+      "studentId": "20911054",
+      "indexNo": "3370822",
+      "name": "ANGUAH Henry Fynn Otchere"
+    },
+    {
+      "supervisor": "Dr. Emmanuel Ahene",
+      "supervisorId": "dr-emmanuel-ahene",
+      "studentId": "20911160",
+      "indexNo": "3387822",
+      "name": "DARKOH Frank"
+    },
+    {
+      "supervisor": "Dr. Emmanuel Ahene",
+      "supervisorId": "dr-emmanuel-ahene",
+      "studentId": "20911280",
+      "indexNo": "3374122",
+      "name": "APPIAH Christiana Afia"
+    },
+    {
+      "supervisor": "Dr. Emmanuel Ahene",
+      "supervisorId": "dr-emmanuel-ahene",
+      "studentId": "20911364",
+      "indexNo": "3371522",
+      "name": "ANNING Bright"
+    },
+    {
+      "supervisor": "Dr. Emmanuel Ahene",
+      "supervisorId": "dr-emmanuel-ahene",
+      "studentId": "20911743",
+      "indexNo": "3374422",
+      "name": "APPIAH Moses Edward"
+    },
+    {
+      "supervisor": "Dr. Emmanuel Ahene",
+      "supervisorId": "dr-emmanuel-ahene",
+      "studentId": "20911907",
+      "indexNo": "3391122",
+      "name": "FIAKPORNU Calvin Mawulorm"
+    },
+    {
+      "supervisor": "Dr. Emmanuel Ahene",
+      "supervisorId": "dr-emmanuel-ahene",
+      "studentId": "20912094",
+      "indexNo": "3389822",
+      "name": "DUKU Polycarp Nkpadewie"
+    },
+    {
+      "supervisor": "Dr. Emmanuel Ahene",
+      "supervisorId": "dr-emmanuel-ahene",
+      "studentId": "20912215",
+      "indexNo": "3394322",
+      "name": "KAKOU Ishmael Evonlah"
+    },
+    {
+      "supervisor": "Dr. Emmanuel Ahene",
+      "supervisorId": "dr-emmanuel-ahene",
+      "studentId": "20912249",
+      "indexNo": "3413922",
+      "name": "SENU Seyram Elorm Adzo"
+    },
+    {
+      "supervisor": "Dr. Emmanuel Ahene",
+      "supervisorId": "dr-emmanuel-ahene",
+      "studentId": "20912390",
+      "indexNo": "3382822",
+      "name": "BATABE Stacy Akiwele"
+    },
+    {
+      "supervisor": "Dr. Emmanuel Ahene",
+      "supervisorId": "dr-emmanuel-ahene",
+      "studentId": "20912412",
+      "indexNo": "3404922",
+      "name": "ODAME Prince"
+    },
+    {
+      "supervisor": "Dr. Emmanuel Ahene",
+      "supervisorId": "dr-emmanuel-ahene",
+      "studentId": "20912455",
+      "indexNo": "3383422",
+      "name": "BENTIL William Ninsin"
+    },
+    {
+      "supervisor": "Dr. Emmanuel Ahene",
+      "supervisorId": "dr-emmanuel-ahene",
+      "studentId": "20912488",
+      "indexNo": "3397022",
+      "name": "KWAKYE-AMEYAW Nana Kwadwo"
+    },
+    {
+      "supervisor": "Dr. Emmanuel Ahene",
+      "supervisorId": "dr-emmanuel-ahene",
+      "studentId": "20912647",
+      "indexNo": "3380522",
+      "name": "AYESU Philip Odame"
+    },
+    {
+      "supervisor": "Dr. Emmanuel Ahene",
+      "supervisorId": "dr-emmanuel-ahene",
+      "studentId": "20912652",
+      "indexNo": "3383722",
+      "name": "BLETCHER Paul Nii Bortey"
+    },
+    {
+      "supervisor": "Dr. Emmanuel Ahene",
+      "supervisorId": "dr-emmanuel-ahene",
+      "studentId": "20912749",
+      "indexNo": "3384822",
+      "name": "BOATENG Joel Owusu"
+    },
+    {
+      "supervisor": "Dr. Emmanuel Ahene",
+      "supervisorId": "dr-emmanuel-ahene",
+      "studentId": "20912866",
+      "indexNo": "3405722",
+      "name": "OFUATEY-KODJOE Alex Junior"
+    },
+    {
+      "supervisor": "Dr. Emmanuel Ahene",
+      "supervisorId": "dr-emmanuel-ahene",
+      "studentId": "20912920",
+      "indexNo": "3392422",
+      "name": "GOMADO Bill Horla"
+    },
+    {
+      "supervisor": "Dr. Emmanuel Ahene",
+      "supervisorId": "dr-emmanuel-ahene",
+      "studentId": "20912996",
+      "indexNo": "3375822",
+      "name": "ASAMOAH Clinton"
+    },
+    {
+      "supervisor": "Dr. Emmanuel Ahene",
+      "supervisorId": "dr-emmanuel-ahene",
+      "studentId": "20913005",
+      "indexNo": "3401522",
+      "name": "NARTEY Desmond Kofi Lawer"
+    },
+    {
+      "supervisor": "Dr. Emmanuel Ahene",
+      "supervisorId": "dr-emmanuel-ahene",
+      "studentId": "20913028",
+      "indexNo": "3382722",
+      "name": "BASOAH Barima Owusu"
+    },
+    {
+      "supervisor": "Dr. Emmanuel Ahene",
+      "supervisorId": "dr-emmanuel-ahene",
+      "studentId": "20913132",
+      "indexNo": "3373122",
+      "name": "ANTWI Nana Osei Assibey"
+    },
+    {
+      "supervisor": "Dr. Emmanuel Ahene",
+      "supervisorId": "dr-emmanuel-ahene",
+      "studentId": "20923802",
+      "indexNo": "3365722",
+      "name": "AGYEMAN-DUAH Gladys"
+    },
+    {
+      "supervisor": "Dr. Rose-Mary Owusuaa Mensah",
+      "supervisorId": "dr-rose-mary-owusuaa-mensah",
+      "studentId": "20913145",
+      "indexNo": "3399122",
+      "name": "MARFO Felix Owusu Akwasi"
+    },
+    {
+      "supervisor": "Dr. Rose-Mary Owusuaa Mensah",
+      "supervisorId": "dr-rose-mary-owusuaa-mensah",
+      "studentId": "20913278",
+      "indexNo": "3375422",
+      "name": "ARYEE Godwyll Essel"
+    },
+    {
+      "supervisor": "Dr. Rose-Mary Owusuaa Mensah",
+      "supervisorId": "dr-rose-mary-owusuaa-mensah",
+      "studentId": "20913295",
+      "indexNo": "3366322",
+      "name": "AHADO Ronald Ofoe"
+    },
+    {
+      "supervisor": "Dr. Rose-Mary Owusuaa Mensah",
+      "supervisorId": "dr-rose-mary-owusuaa-mensah",
+      "studentId": "20913464",
+      "indexNo": "3375922",
+      "name": "ASAMOAH Robert Ebo"
+    },
+    {
+      "supervisor": "Dr. Rose-Mary Owusuaa Mensah",
+      "supervisorId": "dr-rose-mary-owusuaa-mensah",
+      "studentId": "20913470",
+      "indexNo": "3381622",
+      "name": "BADDOO Jeremiah Nii Adotei"
+    },
+    {
+      "supervisor": "Dr. Rose-Mary Owusuaa Mensah",
+      "supervisorId": "dr-rose-mary-owusuaa-mensah",
+      "studentId": "20913520",
+      "indexNo": "3411922",
+      "name": "SACKEY Abednego"
+    },
+    {
+      "supervisor": "Dr. Rose-Mary Owusuaa Mensah",
+      "supervisorId": "dr-rose-mary-owusuaa-mensah",
+      "studentId": "20913526",
+      "indexNo": "3359622",
+      "name": "ABDUL KARIM Abdul Latif Numbre"
+    },
+    {
+      "supervisor": "Dr. Rose-Mary Owusuaa Mensah",
+      "supervisorId": "dr-rose-mary-owusuaa-mensah",
+      "studentId": "20913582",
+      "indexNo": "3372522",
+      "name": "ANSU Godfred"
+    },
+    {
+      "supervisor": "Dr. Rose-Mary Owusuaa Mensah",
+      "supervisorId": "dr-rose-mary-owusuaa-mensah",
+      "studentId": "20913620",
+      "indexNo": "3390622",
+      "name": "ELIASU Rahma Gariba"
+    },
+    {
+      "supervisor": "Dr. Rose-Mary Owusuaa Mensah",
+      "supervisorId": "dr-rose-mary-owusuaa-mensah",
+      "studentId": "20913748",
+      "indexNo": "3388722",
+      "name": "DJIBOE Jeffrey Edem Kojo"
+    },
+    {
+      "supervisor": "Dr. Rose-Mary Owusuaa Mensah",
+      "supervisorId": "dr-rose-mary-owusuaa-mensah",
+      "studentId": "20913750",
+      "indexNo": "3398322",
+      "name": "LARTEY Judah"
+    },
+    {
+      "supervisor": "Dr. Rose-Mary Owusuaa Mensah",
+      "supervisorId": "dr-rose-mary-owusuaa-mensah",
+      "studentId": "20913870",
+      "indexNo": "3376122",
+      "name": "ASANTE Eric"
+    },
+    {
+      "supervisor": "Dr. Rose-Mary Owusuaa Mensah",
+      "supervisorId": "dr-rose-mary-owusuaa-mensah",
+      "studentId": "20913881",
+      "indexNo": "3419722",
+      "name": "ABOAGYE Elvis Frimpong"
+    },
+    {
+      "supervisor": "Dr. Rose-Mary Owusuaa Mensah",
+      "supervisorId": "dr-rose-mary-owusuaa-mensah",
+      "studentId": "20914108",
+      "indexNo": "3396922",
+      "name": "KWAKYE Oliver Andoh"
+    },
+    {
+      "supervisor": "Dr. Rose-Mary Owusuaa Mensah",
+      "supervisorId": "dr-rose-mary-owusuaa-mensah",
+      "studentId": "20914160",
+      "indexNo": "3368022",
+      "name": "ALLASSANI Rex"
+    },
+    {
+      "supervisor": "Dr. Rose-Mary Owusuaa Mensah",
+      "supervisorId": "dr-rose-mary-owusuaa-mensah",
+      "studentId": "20914221",
+      "indexNo": "3393822",
+      "name": "IDDRISU Faadila Wumpini"
+    },
+    {
+      "supervisor": "Dr. Rose-Mary Owusuaa Mensah",
+      "supervisorId": "dr-rose-mary-owusuaa-mensah",
+      "studentId": "20914352",
+      "indexNo": "3374522",
+      "name": "APPIAH Richard"
+    },
+    {
+      "supervisor": "Dr. Rose-Mary Owusuaa Mensah",
+      "supervisorId": "dr-rose-mary-owusuaa-mensah",
+      "studentId": "20914358",
+      "indexNo": "3381822",
+      "name": "BAFFOUR Chris"
+    },
+    {
+      "supervisor": "Dr. Rose-Mary Owusuaa Mensah",
+      "supervisorId": "dr-rose-mary-owusuaa-mensah",
+      "studentId": "20914373",
+      "indexNo": "3363822",
+      "name": "ADU-ASANTE Michael"
+    },
+    {
+      "supervisor": "Dr. Rose-Mary Owusuaa Mensah",
+      "supervisorId": "dr-rose-mary-owusuaa-mensah",
+      "studentId": "20914449",
+      "indexNo": "3393322",
+      "name": "HONU Destine Kofi"
+    },
+    {
+      "supervisor": "Dr. Rose-Mary Owusuaa Mensah",
+      "supervisorId": "dr-rose-mary-owusuaa-mensah",
+      "studentId": "20914471",
+      "indexNo": "3371122",
+      "name": "ANIN Evelyn Sarpong"
+    },
+    {
+      "supervisor": "Dr. Rose-Mary Owusuaa Mensah",
+      "supervisorId": "dr-rose-mary-owusuaa-mensah",
+      "studentId": "20914758",
+      "indexNo": "3398522",
+      "name": "LARTEY-MENSAH Emmanuel Tetteh"
+    },
+    {
+      "supervisor": "Dr. Rose-Mary Owusuaa Mensah",
+      "supervisorId": "dr-rose-mary-owusuaa-mensah",
+      "studentId": "20914823",
+      "indexNo": "3404422",
+      "name": "OBOUBI Darren Larnyoh"
+    },
+    {
+      "supervisor": "Dr. Rose-Mary Owusuaa Mensah",
+      "supervisorId": "dr-rose-mary-owusuaa-mensah",
+      "studentId": "20915032",
+      "indexNo": "3393022",
+      "name": "GYAMFI Owusu Samuel"
+    },
+    {
+      "supervisor": "Dr. Rose-Mary Owusuaa Mensah",
+      "supervisorId": "dr-rose-mary-owusuaa-mensah",
+      "studentId": "20915098",
+      "indexNo": "3377922",
+      "name": "ASIGBEE Jilon Elorm Kwame"
+    },
+    {
+      "supervisor": "Dr. Rose-Mary Owusuaa Mensah",
+      "supervisorId": "dr-rose-mary-owusuaa-mensah",
+      "studentId": "20915194",
+      "indexNo": "3412722",
+      "name": "SAMIRU Nasser Jadagwa"
+    },
+    {
+      "supervisor": "Dr. Rose-Mary Owusuaa Mensah",
+      "supervisorId": "dr-rose-mary-owusuaa-mensah",
+      "studentId": "20915384",
+      "indexNo": "3395722",
+      "name": "KOOMSON Benedict Bondzie"
+    },
+    {
+      "supervisor": "Dr. Rose-Mary Owusuaa Mensah",
+      "supervisorId": "dr-rose-mary-owusuaa-mensah",
+      "studentId": "20915390",
+      "indexNo": "3412022",
+      "name": "SACKEY Osbert Joseph Nii Aflah"
+    },
+    {
+      "supervisor": "Dr. Rose-Mary Owusuaa Mensah",
+      "supervisorId": "dr-rose-mary-owusuaa-mensah",
+      "studentId": "20915643",
+      "indexNo": "3399422",
+      "name": "MENDS Albert"
+    },
+    {
+      "supervisor": "Dr. Rose-Mary Owusuaa Mensah",
+      "supervisorId": "dr-rose-mary-owusuaa-mensah",
+      "studentId": "20915880",
+      "indexNo": "3410422",
+      "name": "OWUSU Reagan Afrane"
+    },
+    {
+      "supervisor": "Dr. Rose-Mary Owusuaa Mensah",
+      "supervisorId": "dr-rose-mary-owusuaa-mensah",
+      "studentId": "20915946",
+      "indexNo": "3364922",
+      "name": "AGOTSE Mawuena Kofi Samuel"
+    },
+    {
+      "supervisor": "Dr. Rose-Mary Owusuaa Mensah",
+      "supervisorId": "dr-rose-mary-owusuaa-mensah",
+      "studentId": "20916016",
+      "indexNo": "3377522",
+      "name": "ASIEDU Henry Owusu"
+    },
+    {
+      "supervisor": "Dr. Rose-Mary Owusuaa Mensah",
+      "supervisorId": "dr-rose-mary-owusuaa-mensah",
+      "studentId": "20916161",
+      "indexNo": "3412522",
+      "name": "SALLO Samuel"
+    },
+    {
+      "supervisor": "Dr. Rose-Mary Owusuaa Mensah",
+      "supervisorId": "dr-rose-mary-owusuaa-mensah",
+      "studentId": "20916207",
+      "indexNo": "3395022",
+      "name": "KESSE Kwame Ofori"
+    },
+    {
+      "supervisor": "Dr. Rose-Mary Owusuaa Mensah",
+      "supervisorId": "dr-rose-mary-owusuaa-mensah",
+      "studentId": "20916455",
+      "indexNo": "3380122",
+      "name": "AWUNTUBA Caswell"
+    },
+    {
+      "supervisor": "Dr. Rose-Mary Owusuaa Mensah",
+      "supervisorId": "dr-rose-mary-owusuaa-mensah",
+      "studentId": "20916560",
+      "indexNo": "3377222",
+      "name": "ASHON Yoofi Adom Amissah"
+    },
+    {
+      "supervisor": "Dr. Rose-Mary Owusuaa Mensah",
+      "supervisorId": "dr-rose-mary-owusuaa-mensah",
+      "studentId": "20916672",
+      "indexNo": "3417622",
+      "name": "YEBOAH David Zahemen"
+    },
+    {
+      "supervisor": "Dr. Rose-Mary Owusuaa Mensah",
+      "supervisorId": "dr-rose-mary-owusuaa-mensah",
+      "studentId": "20916926",
+      "indexNo": "3414622",
+      "name": "SIKA Noah"
+    },
+    {
+      "supervisor": "Dr. Rose-Mary Owusuaa Mensah",
+      "supervisorId": "dr-rose-mary-owusuaa-mensah",
+      "studentId": "20917285",
+      "indexNo": "3405522",
+      "name": "OFORI-KWANSAH Wendy Sedinam"
+    },
+    {
+      "supervisor": "Dr. Rose-Mary Owusuaa Mensah",
+      "supervisorId": "dr-rose-mary-owusuaa-mensah",
+      "studentId": "20917415",
+      "indexNo": "3378222",
+      "name": "ASIPUNU Desmond Dela"
+    },
+    {
+      "supervisor": "Dr. Eric Opoku Osei",
+      "supervisorId": "dr-eric-opoku-osei",
+      "studentId": "20917447",
+      "indexNo": "3419922",
+      "name": "OTI Wisdom Boakye"
+    },
+    {
+      "supervisor": "Dr. Eric Opoku Osei",
+      "supervisorId": "dr-eric-opoku-osei",
+      "studentId": "20917568",
+      "indexNo": "3415522",
+      "name": "TEMPLE Evangelina"
+    },
+    {
+      "supervisor": "Dr. Eric Opoku Osei",
+      "supervisorId": "dr-eric-opoku-osei",
+      "studentId": "20917643",
+      "indexNo": "3382422",
+      "name": "BARTIMEUS Manuel Nii Osabu"
+    },
+    {
+      "supervisor": "Dr. Eric Opoku Osei",
+      "supervisorId": "dr-eric-opoku-osei",
+      "studentId": "20917793",
+      "indexNo": "3415322",
+      "name": "TAY-WORGBALE Stevestan Mawudekakomayor"
+    },
+    {
+      "supervisor": "Dr. Eric Opoku Osei",
+      "supervisorId": "dr-eric-opoku-osei",
+      "studentId": "20917864",
+      "indexNo": "3367422",
+      "name": "AKUAKU Jeremiah Narteh"
+    },
+    {
+      "supervisor": "Dr. Eric Opoku Osei",
+      "supervisorId": "dr-eric-opoku-osei",
+      "studentId": "20918111",
+      "indexNo": "3368322",
+      "name": "AMARH Evans Amartei"
+    },
+    {
+      "supervisor": "Dr. Eric Opoku Osei",
+      "supervisorId": "dr-eric-opoku-osei",
+      "studentId": "20918600",
+      "indexNo": "3391222",
+      "name": "FOKUO James Oppong"
+    },
+    {
+      "supervisor": "Dr. Eric Opoku Osei",
+      "supervisorId": "dr-eric-opoku-osei",
+      "studentId": "20918643",
+      "indexNo": "3365522",
+      "name": "AGYEI Michael Addai"
+    },
+    {
+      "supervisor": "Dr. Eric Opoku Osei",
+      "supervisorId": "dr-eric-opoku-osei",
+      "studentId": "20918758",
+      "indexNo": "3419822",
+      "name": "ANNAN George Jnr"
+    },
+    {
+      "supervisor": "Dr. Eric Opoku Osei",
+      "supervisorId": "dr-eric-opoku-osei",
+      "studentId": "20919068",
+      "indexNo": "3402022",
+      "name": "NKANSAH Benedicta Kerren Mawusene"
+    },
+    {
+      "supervisor": "Dr. Eric Opoku Osei",
+      "supervisorId": "dr-eric-opoku-osei",
+      "studentId": "20919092",
+      "indexNo": "3382622",
+      "name": "BASHIRU Sadat Yerima"
+    },
+    {
+      "supervisor": "Dr. Eric Opoku Osei",
+      "supervisorId": "dr-eric-opoku-osei",
+      "studentId": "20919895",
+      "indexNo": "3372122",
+      "name": "ANORCHIE Michelle Frimpomaah"
+    },
+    {
+      "supervisor": "Dr. Eric Opoku Osei",
+      "supervisorId": "dr-eric-opoku-osei",
+      "studentId": "20920037",
+      "indexNo": "3366522",
+      "name": "AHIEKPOR Jude Kekeli Yaw"
+    },
+    {
+      "supervisor": "Dr. Eric Opoku Osei",
+      "supervisorId": "dr-eric-opoku-osei",
+      "studentId": "20920289",
+      "indexNo": "3410722",
+      "name": "OWUSU AFRIYIE Alfred"
+    },
+    {
+      "supervisor": "Dr. Eric Opoku Osei",
+      "supervisorId": "dr-eric-opoku-osei",
+      "studentId": "20920301",
+      "indexNo": "3416022",
+      "name": "TEYE Victoria"
+    },
+    {
+      "supervisor": "Dr. Eric Opoku Osei",
+      "supervisorId": "dr-eric-opoku-osei",
+      "studentId": "20920710",
+      "indexNo": "3369022",
+      "name": "AMISSAH Gilbert"
+    },
+    {
+      "supervisor": "Dr. Eric Opoku Osei",
+      "supervisorId": "dr-eric-opoku-osei",
+      "studentId": "20920718",
+      "indexNo": "3394522",
+      "name": "KARIKARI David Kweku"
+    },
+    {
+      "supervisor": "Dr. Eric Opoku Osei",
+      "supervisorId": "dr-eric-opoku-osei",
+      "studentId": "20920998",
+      "indexNo": "3413122",
+      "name": "SARKODIE - ADDO Justice Junior"
+    },
+    {
+      "supervisor": "Dr. Eric Opoku Osei",
+      "supervisorId": "dr-eric-opoku-osei",
+      "studentId": "20921083",
+      "indexNo": "3367722",
+      "name": "AKYEN ABBAN Maxwell"
+    },
+    {
+      "supervisor": "Dr. Eric Opoku Osei",
+      "supervisorId": "dr-eric-opoku-osei",
+      "studentId": "20921085",
+      "indexNo": "3378422",
+      "name": "ATAARA Kwasi Aboagye Nkansah"
+    },
+    {
+      "supervisor": "Dr. Eric Opoku Osei",
+      "supervisorId": "dr-eric-opoku-osei",
+      "studentId": "20921110",
+      "indexNo": "3363922",
+      "name": "ADU-BREMPONG Nana Kojo"
+    },
+    {
+      "supervisor": "Dr. Eric Opoku Osei",
+      "supervisorId": "dr-eric-opoku-osei",
+      "studentId": "20921117",
+      "indexNo": "3413022",
+      "name": "SARFO Oduro Yeboah"
+    },
+    {
+      "supervisor": "Dr. Eric Opoku Osei",
+      "supervisorId": "dr-eric-opoku-osei",
+      "studentId": "20921191",
+      "indexNo": "3398922",
+      "name": "MANU Richeal Pokuah"
+    },
+    {
+      "supervisor": "Dr. Eric Opoku Osei",
+      "supervisorId": "dr-eric-opoku-osei",
+      "studentId": "20921228",
+      "indexNo": "3372622",
+      "name": "ANTWI Collins Seth"
+    },
+    {
+      "supervisor": "Dr. Eric Opoku Osei",
+      "supervisorId": "dr-eric-opoku-osei",
+      "studentId": "20921418",
+      "indexNo": "3366822",
+      "name": "AJUITEY Prince Awonaab"
+    },
+    {
+      "supervisor": "Dr. Eric Opoku Osei",
+      "supervisorId": "dr-eric-opoku-osei",
+      "studentId": "20922290",
+      "indexNo": "3377722",
+      "name": "ASIEDU Rabbi Perez Kwakoa"
+    },
+    {
+      "supervisor": "Dr. Eric Opoku Osei",
+      "supervisorId": "dr-eric-opoku-osei",
+      "studentId": "20922313",
+      "indexNo": "3370322",
+      "name": "ANANE Eric Ankamah"
+    },
+    {
+      "supervisor": "Dr. Eric Opoku Osei",
+      "supervisorId": "dr-eric-opoku-osei",
+      "studentId": "20922337",
+      "indexNo": "3406522",
+      "name": "OPOKU Kwaku Kelvin"
+    },
+    {
+      "supervisor": "Dr. Eric Opoku Osei",
+      "supervisorId": "dr-eric-opoku-osei",
+      "studentId": "20922992",
+      "indexNo": "3363722",
+      "name": "ADU NYARKO Andy"
+    },
+    {
+      "supervisor": "Dr. Eric Opoku Osei",
+      "supervisorId": "dr-eric-opoku-osei",
+      "studentId": "20923516",
+      "indexNo": "3404722",
+      "name": "OCRAN Leonard"
+    },
+    {
+      "supervisor": "Dr. Eric Opoku Osei",
+      "supervisorId": "dr-eric-opoku-osei",
+      "studentId": "20923656",
+      "indexNo": "3372922",
+      "name": "ANTWI Jeffrey Twum"
+    },
+    {
+      "supervisor": "Dr. Eric Opoku Osei",
+      "supervisorId": "dr-eric-opoku-osei",
+      "studentId": "20923785",
+      "indexNo": "3403022",
+      "name": "NTIM Oheneba Kwaku Tawiah"
+    },
+    {
+      "supervisor": "Dr. Eric Opoku Osei",
+      "supervisorId": "dr-eric-opoku-osei",
+      "studentId": "20923860",
+      "indexNo": "3389422",
+      "name": "DONKOH Benjamin Kwesi"
+    },
+    {
+      "supervisor": "Dr. Eric Opoku Osei",
+      "supervisorId": "dr-eric-opoku-osei",
+      "studentId": "20923907",
+      "indexNo": "3403822",
+      "name": "NYARKO Samuel Okyere"
+    },
+    {
+      "supervisor": "Dr. Eric Opoku Osei",
+      "supervisorId": "dr-eric-opoku-osei",
+      "studentId": "20923927",
+      "indexNo": "3397722",
+      "name": "KYEI Christian Junior"
+    },
+    {
+      "supervisor": "Dr. Eric Opoku Osei",
+      "supervisorId": "dr-eric-opoku-osei",
+      "studentId": "20924066",
+      "indexNo": "3367122",
+      "name": "AKORSU Emmanuella Amenuveve"
+    },
+    {
+      "supervisor": "Dr. Eric Opoku Osei",
+      "supervisorId": "dr-eric-opoku-osei",
+      "studentId": "20924307",
+      "indexNo": "3371722",
+      "name": "ANOKYE Osei Cornelius"
+    },
+    {
+      "supervisor": "Dr. Eric Opoku Osei",
+      "supervisorId": "dr-eric-opoku-osei",
+      "studentId": "20924488",
+      "indexNo": "3360122",
+      "name": "ABDUL-KARIM Ansinmwini Raqib"
+    },
+    {
+      "supervisor": "Dr. Eric Opoku Osei",
+      "supervisorId": "dr-eric-opoku-osei",
+      "studentId": "20941299",
+      "indexNo": "3376622",
+      "name": "ASANTE Kwame Junior"
+    },
+    {
+      "supervisor": "Dr. Eric Opoku Osei",
+      "supervisorId": "dr-eric-opoku-osei",
+      "studentId": "20934630",
+      "indexNo": "3400522",
+      "name": "MIKADO Ernest Kwadwo"
+    },
+    {
+      "supervisor": "Dr. Kate Takyi",
+      "supervisorId": "dr-kate-takyi",
+      "studentId": "20924551",
+      "indexNo": "3386022",
+      "name": "CHAMOUN Emile"
+    },
+    {
+      "supervisor": "Dr. Kate Takyi",
+      "supervisorId": "dr-kate-takyi",
+      "studentId": "20924562",
+      "indexNo": "3366022",
+      "name": "AGYEMANG Kelvin Ntim"
+    },
+    {
+      "supervisor": "Dr. Kate Takyi",
+      "supervisorId": "dr-kate-takyi",
+      "studentId": "20924678",
+      "indexNo": "3359822",
+      "name": "ABDUL RASHEED Ruweida Suhuyini"
+    },
+    {
+      "supervisor": "Dr. Kate Takyi",
+      "supervisorId": "dr-kate-takyi",
+      "studentId": "20925651",
+      "indexNo": "3395522",
+      "name": "KONADU Nana Kwame Amoateng"
+    },
+    {
+      "supervisor": "Dr. Kate Takyi",
+      "supervisorId": "dr-kate-takyi",
+      "studentId": "20925709",
+      "indexNo": "3407822",
+      "name": "OSEI Isaac Gyasi"
+    },
+    {
+      "supervisor": "Dr. Kate Takyi",
+      "supervisorId": "dr-kate-takyi",
+      "studentId": "20925778",
+      "indexNo": "3407022",
+      "name": "OPOKU NTI Marvin"
+    },
+    {
+      "supervisor": "Dr. Kate Takyi",
+      "supervisorId": "dr-kate-takyi",
+      "studentId": "20925879",
+      "indexNo": "3365822",
+      "name": "AGYEMANG Christabel Yaa"
+    },
+    {
+      "supervisor": "Dr. Kate Takyi",
+      "supervisorId": "dr-kate-takyi",
+      "studentId": "20926432",
+      "indexNo": "3414722",
+      "name": "SOETOR Theophilus Etornam"
+    },
+    {
+      "supervisor": "Dr. Kate Takyi",
+      "supervisorId": "dr-kate-takyi",
+      "studentId": "20926882",
+      "indexNo": "3414522",
+      "name": "SIE Eugene Kwasi"
+    },
+    {
+      "supervisor": "Dr. Kate Takyi",
+      "supervisorId": "dr-kate-takyi",
+      "studentId": "20926884",
+      "indexNo": "3401422",
+      "name": "NARH Lois Korklu"
+    },
+    {
+      "supervisor": "Dr. Kate Takyi",
+      "supervisorId": "dr-kate-takyi",
+      "studentId": "20927077",
+      "indexNo": "3375522",
+      "name": "ASAAH Manasseh"
+    },
+    {
+      "supervisor": "Dr. Kate Takyi",
+      "supervisorId": "dr-kate-takyi",
+      "studentId": "20927090",
+      "indexNo": "3414822",
+      "name": "SULEMANA Kaisaan Anamzoya"
+    },
+    {
+      "supervisor": "Dr. Kate Takyi",
+      "supervisorId": "dr-kate-takyi",
+      "studentId": "20927403",
+      "indexNo": "3364322",
+      "name": "AFFUL Louisa Henewaa"
+    },
+    {
+      "supervisor": "Dr. Kate Takyi",
+      "supervisorId": "dr-kate-takyi",
+      "studentId": "20927884",
+      "indexNo": "3391022",
+      "name": "ETUAH Bright Annan"
+    },
+    {
+      "supervisor": "Dr. Kate Takyi",
+      "supervisorId": "dr-kate-takyi",
+      "studentId": "20928015",
+      "indexNo": "3418522",
+      "name": "YEKUNYA Prince"
+    },
+    {
+      "supervisor": "Dr. Kate Takyi",
+      "supervisorId": "dr-kate-takyi",
+      "studentId": "20928570",
+      "indexNo": "3390422",
+      "name": "EDZIE Samuel Ekow Junior"
+    },
+    {
+      "supervisor": "Dr. Kate Takyi",
+      "supervisorId": "dr-kate-takyi",
+      "studentId": "20929071",
+      "indexNo": "3361222",
+      "name": "ACHEAMPONG Francis"
+    },
+    {
+      "supervisor": "Dr. Kate Takyi",
+      "supervisorId": "dr-kate-takyi",
+      "studentId": "20929168",
+      "indexNo": "3359222",
+      "name": "ABBAN Jeddy Paa Kojo"
+    },
+    {
+      "supervisor": "Dr. Kate Takyi",
+      "supervisorId": "dr-kate-takyi",
+      "studentId": "20929289",
+      "indexNo": "3388322",
+      "name": "DENNIS Opoku Amponsah"
+    },
+    {
+      "supervisor": "Dr. Kate Takyi",
+      "supervisorId": "dr-kate-takyi",
+      "studentId": "20929356",
+      "indexNo": "3416422",
+      "name": "TORKPO Robert Kweku"
+    },
+    {
+      "supervisor": "Dr. Kate Takyi",
+      "supervisorId": "dr-kate-takyi",
+      "studentId": "20929951",
+      "indexNo": "3406122",
+      "name": "OKYERE-GYAMFI Augustine"
+    },
+    {
+      "supervisor": "Dr. Kate Takyi",
+      "supervisorId": "dr-kate-takyi",
+      "studentId": "20930032",
+      "indexNo": "3385822",
+      "name": "BREW Eliza Anim"
+    },
+    {
+      "supervisor": "Dr. Kate Takyi",
+      "supervisorId": "dr-kate-takyi",
+      "studentId": "20930185",
+      "indexNo": "3401922",
+      "name": "NIMAKO Obed Afari"
+    },
+    {
+      "supervisor": "Dr. Kate Takyi",
+      "supervisorId": "dr-kate-takyi",
+      "studentId": "20930371",
+      "indexNo": "3405922",
+      "name": "OKOI Judith Ampomaa"
+    },
+    {
+      "supervisor": "Dr. Kate Takyi",
+      "supervisorId": "dr-kate-takyi",
+      "studentId": "20930579",
+      "indexNo": "3413722",
+      "name": "SELBY Emmanuel Kweku"
+    },
+    {
+      "supervisor": "Dr. Kate Takyi",
+      "supervisorId": "dr-kate-takyi",
+      "studentId": "20931010",
+      "indexNo": "3408622",
+      "name": "OTIS Daniel Owusu"
+    },
+    {
+      "supervisor": "Dr. Kate Takyi",
+      "supervisorId": "dr-kate-takyi",
+      "studentId": "20931338",
+      "indexNo": "3380622",
+      "name": "AYITEY Dennis Tiam"
+    },
+    {
+      "supervisor": "Dr. Kate Takyi",
+      "supervisorId": "dr-kate-takyi",
+      "studentId": "20931447",
+      "indexNo": "3413822",
+      "name": "SEMEKOR Eunice"
+    },
+    {
+      "supervisor": "Dr. Kate Takyi",
+      "supervisorId": "dr-kate-takyi",
+      "studentId": "20931540",
+      "indexNo": "3404522",
+      "name": "OCANSEY Robert Tetteh"
+    },
+    {
+      "supervisor": "Dr. Kate Takyi",
+      "supervisorId": "dr-kate-takyi",
+      "studentId": "20931721",
+      "indexNo": "3361822",
+      "name": "ACQUANDOH Esther Efua"
+    },
+    {
+      "supervisor": "Dr. Kate Takyi",
+      "supervisorId": "dr-kate-takyi",
+      "studentId": "20931997",
+      "indexNo": "3382022",
+      "name": "BAMUOH Ida Nuotama"
+    },
+    {
+      "supervisor": "Dr. Kate Takyi",
+      "supervisorId": "dr-kate-takyi",
+      "studentId": "20932240",
+      "indexNo": "3409322",
+      "name": "OWUSU Bruce Peprah"
+    },
+    {
+      "supervisor": "Dr. Kate Takyi",
+      "supervisorId": "dr-kate-takyi",
+      "studentId": "20932387",
+      "indexNo": "3370622",
+      "name": "ANDOH Fredrick"
+    },
+    {
+      "supervisor": "Dr. Kate Takyi",
+      "supervisorId": "dr-kate-takyi",
+      "studentId": "20932606",
+      "indexNo": "3369222",
+      "name": "AMOAH Benjamin"
+    },
+    {
+      "supervisor": "Dr. Kate Takyi",
+      "supervisorId": "dr-kate-takyi",
+      "studentId": "20932653",
+      "indexNo": "3390222",
+      "name": "DZEBLE Emmanuel Eli Komla"
+    },
+    {
+      "supervisor": "Dr. Kate Takyi",
+      "supervisorId": "dr-kate-takyi",
+      "studentId": "20932690",
+      "indexNo": "3415222",
+      "name": "TAMAKLOE Richmond Delasi"
+    },
+    {
+      "supervisor": "Dr. Kate Takyi",
+      "supervisorId": "dr-kate-takyi",
+      "studentId": "20932831",
+      "indexNo": "3389222",
+      "name": "DOKU Clifford Nii Adjei"
+    },
+    {
+      "supervisor": "Dr. Kate Takyi",
+      "supervisorId": "dr-kate-takyi",
+      "studentId": "20932914",
+      "indexNo": "3364822",
+      "name": "AGGOR Kobbie Eyram"
+    },
+    {
+      "supervisor": "Dr. Kate Takyi",
+      "supervisorId": "dr-kate-takyi",
+      "studentId": "20933353",
+      "indexNo": "3400422",
+      "name": "MENSAH PEPRA Terry"
+    },
+    {
+      "supervisor": "Dr. Kate Takyi",
+      "supervisorId": "dr-kate-takyi",
+      "studentId": "20933667",
+      "indexNo": "3408522",
+      "name": "OSEI-ASSIBEY Kelvin Odame"
+    },
+    {
+      "supervisor": "Dr. Kwabena Owusu-Agyemang",
+      "supervisorId": "dr-kwabena-owusu-agyemang",
+      "studentId": "20903243",
+      "indexNo": "3401722",
+      "name": "NARTEY Samuel Akoto"
+    },
+    {
+      "supervisor": "Dr. Kwabena Owusu-Agyemang",
+      "supervisorId": "dr-kwabena-owusu-agyemang",
+      "studentId": "20883877",
+      "indexNo": "3406322",
+      "name": "OPOKU Davies"
+    },
+    {
+      "supervisor": "Dr. Kwabena Owusu-Agyemang",
+      "supervisorId": "dr-kwabena-owusu-agyemang",
+      "studentId": "20906753",
+      "indexNo": "3397522",
+      "name": "KWOFIE Priscilla Anvoba"
+    },
+    {
+      "supervisor": "Dr. Kwabena Owusu-Agyemang",
+      "supervisorId": "dr-kwabena-owusu-agyemang",
+      "studentId": "20918864",
+      "indexNo": "3375722",
+      "name": "ASAFO-ADJEI Jensen Kweku Sedem"
+    },
+    {
+      "supervisor": "Dr. Kwabena Owusu-Agyemang",
+      "supervisorId": "dr-kwabena-owusu-agyemang",
+      "studentId": "20935079",
+      "indexNo": "3414022",
+      "name": "SEWORDOR Ruth Afivi"
+    },
+    {
+      "supervisor": "Dr. Kwabena Owusu-Agyemang",
+      "supervisorId": "dr-kwabena-owusu-agyemang",
+      "studentId": "20935187",
+      "indexNo": "3392022",
+      "name": "FYNN-SACKEY Emmanuel Opoku"
+    },
+    {
+      "supervisor": "Dr. Kwabena Owusu-Agyemang",
+      "supervisorId": "dr-kwabena-owusu-agyemang",
+      "studentId": "20935239",
+      "indexNo": "3396722",
+      "name": "KWAKYE Ernest Bediako"
+    },
+    {
+      "supervisor": "Dr. Kwabena Owusu-Agyemang",
+      "supervisorId": "dr-kwabena-owusu-agyemang",
+      "studentId": "20935256",
+      "indexNo": "3384122",
+      "name": "BOAKYE Fredrick"
+    },
+    {
+      "supervisor": "Dr. Kwabena Owusu-Agyemang",
+      "supervisorId": "dr-kwabena-owusu-agyemang",
+      "studentId": "20935372",
+      "indexNo": "3399522",
+      "name": "MENSAH Emmanuella Asiedua"
+    },
+    {
+      "supervisor": "Dr. Kwabena Owusu-Agyemang",
+      "supervisorId": "dr-kwabena-owusu-agyemang",
+      "studentId": "20936354",
+      "indexNo": "3383322",
+      "name": "BENTIL Edmond Fiifi Ampoma"
+    },
+    {
+      "supervisor": "Dr. Kwabena Owusu-Agyemang",
+      "supervisorId": "dr-kwabena-owusu-agyemang",
+      "studentId": "20936880",
+      "indexNo": "3399022",
+      "name": "MARFO Derrick"
+    },
+    {
+      "supervisor": "Dr. Kwabena Owusu-Agyemang",
+      "supervisorId": "dr-kwabena-owusu-agyemang",
+      "studentId": "20937081",
+      "indexNo": "3414222",
+      "name": "SHAIBU Salim"
+    },
+    {
+      "supervisor": "Dr. Kwabena Owusu-Agyemang",
+      "supervisorId": "dr-kwabena-owusu-agyemang",
+      "studentId": "20937742",
+      "indexNo": "3371622",
+      "name": "ANNORBAH Marvinphil Sekoh"
+    },
+    {
+      "supervisor": "Dr. Kwabena Owusu-Agyemang",
+      "supervisorId": "dr-kwabena-owusu-agyemang",
+      "studentId": "20937813",
+      "indexNo": "3400922",
+      "name": "MOHAMMED Iddriss"
+    },
+    {
+      "supervisor": "Dr. Kwabena Owusu-Agyemang",
+      "supervisorId": "dr-kwabena-owusu-agyemang",
+      "studentId": "20938022",
+      "indexNo": "3394222",
+      "name": "JOHNSON William"
+    },
+    {
+      "supervisor": "Dr. Kwabena Owusu-Agyemang",
+      "supervisorId": "dr-kwabena-owusu-agyemang",
+      "studentId": "20938275",
+      "indexNo": "3383622",
+      "name": "BIMPONG Clinton"
+    },
+    {
+      "supervisor": "Dr. Kwabena Owusu-Agyemang",
+      "supervisorId": "dr-kwabena-owusu-agyemang",
+      "studentId": "20938399",
+      "indexNo": "3400622",
+      "name": "MINTAH Bright Amofa"
+    },
+    {
+      "supervisor": "Dr. Kwabena Owusu-Agyemang",
+      "supervisorId": "dr-kwabena-owusu-agyemang",
+      "studentId": "20938424",
+      "indexNo": "3416122",
+      "name": "THOMPSON Kobina Mensa"
+    },
+    {
+      "supervisor": "Dr. Kwabena Owusu-Agyemang",
+      "supervisorId": "dr-kwabena-owusu-agyemang",
+      "studentId": "20938505",
+      "indexNo": "3378622",
+      "name": "ATITSO Jonas Sedem Kwame"
+    },
+    {
+      "supervisor": "Dr. Kwabena Owusu-Agyemang",
+      "supervisorId": "dr-kwabena-owusu-agyemang",
+      "studentId": "20938530",
+      "indexNo": "3364122",
+      "name": "ADUSEI Christian"
+    },
+    {
+      "supervisor": "Dr. Kwabena Owusu-Agyemang",
+      "supervisorId": "dr-kwabena-owusu-agyemang",
+      "studentId": "20938987",
+      "indexNo": "3361622",
+      "name": "ACQUAH Gideon"
+    },
+    {
+      "supervisor": "Dr. Kwabena Owusu-Agyemang",
+      "supervisorId": "dr-kwabena-owusu-agyemang",
+      "studentId": "20939088",
+      "indexNo": "3416322",
+      "name": "TORKORNOO Kevin"
+    },
+    {
+      "supervisor": "Dr. Kwabena Owusu-Agyemang",
+      "supervisorId": "dr-kwabena-owusu-agyemang",
+      "studentId": "20939596",
+      "indexNo": "3393222",
+      "name": "HARUNA Bawumia Fahad"
+    },
+    {
+      "supervisor": "Dr. Kwabena Owusu-Agyemang",
+      "supervisorId": "dr-kwabena-owusu-agyemang",
+      "studentId": "20939685",
+      "indexNo": "3392922",
+      "name": "GYAMFI Nana Agyemang"
+    },
+    {
+      "supervisor": "Dr. Kwabena Owusu-Agyemang",
+      "supervisorId": "dr-kwabena-owusu-agyemang",
+      "studentId": "20939763",
+      "indexNo": "3411522",
+      "name": "QUARCOO Kelvin"
+    },
+    {
+      "supervisor": "Dr. Kwabena Owusu-Agyemang",
+      "supervisorId": "dr-kwabena-owusu-agyemang",
+      "studentId": "20939860",
+      "indexNo": "3375222",
+      "name": "ARMAH Lawrence Nii"
+    },
+    {
+      "supervisor": "Dr. Kwabena Owusu-Agyemang",
+      "supervisorId": "dr-kwabena-owusu-agyemang",
+      "studentId": "20940143",
+      "indexNo": "3368922",
+      "name": "AMEYAW Seth"
+    },
+    {
+      "supervisor": "Dr. Kwabena Owusu-Agyemang",
+      "supervisorId": "dr-kwabena-owusu-agyemang",
+      "studentId": "20940248",
+      "indexNo": "3413622",
+      "name": "SEIDU Hamzah"
+    },
+    {
+      "supervisor": "Dr. Kwabena Owusu-Agyemang",
+      "supervisorId": "dr-kwabena-owusu-agyemang",
+      "studentId": "20940297",
+      "indexNo": "3396222",
+      "name": "KPENTEY Kankson Komla Ewoenam"
+    },
+    {
+      "supervisor": "Dr. Kwabena Owusu-Agyemang",
+      "supervisorId": "dr-kwabena-owusu-agyemang",
+      "studentId": "20940308",
+      "indexNo": "3390822",
+      "name": "ESSANDOH Prince Takyi"
+    },
+    {
+      "supervisor": "Dr. Kwabena Owusu-Agyemang",
+      "supervisorId": "dr-kwabena-owusu-agyemang",
+      "studentId": "20940420",
+      "indexNo": "3381722",
+      "name": "BADU Owusu Edmund"
+    },
+    {
+      "supervisor": "Dr. Kwabena Owusu-Agyemang",
+      "supervisorId": "dr-kwabena-owusu-agyemang",
+      "studentId": "20940474",
+      "indexNo": "3370122",
+      "name": "AMPONSEM Stephen Owusu"
+    },
+    {
+      "supervisor": "Dr. Kwabena Owusu-Agyemang",
+      "supervisorId": "dr-kwabena-owusu-agyemang",
+      "studentId": "20940702",
+      "indexNo": "3378822",
+      "name": "ATUAHENE Judith Nkrumah"
+    },
+    {
+      "supervisor": "Dr. Kwabena Owusu-Agyemang",
+      "supervisorId": "dr-kwabena-owusu-agyemang",
+      "studentId": "20940784",
+      "indexNo": "3392222",
+      "name": "GBEDEMAH Delight Elorm"
+    },
+    {
+      "supervisor": "Dr. Kwabena Owusu-Agyemang",
+      "supervisorId": "dr-kwabena-owusu-agyemang",
+      "studentId": "20940813",
+      "indexNo": "3371322",
+      "name": "ANKRAH Manasseh Papa Kwamena"
+    },
+    {
+      "supervisor": "Dr. Kwabena Owusu-Agyemang",
+      "supervisorId": "dr-kwabena-owusu-agyemang",
+      "studentId": "20940830",
+      "indexNo": "3407222",
+      "name": "OPPONG Emmanuel Akwasi"
+    },
+    {
+      "supervisor": "Dr. Kwabena Owusu-Agyemang",
+      "supervisorId": "dr-kwabena-owusu-agyemang",
+      "studentId": "20941017",
+      "indexNo": "3397422",
+      "name": "KWOFIE Kenneth Ryke"
+    },
+    {
+      "supervisor": "Dr. Kwabena Owusu-Agyemang",
+      "supervisorId": "dr-kwabena-owusu-agyemang",
+      "studentId": "20896200",
+      "indexNo": "3370522",
+      "name": "ANDAM-COBBOLD Paapa Kobina"
+    },
+    {
+      "supervisor": "Dr. Kwabena Owusu-Agyemang",
+      "supervisorId": "dr-kwabena-owusu-agyemang",
+      "studentId": "20911755",
+      "indexNo": "3390022",
+      "name": "DUSSEY Caleb Semekor"
+    },
+    {
+      "supervisor": "Dr. Kwabena Owusu-Agyemang",
+      "supervisorId": "dr-kwabena-owusu-agyemang",
+      "studentId": "20883806",
+      "indexNo": "3361422",
+      "name": "ACHEAMPONG Shadrack Adu Sarfo"
+    },
+    {
+      "supervisor": "Dr. Linda Amoako Banning",
+      "supervisorId": "dr-linda-amoako-banning",
+      "studentId": "20941486",
+      "indexNo": "3388822",
+      "name": "DODOFOLI Joshua Korku"
+    },
+    {
+      "supervisor": "Dr. Linda Amoako Banning",
+      "supervisorId": "dr-linda-amoako-banning",
+      "studentId": "20941781",
+      "indexNo": "3396422",
+      "name": "KUMAH Benjamin"
+    },
+    {
+      "supervisor": "Dr. Linda Amoako Banning",
+      "supervisorId": "dr-linda-amoako-banning",
+      "studentId": "20941908",
+      "indexNo": "3360322",
+      "name": "ABDULAI Abdul-Latif"
+    },
+    {
+      "supervisor": "Dr. Linda Amoako Banning",
+      "supervisorId": "dr-linda-amoako-banning",
+      "studentId": "20941916",
+      "indexNo": "3372022",
+      "name": "ANOKYE-MENSAH Papa Yaw"
+    },
+    {
+      "supervisor": "Dr. Linda Amoako Banning",
+      "supervisorId": "dr-linda-amoako-banning",
+      "studentId": "20942051",
+      "indexNo": "3417922",
+      "name": "YEBOAH Godfred"
+    },
+    {
+      "supervisor": "Dr. Linda Amoako Banning",
+      "supervisorId": "dr-linda-amoako-banning",
+      "studentId": "20942066",
+      "indexNo": "3403322",
+      "name": "NUKPORTI Collins Korbla"
+    },
+    {
+      "supervisor": "Dr. Linda Amoako Banning",
+      "supervisorId": "dr-linda-amoako-banning",
+      "studentId": "20942206",
+      "indexNo": "3383922",
+      "name": "BOADU Obiri Yeboah Kwame"
+    },
+    {
+      "supervisor": "Dr. Linda Amoako Banning",
+      "supervisorId": "dr-linda-amoako-banning",
+      "studentId": "20942305",
+      "indexNo": "3403222",
+      "name": "NUAMAH Nana Ama Dansowaa"
+    },
+    {
+      "supervisor": "Dr. Linda Amoako Banning",
+      "supervisorId": "dr-linda-amoako-banning",
+      "studentId": "20942504",
+      "indexNo": "3366622",
+      "name": "AIDOO Sampson"
+    },
+    {
+      "supervisor": "Dr. Linda Amoako Banning",
+      "supervisorId": "dr-linda-amoako-banning",
+      "studentId": "20942640",
+      "indexNo": "3372722",
+      "name": "ANTWI Frank Oteng"
+    },
+    {
+      "supervisor": "Dr. Linda Amoako Banning",
+      "supervisorId": "dr-linda-amoako-banning",
+      "studentId": "20942832",
+      "indexNo": "3416722",
+      "name": "TWUM Clement"
+    },
+    {
+      "supervisor": "Dr. Linda Amoako Banning",
+      "supervisorId": "dr-linda-amoako-banning",
+      "studentId": "20942932",
+      "indexNo": "3416622",
+      "name": "TWENEBOAH Jonathan Ofori"
+    },
+    {
+      "supervisor": "Dr. Linda Amoako Banning",
+      "supervisorId": "dr-linda-amoako-banning",
+      "studentId": "20943236",
+      "indexNo": "3398722",
+      "name": "MACCARTHY Henorkam Tetteh"
+    },
+    {
+      "supervisor": "Dr. Linda Amoako Banning",
+      "supervisorId": "dr-linda-amoako-banning",
+      "studentId": "20943241",
+      "indexNo": "3383122",
+      "name": "BEKOE Ntiamoah Chris"
+    },
+    {
+      "supervisor": "Dr. Linda Amoako Banning",
+      "supervisorId": "dr-linda-amoako-banning",
+      "studentId": "20943387",
+      "indexNo": "3415722",
+      "name": "TENZAGH Philip"
+    },
+    {
+      "supervisor": "Dr. Linda Amoako Banning",
+      "supervisorId": "dr-linda-amoako-banning",
+      "studentId": "20943425",
+      "indexNo": "3379022",
+      "name": "AWARIKARO Rudolph Hodds Awenate"
+    },
+    {
+      "supervisor": "Dr. Linda Amoako Banning",
+      "supervisorId": "dr-linda-amoako-banning",
+      "studentId": "20943609",
+      "indexNo": "3379522",
+      "name": "AWUAH Kelvin"
+    },
+    {
+      "supervisor": "Dr. Linda Amoako Banning",
+      "supervisorId": "dr-linda-amoako-banning",
+      "studentId": "20943728",
+      "indexNo": "3365222",
+      "name": "AGYEI Akwasi Poku Ofori"
+    },
+    {
+      "supervisor": "Dr. Linda Amoako Banning",
+      "supervisorId": "dr-linda-amoako-banning",
+      "studentId": "20943811",
+      "indexNo": "3380722",
+      "name": "AYITEY-ADJIN Sadiq"
+    },
+    {
+      "supervisor": "Dr. Linda Amoako Banning",
+      "supervisorId": "dr-linda-amoako-banning",
+      "studentId": "20943817",
+      "indexNo": "3397322",
+      "name": "KWOFIE Benjamin Nana"
+    },
+    {
+      "supervisor": "Dr. Linda Amoako Banning",
+      "supervisorId": "dr-linda-amoako-banning",
+      "studentId": "20943941",
+      "indexNo": "3363022",
+      "name": "ADJEI Kelvin Ankamah"
+    },
+    {
+      "supervisor": "Dr. Linda Amoako Banning",
+      "supervisorId": "dr-linda-amoako-banning",
+      "studentId": "20944024",
+      "indexNo": "3389522",
+      "name": "DOWUONA Daniel Nortei"
+    },
+    {
+      "supervisor": "Dr. Linda Amoako Banning",
+      "supervisorId": "dr-linda-amoako-banning",
+      "studentId": "20944358",
+      "indexNo": "3366222",
+      "name": "AGYEMANG-BADU Daniel"
+    },
+    {
+      "supervisor": "Dr. Linda Amoako Banning",
+      "supervisorId": "dr-linda-amoako-banning",
+      "studentId": "20944659",
+      "indexNo": "3362122",
+      "name": "ADARKWA Godfred Boakye"
+    },
+    {
+      "supervisor": "Dr. Linda Amoako Banning",
+      "supervisorId": "dr-linda-amoako-banning",
+      "studentId": "20944927",
+      "indexNo": "3419322",
+      "name": "ZIGGAH Amy Ami Enam"
+    },
+    {
+      "supervisor": "Dr. Linda Amoako Banning",
+      "supervisorId": "dr-linda-amoako-banning",
+      "studentId": "20944995",
+      "indexNo": "3397922",
+      "name": "KYEREH Jeffery"
+    },
+    {
+      "supervisor": "Dr. Linda Amoako Banning",
+      "supervisorId": "dr-linda-amoako-banning",
+      "studentId": "20945191",
+      "indexNo": "3418422",
+      "name": "YEBOAH Neison Nti"
+    },
+    {
+      "supervisor": "Dr. Linda Amoako Banning",
+      "supervisorId": "dr-linda-amoako-banning",
+      "studentId": "20945252",
+      "indexNo": "3394022",
+      "name": "JACKSON Judah Bless"
+    },
+    {
+      "supervisor": "Dr. Linda Amoako Banning",
+      "supervisorId": "dr-linda-amoako-banning",
+      "studentId": "20945476",
+      "indexNo": "3369622",
+      "name": "AMPONG Scott Kankam"
+    },
+    {
+      "supervisor": "Dr. Linda Amoako Banning",
+      "supervisorId": "dr-linda-amoako-banning",
+      "studentId": "20945751",
+      "indexNo": "3380922",
+      "name": "AZUMAH Asakwin Caleb"
+    },
+    {
+      "supervisor": "Dr. Linda Amoako Banning",
+      "supervisorId": "dr-linda-amoako-banning",
+      "studentId": "20946096",
+      "indexNo": "3413522",
+      "name": "SEGBEDZI Livingston"
+    },
+    {
+      "supervisor": "Dr. Linda Amoako Banning",
+      "supervisorId": "dr-linda-amoako-banning",
+      "studentId": "20946143",
+      "indexNo": "3410222",
+      "name": "OWUSU Nelson Osei Tutu"
+    },
+    {
+      "supervisor": "Dr. Linda Amoako Banning",
+      "supervisorId": "dr-linda-amoako-banning",
+      "studentId": "20946497",
+      "indexNo": "3417422",
+      "name": "YAHAYA Alidu Faisal"
+    },
+    {
+      "supervisor": "Dr. Linda Amoako Banning",
+      "supervisorId": "dr-linda-amoako-banning",
+      "studentId": "20946593",
+      "indexNo": "3399722",
+      "name": "MENSAH Justin"
+    },
+    {
+      "supervisor": "Dr. Linda Amoako Banning",
+      "supervisorId": "dr-linda-amoako-banning",
+      "studentId": "20946650",
+      "indexNo": "3404822",
+      "name": "ODAI Samuel Nii-Afotey"
+    },
+    {
+      "supervisor": "Dr. Linda Amoako Banning",
+      "supervisorId": "dr-linda-amoako-banning",
+      "studentId": "20946791",
+      "indexNo": "3395822",
+      "name": "KORANTENG Nhyiraba Daniel"
+    },
+    {
+      "supervisor": "Dr. Linda Amoako Banning",
+      "supervisorId": "dr-linda-amoako-banning",
+      "studentId": "20946890",
+      "indexNo": "3419222",
+      "name": "ZAGLA Donatus"
+    },
+    {
+      "supervisor": "Dr. Linda Amoako Banning",
+      "supervisorId": "dr-linda-amoako-banning",
+      "studentId": "20947414",
+      "indexNo": "3401222",
+      "name": "MUSTAPHA Abdul-Salam Nto"
+    },
+    {
+      "supervisor": "Dr. Linda Amoako Banning",
+      "supervisorId": "dr-linda-amoako-banning",
+      "studentId": "20947492",
+      "indexNo": "3396822",
+      "name": "KWAKYE Jude Boateng"
+    },
+    {
+      "supervisor": "Dr. Linda Amoako Banning",
+      "supervisorId": "dr-linda-amoako-banning",
+      "studentId": "20889323",
+      "indexNo": "3415822",
+      "name": "TETTEH Mark Addo"
+    },
+    {
+      "supervisor": "Dr. Benjamin Tei-Partey",
+      "supervisorId": "dr-benjamin-tei-partey",
+      "studentId": "20948017",
+      "indexNo": "3362822",
+      "name": "ADJEI Albert Arko"
+    },
+    {
+      "supervisor": "Dr. Benjamin Tei-Partey",
+      "supervisorId": "dr-benjamin-tei-partey",
+      "studentId": "20948079",
+      "indexNo": "3372222",
+      "name": "ANSAH Francis"
+    },
+    {
+      "supervisor": "Dr. Benjamin Tei-Partey",
+      "supervisorId": "dr-benjamin-tei-partey",
+      "studentId": "20948238",
+      "indexNo": "3371222",
+      "name": "ANKOMAH Kelvin"
+    },
+    {
+      "supervisor": "Dr. Benjamin Tei-Partey",
+      "supervisorId": "dr-benjamin-tei-partey",
+      "studentId": "20948245",
+      "indexNo": "3364522",
+      "name": "AGBEKE Joshua Bubune"
+    },
+    {
+      "supervisor": "Dr. Benjamin Tei-Partey",
+      "supervisorId": "dr-benjamin-tei-partey",
+      "studentId": "20948482",
+      "indexNo": "3371022",
+      "name": "ANIM Kwarteng Michael"
+    },
+    {
+      "supervisor": "Dr. Benjamin Tei-Partey",
+      "supervisorId": "dr-benjamin-tei-partey",
+      "studentId": "20948514",
+      "indexNo": "3362722",
+      "name": "ADDY Christian Nii Antiaye"
+    },
+    {
+      "supervisor": "Dr. Benjamin Tei-Partey",
+      "supervisorId": "dr-benjamin-tei-partey",
+      "studentId": "20948582",
+      "indexNo": "3368222",
+      "name": "AMANKONAH-HENNEH Elton"
+    },
+    {
+      "supervisor": "Dr. Benjamin Tei-Partey",
+      "supervisorId": "dr-benjamin-tei-partey",
+      "studentId": "20948686",
+      "indexNo": "3415422",
+      "name": "TECHIE Doreen"
+    },
+    {
+      "supervisor": "Dr. Benjamin Tei-Partey",
+      "supervisorId": "dr-benjamin-tei-partey",
+      "studentId": "20948761",
+      "indexNo": "3402222",
+      "name": "NKETIAH Asamoah Michael"
+    },
+    {
+      "supervisor": "Dr. Benjamin Tei-Partey",
+      "supervisorId": "dr-benjamin-tei-partey",
+      "studentId": "20948813",
+      "indexNo": "3360522",
+      "name": "ABDULAI Umar Tijani"
+    },
+    {
+      "supervisor": "Dr. Benjamin Tei-Partey",
+      "supervisorId": "dr-benjamin-tei-partey",
+      "studentId": "20948853",
+      "indexNo": "3379422",
+      "name": "AWUAH Caleb Ofori"
+    },
+    {
+      "supervisor": "Dr. Benjamin Tei-Partey",
+      "supervisorId": "dr-benjamin-tei-partey",
+      "studentId": "20949009",
+      "indexNo": "3406422",
+      "name": "OPOKU Davis"
+    },
+    {
+      "supervisor": "Dr. Benjamin Tei-Partey",
+      "supervisorId": "dr-benjamin-tei-partey",
+      "studentId": "20949115",
+      "indexNo": "3393522",
+      "name": "HUARU Hafiz"
+    },
+    {
+      "supervisor": "Dr. Benjamin Tei-Partey",
+      "supervisorId": "dr-benjamin-tei-partey",
+      "studentId": "20949135",
+      "indexNo": "3376222",
+      "name": "ASANTE Ernest Kwame Opoku"
+    },
+    {
+      "supervisor": "Dr. Benjamin Tei-Partey",
+      "supervisorId": "dr-benjamin-tei-partey",
+      "studentId": "20949265",
+      "indexNo": "3381922",
+      "name": "BAIDOO Kingsley"
+    },
+    {
+      "supervisor": "Dr. Benjamin Tei-Partey",
+      "supervisorId": "dr-benjamin-tei-partey",
+      "studentId": "20949673",
+      "indexNo": "3401622",
+      "name": "NARTEY Osborn Ojerh Tettey"
+    },
+    {
+      "supervisor": "Dr. Benjamin Tei-Partey",
+      "supervisorId": "dr-benjamin-tei-partey",
+      "studentId": "20949809",
+      "indexNo": "3406722",
+      "name": "OPOKU Perry"
+    },
+    {
+      "supervisor": "Dr. Benjamin Tei-Partey",
+      "supervisorId": "dr-benjamin-tei-partey",
+      "studentId": "20949904",
+      "indexNo": "3392522",
+      "name": "GORMAN Shaphat Fiifi"
+    },
+    {
+      "supervisor": "Dr. Benjamin Tei-Partey",
+      "supervisorId": "dr-benjamin-tei-partey",
+      "studentId": "20949966",
+      "indexNo": "3370922",
+      "name": "ANIM Kofi Korang"
+    },
+    {
+      "supervisor": "Dr. Benjamin Tei-Partey",
+      "supervisorId": "dr-benjamin-tei-partey",
+      "studentId": "20950261",
+      "indexNo": "3409122",
+      "name": "OWUAYEBI Erica Ama Dansua"
+    },
+    {
+      "supervisor": "Dr. Benjamin Tei-Partey",
+      "supervisorId": "dr-benjamin-tei-partey",
+      "studentId": "20950602",
+      "indexNo": "3389622",
+      "name": "DOWUONA OWOO Mildred"
+    },
+    {
+      "supervisor": "Dr. Benjamin Tei-Partey",
+      "supervisorId": "dr-benjamin-tei-partey",
+      "studentId": "20950857",
+      "indexNo": "3385122",
+      "name": "BOKORDEDZI Gershwin Sy Amenuveve"
+    },
+    {
+      "supervisor": "Dr. Benjamin Tei-Partey",
+      "supervisorId": "dr-benjamin-tei-partey",
+      "studentId": "20951005",
+      "indexNo": "3385322",
+      "name": "BONSU Nana Adwoa Serwaa"
+    },
+    {
+      "supervisor": "Dr. Benjamin Tei-Partey",
+      "supervisorId": "dr-benjamin-tei-partey",
+      "studentId": "20951169",
+      "indexNo": "3360822",
+      "name": "ABOAGYE Emmanuel Opoku"
+    },
+    {
+      "supervisor": "Dr. Benjamin Tei-Partey",
+      "supervisorId": "dr-benjamin-tei-partey",
+      "studentId": "20951533",
+      "indexNo": "3398622",
+      "name": "LAWEH Emanuel Lamptey"
+    },
+    {
+      "supervisor": "Dr. Benjamin Tei-Partey",
+      "supervisorId": "dr-benjamin-tei-partey",
+      "studentId": "20951609",
+      "indexNo": "3386622",
+      "name": "CUDJOE Philip"
+    },
+    {
+      "supervisor": "Dr. Benjamin Tei-Partey",
+      "supervisorId": "dr-benjamin-tei-partey",
+      "studentId": "20951781",
+      "indexNo": "3399222",
+      "name": "MARTEY KORLEY Enoch"
+    },
+    {
+      "supervisor": "Dr. Benjamin Tei-Partey",
+      "supervisorId": "dr-benjamin-tei-partey",
+      "studentId": "20952128",
+      "indexNo": "3386822",
+      "name": "DADZIE Joseph"
+    },
+    {
+      "supervisor": "Dr. Benjamin Tei-Partey",
+      "supervisorId": "dr-benjamin-tei-partey",
+      "studentId": "20952219",
+      "indexNo": "3367322",
+      "name": "AKPANGLO Samuel Katey"
+    },
+    {
+      "supervisor": "Dr. Benjamin Tei-Partey",
+      "supervisorId": "dr-benjamin-tei-partey",
+      "studentId": "20952293",
+      "indexNo": "3402522",
+      "name": "NKRUMAH Ignatius Peprah"
+    },
+    {
+      "supervisor": "Dr. Benjamin Tei-Partey",
+      "supervisorId": "dr-benjamin-tei-partey",
+      "studentId": "20953083",
+      "indexNo": "3364722",
+      "name": "AGBOR SEIDU Mahfuz"
+    },
+    {
+      "supervisor": "Dr. Benjamin Tei-Partey",
+      "supervisorId": "dr-benjamin-tei-partey",
+      "studentId": "20953558",
+      "indexNo": "3368422",
+      "name": "AMARTEY Roland Teye"
+    },
+    {
+      "supervisor": "Dr. Benjamin Tei-Partey",
+      "supervisorId": "dr-benjamin-tei-partey",
+      "studentId": "20954106",
+      "indexNo": "3405322",
+      "name": "ODURO-GYAMINAH Bismark Nana Yaw Opoku"
+    },
+    {
+      "supervisor": "Dr. Benjamin Tei-Partey",
+      "supervisorId": "dr-benjamin-tei-partey",
+      "studentId": "20954149",
+      "indexNo": "3364622",
+      "name": "AGBO Fadl Adams"
+    },
+    {
+      "supervisor": "Dr. Benjamin Tei-Partey",
+      "supervisorId": "dr-benjamin-tei-partey",
+      "studentId": "20954179",
+      "indexNo": "3361522",
+      "name": "ACKAH Divine Elikem"
+    },
+    {
+      "supervisor": "Dr. Benjamin Tei-Partey",
+      "supervisorId": "dr-benjamin-tei-partey",
+      "studentId": "20954328",
+      "indexNo": "3362322",
+      "name": "ADDAI Isaac"
+    },
+    {
+      "supervisor": "Dr. Benjamin Tei-Partey",
+      "supervisorId": "dr-benjamin-tei-partey",
+      "studentId": "20954676",
+      "indexNo": "3405122",
+      "name": "ODUM Benjamin Serdem"
+    },
+    {
+      "supervisor": "Dr. Benjamin Tei-Partey",
+      "supervisorId": "dr-benjamin-tei-partey",
+      "studentId": "20954788",
+      "indexNo": "3366422",
+      "name": "AHIATAKU Etornam Kordzo"
+    },
+    {
+      "supervisor": "Dr. Benjamin Tei-Partey",
+      "supervisorId": "dr-benjamin-tei-partey",
+      "studentId": "20901740",
+      "indexNo": "3392322",
+      "name": "GODSON Nhyira Akua"
+    },
+    {
+      "supervisor": "Dr. Benjamin Tei-Partey",
+      "supervisorId": "dr-benjamin-tei-partey",
+      "studentId": "20889448",
+      "indexNo": "3387522",
+      "name": "DANSO Martin Obiri"
+    },
+    {
+      "supervisor": "Dr. Kornyo Oliver",
+      "supervisorId": "dr-kornyo-oliver",
+      "studentId": "20955654",
+      "indexNo": "3388522",
+      "name": "DEVINE Randy"
+    },
+    {
+      "supervisor": "Dr. Kornyo Oliver",
+      "supervisorId": "dr-kornyo-oliver",
+      "studentId": "20956461",
+      "indexNo": "3417322",
+      "name": "WILLS Tony"
+    },
+    {
+      "supervisor": "Dr. Kornyo Oliver",
+      "supervisorId": "dr-kornyo-oliver",
+      "studentId": "20956697",
+      "indexNo": "3388422",
+      "name": "DETTOH Prince Kweku Adu"
+    },
+    {
+      "supervisor": "Dr. Kornyo Oliver",
+      "supervisorId": "dr-kornyo-oliver",
+      "studentId": "20956721",
+      "indexNo": "3363622",
+      "name": "ADU MENSAH AMOFAH Felix"
+    },
+    {
+      "supervisor": "Dr. Kornyo Oliver",
+      "supervisorId": "dr-kornyo-oliver",
+      "studentId": "20957314",
+      "indexNo": "3393722",
+      "name": "IBRAHIM Saadatu"
+    },
+    {
+      "supervisor": "Dr. Kornyo Oliver",
+      "supervisorId": "dr-kornyo-oliver",
+      "studentId": "20957347",
+      "indexNo": "3365022",
+      "name": "AGYAPONG Ebenezer Ntiakoh"
+    },
+    {
+      "supervisor": "Dr. Kornyo Oliver",
+      "supervisorId": "dr-kornyo-oliver",
+      "studentId": "20957585",
+      "indexNo": "3410322",
+      "name": "OWUSU Queenster Adomah"
+    },
+    {
+      "supervisor": "Dr. Kornyo Oliver",
+      "supervisorId": "dr-kornyo-oliver",
+      "studentId": "20957659",
+      "indexNo": "3375322",
+      "name": "ARTHUR Frank Annor"
+    },
+    {
+      "supervisor": "Dr. Kornyo Oliver",
+      "supervisorId": "dr-kornyo-oliver",
+      "studentId": "20958028",
+      "indexNo": "3359722",
+      "name": "ABDUL RAFIU Shamsudeen"
+    },
+    {
+      "supervisor": "Dr. Kornyo Oliver",
+      "supervisorId": "dr-kornyo-oliver",
+      "studentId": "20958038",
+      "indexNo": "3367922",
+      "name": "ALHASSAN DIASSO Iman"
+    },
+    {
+      "supervisor": "Dr. Kornyo Oliver",
+      "supervisorId": "dr-kornyo-oliver",
+      "studentId": "20958507",
+      "indexNo": "3396122",
+      "name": "KPEMLIE Vincent Kwaku"
+    },
+    {
+      "supervisor": "Dr. Kornyo Oliver",
+      "supervisorId": "dr-kornyo-oliver",
+      "studentId": "20958508",
+      "indexNo": "3359522",
+      "name": "ABDUL HAQUE Yahaya Yelpoea"
+    },
+    {
+      "supervisor": "Dr. Kornyo Oliver",
+      "supervisorId": "dr-kornyo-oliver",
+      "studentId": "20958964",
+      "indexNo": "3413422",
+      "name": "SEFA Kelvin"
+    },
+    {
+      "supervisor": "Dr. Kornyo Oliver",
+      "supervisorId": "dr-kornyo-oliver",
+      "studentId": "20958994",
+      "indexNo": "3409822",
+      "name": "OWUSU Jaffar"
+    },
+    {
+      "supervisor": "Dr. Kornyo Oliver",
+      "supervisorId": "dr-kornyo-oliver",
+      "studentId": "20959145",
+      "indexNo": "3360422",
+      "name": "ABDULAI Jalali-Din Wuni-Zaligu"
+    },
+    {
+      "supervisor": "Dr. Kornyo Oliver",
+      "supervisorId": "dr-kornyo-oliver",
+      "studentId": "20959161",
+      "indexNo": "3374622",
+      "name": "APPIAH-KUBI Desmond"
+    },
+    {
+      "supervisor": "Dr. Kornyo Oliver",
+      "supervisorId": "dr-kornyo-oliver",
+      "studentId": "20959239",
+      "indexNo": "3367622",
+      "name": "AKWAH Bismark"
+    },
+    {
+      "supervisor": "Dr. Kornyo Oliver",
+      "supervisorId": "dr-kornyo-oliver",
+      "studentId": "20959328",
+      "indexNo": "3385922",
+      "name": "CAIQUO William Kyemenu"
+    },
+    {
+      "supervisor": "Dr. Kornyo Oliver",
+      "supervisorId": "dr-kornyo-oliver",
+      "studentId": "20959480",
+      "indexNo": "3407722",
+      "name": "OSEI Heinrich Owusu"
+    },
+    {
+      "supervisor": "Dr. Kornyo Oliver",
+      "supervisorId": "dr-kornyo-oliver",
+      "studentId": "20959552",
+      "indexNo": "3384522",
+      "name": "BOAMAH Joel"
+    },
+    {
+      "supervisor": "Dr. Kornyo Oliver",
+      "supervisorId": "dr-kornyo-oliver",
+      "studentId": "20959778",
+      "indexNo": "3396522",
+      "name": "KUSI James"
+    },
+    {
+      "supervisor": "Dr. Kornyo Oliver",
+      "supervisorId": "dr-kornyo-oliver",
+      "studentId": "20959993",
+      "indexNo": "3383522",
+      "name": "BENYAH Kofi Abordo"
+    },
+    {
+      "supervisor": "Dr. Kornyo Oliver",
+      "supervisorId": "dr-kornyo-oliver",
+      "studentId": "20960000",
+      "indexNo": "3419522",
+      "name": "ZULFAWU Mohammed"
+    },
+    {
+      "supervisor": "Dr. Kornyo Oliver",
+      "supervisorId": "dr-kornyo-oliver",
+      "studentId": "20960223",
+      "indexNo": "3379122",
+      "name": "AWHANSU Oluwaseyi Praise"
+    },
+    {
+      "supervisor": "Dr. Kornyo Oliver",
+      "supervisorId": "dr-kornyo-oliver",
+      "studentId": "20960313",
+      "indexNo": "3374922",
+      "name": "ARKUTU Melike"
+    },
+    {
+      "supervisor": "Dr. Kornyo Oliver",
+      "supervisorId": "dr-kornyo-oliver",
+      "studentId": "20960382",
+      "indexNo": "3394922",
+      "name": "KATA Desmond Jeffery"
+    },
+    {
+      "supervisor": "Dr. Kornyo Oliver",
+      "supervisorId": "dr-kornyo-oliver",
+      "studentId": "20960739",
+      "indexNo": "3393422",
+      "name": "HOVOR Kingsley"
+    },
+    {
+      "supervisor": "Dr. Kornyo Oliver",
+      "supervisorId": "dr-kornyo-oliver",
+      "studentId": "20961171",
+      "indexNo": "3401822",
+      "name": "NIMAKO Evans"
+    },
+    {
+      "supervisor": "Dr. Kornyo Oliver",
+      "supervisorId": "dr-kornyo-oliver",
+      "studentId": "20961333",
+      "indexNo": "3399922",
+      "name": "MENSAH Kenneth Okoe"
+    },
+    {
+      "supervisor": "Dr. Kornyo Oliver",
+      "supervisorId": "dr-kornyo-oliver",
+      "studentId": "20961339",
+      "indexNo": "3399822",
+      "name": "MENSAH Kennedy Akweteh"
+    },
+    {
+      "supervisor": "Dr. Kornyo Oliver",
+      "supervisorId": "dr-kornyo-oliver",
+      "studentId": "20961823",
+      "indexNo": "3387622",
+      "name": "DAPAAH Sarpong Nana"
+    },
+    {
+      "supervisor": "Dr. Kornyo Oliver",
+      "supervisorId": "dr-kornyo-oliver",
+      "studentId": "20962630",
+      "indexNo": "3369422",
+      "name": "AMPAH Emily Maureen"
+    },
+    {
+      "supervisor": "Dr. Kornyo Oliver",
+      "supervisorId": "dr-kornyo-oliver",
+      "studentId": "20962826",
+      "indexNo": "3384422",
+      "name": "BOAKYE-ANSAH Saverena"
+    },
+    {
+      "supervisor": "Dr. Kornyo Oliver",
+      "supervisorId": "dr-kornyo-oliver",
+      "studentId": "20963122",
+      "indexNo": "3409022",
+      "name": "OWIREDU David Kwaku Kuffour"
+    },
+    {
+      "supervisor": "Dr. Kornyo Oliver",
+      "supervisorId": "dr-kornyo-oliver",
+      "studentId": "20963242",
+      "indexNo": "3400722",
+      "name": "MOHAMMED Abdul Basit"
+    },
+    {
+      "supervisor": "Dr. Kornyo Oliver",
+      "supervisorId": "dr-kornyo-oliver",
+      "studentId": "20963256",
+      "indexNo": "3399622",
+      "name": "MENSAH Isaac Nana Sam"
+    },
+    {
+      "supervisor": "Dr. Kornyo Oliver",
+      "supervisorId": "dr-kornyo-oliver",
+      "studentId": "21456839",
+      "indexNo": "3403522",
+      "name": "NWAKANMA Chimezie Brian"
+    },
+    {
+      "supervisor": "Dr. Kornyo Oliver",
+      "supervisorId": "dr-kornyo-oliver",
+      "studentId": "21457098",
+      "indexNo": "3412222",
+      "name": "SAIBERT Maryclare Tariro"
+    },
+    {
+      "supervisor": "Dr. Kornyo Oliver",
+      "supervisorId": "dr-kornyo-oliver",
+      "studentId": "21459483",
+      "indexNo": "3382222",
+      "name": "BARRY Momodou Wurrie"
+    },
+    {
+      "supervisor": "Dr. Kornyo Oliver",
+      "supervisorId": "dr-kornyo-oliver",
+      "studentId": "21460110",
+      "indexNo": "3366722",
+      "name": "AJANG Burjwok Paulo Deng"
+    },
+    {
+      "supervisor": "Dr. Kornyo Oliver",
+      "supervisorId": "dr-kornyo-oliver",
+      "studentId": "21460750",
+      "indexNo": "3415022",
+      "name": "TAIWO Rodeeyah Akorede"
+    },
+    {
+      "supervisor": "Dr. Kornyo Oliver",
+      "supervisorId": "dr-kornyo-oliver",
+      "studentId": "21462947",
+      "indexNo": "3394122",
+      "name": "JEAN Ange Emmanuel Adou Granger Sidike"
+    }
+  ]
+}

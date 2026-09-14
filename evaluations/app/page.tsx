@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { serverApiUrl } from "@/lib/api";
-import { CRITERIA, TOTAL_WEIGHT } from "@/lib/rubric";
+import { CRITERIA, PANEL_SHARE, SUPERVISOR_SHARE } from "@/lib/rubric";
 
 export const dynamic = "force-dynamic";
 
@@ -27,8 +27,37 @@ export default async function Home() {
 
   return (
     <main className="mt-7">
-      {/* The rubric's own proportions, shown at the weights they carry. */}
+      {/* How the final mark is split, before the panel's own rubric — the bar
+          below is a breakdown of the 40% half, not of the whole mark. */}
       <section>
+        <div className="flex h-[38px] gap-[3px] overflow-hidden rounded-md">
+          <div className="flex min-w-0 items-center px-2.5 text-[12px] font-semibold text-white"
+               style={{ flex: PANEL_SHARE, background: "var(--color-knust)" }}>
+            <span className="truncate">Defense panel</span>
+            <span className="num ml-auto shrink-0 pl-2 text-[11px] opacity-80">{PANEL_SHARE}%</span>
+          </div>
+          <Link href="/supervisors"
+                className="flex min-w-0 items-center px-2.5 text-[12px] font-semibold text-white transition hover:opacity-90"
+                style={{ flex: SUPERVISOR_SHARE, background: "var(--color-css-blue)" }}>
+            <span className="truncate">Supervisor</span>
+            <span className="num ml-auto shrink-0 pl-2 text-[11px] opacity-80">{SUPERVISOR_SHARE}%</span>
+          </Link>
+        </div>
+        <div className="mt-2 flex flex-wrap justify-between gap-3 text-[11.5px] text-ink-3">
+          <p>
+            Each supervisor marks their own students out of {SUPERVISOR_SHARE}
+            {" "}&mdash; <Link href="/supervisors" className="text-knust underline underline-offset-2">
+              file yours here
+            </Link>.
+          </p>
+        </div>
+      </section>
+
+      {/* The panel rubric's own proportions, shown at the weights they carry. */}
+      <section className="mt-7">
+        <h2 className="mb-2.5 font-display text-[15px] font-semibold">
+          Inside the panel&rsquo;s {PANEL_SHARE}%
+        </h2>
         {/* Narrow segments cannot hold their labels — under sm the bar keeps the
             proportions and the names move to a legend underneath. */}
         <div className="flex h-2.5 gap-[3px] overflow-hidden rounded-md sm:h-[38px]">
@@ -53,7 +82,10 @@ export default async function Home() {
           ))}
         </ul>
         <div className="mt-2 flex flex-wrap justify-between gap-3 text-[11.5px] text-ink-3">
-          <p>Each student is scored 0–10 per criterion, weighted to {TOTAL_WEIGHT} points.</p>
+          <p>
+            Each student is scored 0–10 per criterion by both examiners, averaged,
+            then taken as {PANEL_SHARE}% of the final mark.
+          </p>
           <p className="num">{groups} groups · {students} students · {rooms.length} rooms</p>
         </div>
       </section>

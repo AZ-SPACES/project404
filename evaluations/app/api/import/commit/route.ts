@@ -80,32 +80,57 @@ export async function POST(req: Request) {
     );
   }
 
+  // "merge" adds and updates and removes nothing; "replace" makes the roster match
+  // the file exactly. Merge is the default: an allocation sheet is normally a
+  // correction or an addition, and the destructive reading of it should have to be
+  // asked for rather than arrived at.
+  const mode = form.get("mode") === "replace" ? "replace" : "merge";
+
   const client = await pool.connect();
   try {
     await client.query("begin");
 
     const incomingIds = result.students.map((s) => s.id);
-    const { rows: doomed } = await client.query<{ students: number; scores: number }>(
-      `select (select count(*)::int from students where id <> all($1::text[])) as students,
-              (select count(*)::int from scores   where student_id <> all($1::text[])) as scores`,
+
+    // Students with no group belong to no room and so appear in no allocation
+    // sheet — they are supervisees who never sat the defense. Deleting them
+    // because a room allocation does not mention them would be wrong, and would
+    // take their supervisor's mark with them.
+    const { rows: doomed } = await client.query<{
+      students: number; scores: number; marks: number; unscheduled: number;
+    }>(
+      `select (select count(*)::int from students
+                where id <> all($1::text[]) and group_number is not null) as students,
+              (select count(*)::int from scores sc
+                 join students s on s.id = sc.student_id
+                where s.id <> all($1::text[]) and s.group_number is not null) as scores,
+              (select count(*)::int from supervisor_scores ss
+                 join students s on s.id = ss.student_id
+                where s.id <> all($1::text[]) and s.group_number is not null) as marks,
+              (select count(*)::int from students where group_number is null) as unscheduled`,
       [incomingIds]
     );
     const studentsAtRisk = doomed[0]?.students ?? 0;
     const scoresAtRisk = doomed[0]?.scores ?? 0;
+    const marksAtRisk = doomed[0]?.marks ?? 0;
+    const unscheduled = doomed[0]?.unscheduled ?? 0;
 
-    // Any removal is destructive — students cascade to their ballots — so the caller
-    // has to have seen the count and said yes.
-    if (studentsAtRisk > 0 && form.get("confirmDeletions") !== "true") {
+    // Any removal is destructive — students cascade to their ballots and their
+    // supervisor mark — so the caller has to have seen the count and said yes.
+    if (mode === "replace" && studentsAtRisk > 0 && form.get("confirmDeletions") !== "true") {
       await client.query("rollback");
+      const losing = [
+        scoresAtRisk ? `${scoresAtRisk} ballot(s)` : "",
+        marksAtRisk ? `${marksAtRisk} supervisor mark(s)` : "",
+      ].filter(Boolean).join(" and ");
       return NextResponse.json({
         error:
           `This import removes ${studentsAtRisk} student(s) who are not in the file` +
-          (scoresAtRisk
-            ? `, deleting the ${scoresAtRisk} ballot(s) already recorded against them`
-            : "") +
-          `. Re-submit with confirmation to proceed.`,
+          (losing ? `, deleting the ${losing} recorded against them` : "") +
+          `. Re-submit with confirmation, or import as an update instead.`,
         studentsAtRisk,
         scoresAtRisk,
+        marksAtRisk,
         needsConfirmation: true,
       }, { status: 409 });
     }
@@ -145,25 +170,45 @@ export async function POST(req: Request) {
       );
     }
 
-    const { rowCount: removedStudents } = await client.query(
-      `delete from students where id <> all($1::text[])`, [incomingIds]
-    );
-    const { rowCount: removedGroups } = await client.query(
-      `delete from groups where number <> all($1::int[])`,
-      [result.groups.map((g) => g.number)]
-    );
+    let removedStudents = 0;
+    let removedGroups = 0;
+
+    if (mode === "replace") {
+      const gone = await client.query(
+        `delete from students where id <> all($1::text[]) and group_number is not null`,
+        [incomingIds]
+      );
+      const goneGroups = await client.query(
+        `delete from groups where number <> all($1::int[])`,
+        [result.groups.map((g) => g.number)]
+      );
+      removedStudents = gone.rowCount ?? 0;
+      removedGroups = goneGroups.rowCount ?? 0;
+    }
 
     await client.query("commit");
 
+    const warnings = [...result.warnings];
+    if (mode === "replace" && unscheduled) {
+      warnings.push(
+        `${unscheduled} student(s) with no room — supervisees who did not sit the ` +
+        `defense — were kept. They appear in no allocation sheet, so a replace ` +
+        `never removes them.`
+      );
+    }
+
     return NextResponse.json({
       ok: true,
+      mode,
       rooms: result.rooms.length,
       groups: result.groups.length,
       students: result.students.length,
-      removedStudents: removedStudents ?? 0,
-      removedGroups: removedGroups ?? 0,
-      deletedScores: scoresAtRisk,
-      warnings: result.warnings,
+      removedStudents,
+      removedGroups,
+      deletedScores: mode === "replace" ? scoresAtRisk : 0,
+      deletedMarks: mode === "replace" ? marksAtRisk : 0,
+      keptStudents: mode === "merge" ? studentsAtRisk : 0,
+      warnings,
     });
   } catch (e) {
     await client.query("rollback").catch(() => {});

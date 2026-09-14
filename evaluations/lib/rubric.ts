@@ -1,5 +1,10 @@
 // The rubric exactly as printed in DEFENSE ALLOCATION FOR COMPUTER SCIENCE 2026.
-// Weights are percentages of a 100-point total; each criterion is scored 0-10.
+//
+// The weights below are percentages of the *panel* score, which is itself 40% of
+// the final mark — the student's supervisor contributes the other 60% separately.
+// They are deliberately left summing to 100 rather than rescaled to 40: this is
+// the scale printed on the sheet the panels scored from, and every ballot already
+// in the database is on it. The 40% conversion happens once, in `finalMark`.
 export type CriterionKey =
   | "appearance" | "usability" | "technical" | "innovation" | "presentation";
 
@@ -26,6 +31,10 @@ export const CRITERIA: Criterion[] = [
 ];
 
 export const TOTAL_WEIGHT = CRITERIA.reduce((n, c) => n + c.weight, 0); // 100
+
+/** How the final mark is split between the defense panel and the supervisor. */
+export const PANEL_SHARE = 40;
+export const SUPERVISOR_SHARE = 60;
 
 export type Ballot = Partial<Record<CriterionKey, number | null>>;
 
@@ -57,4 +66,33 @@ export function aggregate(ballots: Ballot[]) {
     }
   }
   return { per, total: any ? total : null };
+}
+
+/**
+ * The two halves of a student's mark, combined.
+ *
+ * `panelTotal` is the panel mean on the 0-100 rubric scale above; `supervisorMark`
+ * is the supervisor's own figure, already out of 60. Either may be missing, and a
+ * missing half is not a zero — `complete` says whether the mark can be published,
+ * and `final` is only the sum of the halves that exist, so a part-marked student
+ * reads as "28.4 so far" rather than as a failing 28.4.
+ *
+ * The two components are named `...Points` because this result gets spread onto a
+ * student row that already carries `supervisor` — the person's name.
+ */
+export function finalMark(
+  panelTotal: number | null | undefined,
+  supervisorMark: number | null | undefined
+) {
+  const panel = typeof panelTotal === "number"
+    ? (panelTotal / TOTAL_WEIGHT) * PANEL_SHARE
+    : null;
+  const supervisor = typeof supervisorMark === "number" ? supervisorMark : null;
+
+  return {
+    panelPoints: panel,                // out of PANEL_SHARE
+    supervisorPoints: supervisor,      // out of SUPERVISOR_SHARE
+    final: panel === null && supervisor === null ? null : (panel ?? 0) + (supervisor ?? 0),
+    complete: panel !== null && supervisor !== null,
+  };
 }

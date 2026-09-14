@@ -20,9 +20,14 @@ type Preview = {
   };
 };
 type CommitResult = {
-  ok?: true; rooms: number; groups: number; students: number;
-  removedStudents: number; removedGroups: number; deletedScores: number; warnings: string[];
+  ok?: true; mode: Mode; rooms: number; groups: number; students: number;
+  removedStudents: number; removedGroups: number;
+  deletedScores: number; deletedMarks: number; keptStudents: number;
+  warnings: string[];
 };
+
+/** Update leaves everything the file does not mention alone; replace does not. */
+type Mode = "merge" | "replace";
 
 export default function ImportWizard() {
   const router = useRouter();
@@ -32,6 +37,7 @@ export default function ImportWizard() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
+  const [mode, setMode] = useState<Mode>("merge");
   const [done, setDone] = useState<CommitResult | null>(null);
 
   const runPreview = useCallback(
@@ -58,7 +64,8 @@ export default function ImportWizard() {
   );
 
   const pick = (f: File | null) => {
-    setFile(f); setPreview(null); setConfirmed(false); setDone(null); setError(null);
+    setFile(f); setPreview(null); setConfirmed(false); setMode("merge");
+    setDone(null); setError(null);
     if (f) runPreview(f);
   };
 
@@ -78,7 +85,8 @@ export default function ImportWizard() {
       if (preview.sheet) body.set("sheet", preview.sheet);
       body.set("headerRow", preview.headerRow === null ? "" : String(preview.headerRow));
       body.set("mapping", JSON.stringify(preview.mapping));
-      if (confirmed) body.set("confirmDeletions", "true");
+      body.set("mode", mode);
+      if (mode === "replace" && confirmed) body.set("confirmDeletions", "true");
       const res = await fetch(apiUrl("/api/import/commit"), { method: "POST", body });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "The import failed."); return; }
@@ -92,7 +100,7 @@ export default function ImportWizard() {
   };
 
   const s = preview?.summary;
-  const blocked = !!s && s.removed > 0 && !confirmed;
+  const blocked = mode === "replace" && !!s && s.removed > 0 && !confirmed;
 
   return (
     <div className="mt-6 grid gap-5">
@@ -226,25 +234,54 @@ export default function ImportWizard() {
           ) : null}
 
           {s.removed > 0 && (
-            <label className="mt-4 flex items-start gap-2.5 rounded-md border border-alert/30 bg-alert/5 p-3 text-[12.5px] text-alert">
-              <input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)}
-                     className="mt-0.5" />
-              <span>
-                <b>{s.removed} student(s)</b> in the database are not in this file and will be
-                deleted
-                {s.scoresAtRisk > 0 ? (
-                  <>, along with the <b>{s.scoresAtRisk} ballot(s)</b> already recorded
-                    against them (of {s.scoresTotal} in total)</>
-                ) : (
-                  <> — none of them have ballots recorded</>
-                )}. Tick to confirm.
-              </span>
-            </label>
+            <fieldset className="mt-4 rounded-md border border-line p-3">
+              <legend className="eyebrow px-1">
+                {s.removed} student(s) in the database are not in this file
+              </legend>
+              <label className="flex items-start gap-2.5 p-1.5 text-[12.5px]">
+                <input type="radio" name="import-mode" className="mt-0.5"
+                       checked={mode === "merge"}
+                       onChange={() => { setMode("merge"); setConfirmed(false); }} />
+                <span>
+                  <b>Update</b> — add and correct the students in this file, and leave the
+                  other {s.removed} exactly as they are. Nothing is deleted.
+                </span>
+              </label>
+              <label className="flex items-start gap-2.5 p-1.5 text-[12.5px]">
+                <input type="radio" name="import-mode" className="mt-0.5"
+                       checked={mode === "replace"}
+                       onChange={() => setMode("replace")} />
+                <span>
+                  <b>Replace</b> — make the roster match this file exactly, deleting those{" "}
+                  {s.removed} student(s)
+                  {s.scoresAtRisk > 0 ? (
+                    <> and the <b>{s.scoresAtRisk} ballot(s)</b> recorded against them (of{" "}
+                      {s.scoresTotal} in total)</>
+                  ) : (
+                    <> — none of them have ballots recorded</>
+                  )}.
+                </span>
+              </label>
+
+              {mode === "replace" && (
+                <label className="mt-1.5 flex items-start gap-2.5 rounded-md border border-alert/30 bg-alert/5 p-3 text-[12.5px] text-alert">
+                  <input type="checkbox" checked={confirmed} className="mt-0.5"
+                         onChange={(e) => setConfirmed(e.target.checked)} />
+                  <span>
+                    I understand this permanently deletes {s.removed} student(s)
+                    {s.scoresAtRisk > 0 ? `, their ${s.scoresAtRisk} ballot(s)` : ""} and any
+                    supervisor marks recorded against them.
+                  </span>
+                </label>
+              )}
+            </fieldset>
           )}
 
           <div className="mt-5 flex items-center gap-3">
             <button className="btn btn-primary" onClick={commit} disabled={busy || blocked}>
-              {busy ? "Importing…" : "Import allocation"}
+              {busy
+                ? "Importing…"
+                : mode === "replace" ? "Replace allocation" : "Update allocation"}
             </button>
             {blocked && <span className="text-[12px] text-ink-3">Confirm the deletions above first.</span>}
           </div>
@@ -256,9 +293,28 @@ export default function ImportWizard() {
           <h2 className="font-display text-[16px] font-semibold">Import complete</h2>
           <p className="num mt-1.5 text-[13px] text-ink-2">
             {done.students} students · {done.groups} groups · {done.rooms} rooms.
+            {done.keptStudents
+              ? ` ${done.keptStudents} student(s) not in the file were left untouched.`
+              : ""}
             {done.removedStudents ? ` Removed ${done.removedStudents} student(s)` : ""}
-            {done.deletedScores ? ` and ${done.deletedScores} ballot(s).` : done.removedStudents ? "." : ""}
+            {done.removedStudents
+              ? (done.deletedScores || done.deletedMarks
+                  ? `, with ${[
+                      done.deletedScores ? `${done.deletedScores} ballot(s)` : "",
+                      done.deletedMarks ? `${done.deletedMarks} supervisor mark(s)` : "",
+                    ].filter(Boolean).join(" and ")}.`
+                  : ".")
+              : ""}
           </p>
+          {done.warnings?.length ? (
+            <ul className="mt-3 grid gap-1.5">
+              {done.warnings.map((w) => (
+                <li key={w} className="rounded-md border border-warn/30 bg-warn/5 px-3 py-2 text-[12.5px] text-warn">
+                  {w}
+                </li>
+              ))}
+            </ul>
+          ) : null}
           <a href="/" className="btn mt-4">Back to rooms</a>
         </section>
       )}
