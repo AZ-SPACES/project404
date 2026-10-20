@@ -87,3 +87,36 @@ create table if not exists supervisor_scores (
 
 create index if not exists students_supervisor_idx    on students(supervisor_id);
 create index if not exists supervisor_scores_sup_idx  on supervisor_scores(supervisor_id);
+
+-- ---------------------------------------------------------------------------
+-- Third-year mini project, added after the final-year defense.
+--
+-- These students did not defend, so there is no panel and no rubric: their
+-- supervisor gives one mark out of 100 and that is the whole grade. They are kept
+-- out of `students` on purpose. Every query over that table — results, transfers,
+-- and above all /import, which removes any student missing from an uploaded
+-- allocation — is about the final-year cohort, and a third year caught in one of
+-- them would either be counted as a final year or deleted.
+--
+-- Two students appear on both lists (they are repeating a third-year course).
+-- They get one record in each table, which is correct: two different marks.
+-- ---------------------------------------------------------------------------
+
+create table if not exists mini_students (
+  id            text primary key,     -- 'mp-8975923'
+  index_no      text not null unique,
+  name          text not null,
+  supervisor_id text not null references supervisors(id),
+  sort          int  not null
+);
+
+create table if not exists mini_scores (
+  student_id    text not null references mini_students(id) on delete cascade,
+  supervisor_id text not null references supervisors(id),
+  mark          numeric(4,1) check (mark between 0 and 100),
+  notes         text        not null default '',
+  updated_at    timestamptz not null default now(),
+  primary key (student_id)
+);
+
+create index if not exists mini_students_supervisor_idx on mini_students(supervisor_id);

@@ -10,7 +10,8 @@ type SupervisorRow = {
 
 export async function GET() {
   // `defended` is the subset that sat the defense and so has a panel half too;
-  // the rest are supervisees who only ever get the 60%.
+  // the rest are supervisees who only ever get the 60%. A supervisor of third
+  // years alone (see /mini) has no final-year students and is left out.
   const supervisors = await query<SupervisorRow>(`
     select sv.id, sv.name,
            count(s.id)::int                                        as students,
@@ -20,6 +21,7 @@ export async function GET() {
       left join students s          on s.supervisor_id = sv.id
       left join supervisor_scores ss on ss.student_id = s.id
      group by sv.id, sv.name, sv.sort
+    having count(s.id) > 0
      order by sv.sort
   `);
   return NextResponse.json({ supervisors });

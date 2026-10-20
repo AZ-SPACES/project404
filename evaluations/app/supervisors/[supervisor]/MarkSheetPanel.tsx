@@ -23,12 +23,17 @@ const fmt = (n: number | null) => (n === null ? "—" : Number.isInteger(n) ? St
  * The upload is always previewed before it is written: the supervisor sees every
  * mark that would change, and from what to what, and only then agrees. Applying
  * without that step would make a mis-sorted spreadsheet unrecoverable.
+ *
+ * `apiBase` and `max` let the mini project page reuse it: its sheet lives under
+ * /api/mini and its marks go up to 100.
  */
 export default function MarkSheetPanel({
-  supervisorId, onApplied,
+  supervisorId, onApplied, apiBase = "/api/supervisors", max = SUPERVISOR_SHARE,
 }: {
   supervisorId: string;
   onApplied: () => void;
+  apiBase?: string;
+  max?: number;
 }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState<null | "preview" | "commit">(null);
@@ -46,7 +51,7 @@ export default function MarkSheetPanel({
       const body = new FormData();
       body.set("file", file);
       if (commit) body.set("commit", "1");
-      const res = await fetch(apiUrl(`/api/supervisors/${supervisorId}/marks`), {
+      const res = await fetch(apiUrl(`${apiBase}/${supervisorId}/marks`), {
         method: "POST", body,
       });
       const data = await res.json();
@@ -96,10 +101,10 @@ export default function MarkSheetPanel({
       {open && (
         <div className="border-t border-line-soft p-4">
           <div className="flex flex-wrap items-center gap-2">
-            <a href={apiUrl(`/api/supervisors/${supervisorId}/sheet?format=xlsx`)} className="btn">
+            <a href={apiUrl(`${apiBase}/${supervisorId}/sheet?format=xlsx`)} className="btn">
               Download Excel
             </a>
-            <a href={apiUrl(`/api/supervisors/${supervisorId}/sheet?format=csv`)} className="btn">
+            <a href={apiUrl(`${apiBase}/${supervisorId}/sheet?format=csv`)} className="btn">
               Download CSV
             </a>
             <span className="mx-1 hidden h-5 w-px bg-line sm:block" />
@@ -111,7 +116,7 @@ export default function MarkSheetPanel({
                    className="sr-only" />
           </div>
           <p className="mt-2.5 max-w-[70ch] text-[11.5px] text-ink-3">
-            Marks are 0–{SUPERVISOR_SHARE}, to one decimal place. A row left blank is
+            Marks are 0–{max}, to one decimal place. A row left blank is
             left alone, so you can send the sheet back in batches. Keep the{" "}
             <span className="num">Ref</span> column — it is what matches each row to
             the right student.

@@ -17,9 +17,9 @@ export default async function SupervisorPage({
   if (res.status === 404) notFound();
   if (!res.ok) throw new Error(`Could not load supervisor ${id} (${res.status})`);
 
-  const { supervisor, students } = (await res.json()) as {
-    supervisor: Supervisor; students: Supervisee[];
+  const { supervisor, students, miniCount } = (await res.json()) as {
+    supervisor: Supervisor; students: Supervisee[]; miniCount: number;
   };
 
-  return <SupervisorBoard supervisor={supervisor} initialStudents={students} />;
+  return <SupervisorBoard supervisor={supervisor} initialStudents={students} miniCount={miniCount} />;
 }

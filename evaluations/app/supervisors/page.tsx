@@ -24,12 +24,15 @@ export default async function SupervisorsPage() {
     <main className="mt-7">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <span className="eyebrow">Supervisor marks · {SUPERVISOR_SHARE}%</span>
+          <span className="eyebrow">Final year project · 4th year · your {SUPERVISOR_SHARE}%</span>
           <h2 className="font-display text-[22px] font-bold">Find your name</h2>
           <p className="mt-1 max-w-[62ch] text-[13px] text-ink-2">
             The defense panel scored {PANEL_SHARE}% of each student&rsquo;s final mark.
             The remaining {SUPERVISOR_SHARE}% is yours, given to your own supervisees
-            individually.
+            individually. Third-year marks are under{" "}
+            <Link href="/mini" className="text-knust underline-offset-2 hover:underline">
+              Mini project (3rd year)
+            </Link>.
           </p>
         </div>
         <p className="num text-[12px] text-ink-3">

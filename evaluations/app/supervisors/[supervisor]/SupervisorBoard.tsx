@@ -42,9 +42,9 @@ function readMark(text: string):
 }
 
 export default function SupervisorBoard({
-  supervisor, initialStudents,
+  supervisor, initialStudents, miniCount = 0,
 }: {
-  supervisor: Supervisor; initialStudents: Supervisee[];
+  supervisor: Supervisor; initialStudents: Supervisee[]; miniCount?: number;
 }) {
   const [students, setStudents] = useState(initialStudents);
   const [drafts, setDrafts] = useState<Map<string, Draft>>(new Map());
@@ -145,14 +145,20 @@ export default function SupervisorBoard({
       <div className="flex flex-wrap items-end justify-between gap-x-5 gap-y-3">
         <div className="min-w-0">
           <Link href="/supervisors" className="eyebrow hover:text-ink-2">
-            &larr; All supervisors
+            &larr; Final year project · all supervisors
           </Link>
           <h2 className="font-display text-[22px] font-bold">{supervisor.name}</h2>
           <p className="mt-0.5 text-[12.5px] text-ink-2">
-            Your {SUPERVISOR_SHARE}% for {students.length} student
+            Final year project · your {SUPERVISOR_SHARE}% for {students.length} student
             {students.length === 1 ? "" : "s"}
             {didNotDefend > 0 && ` · ${didNotDefend} did not sit the defense`}
           </p>
+          {miniCount > 0 && (
+            <Link href={`/mini/${supervisor.id}`}
+                  className="mt-1 inline-block text-[12.5px] font-medium text-knust underline-offset-2 hover:underline">
+              Your {miniCount} mini project (3rd year) student{miniCount === 1 ? "" : "s"} &rarr;
+            </Link>
+          )}
         </div>
         <div className="flex w-full flex-wrap items-center gap-x-3 gap-y-2 sm:w-auto">
           <div className="num order-last flex w-full flex-wrap gap-x-2 text-[11.5px] text-ink-3 sm:order-none sm:w-auto sm:flex-col sm:items-end sm:gap-x-0">
