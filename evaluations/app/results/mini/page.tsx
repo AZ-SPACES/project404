@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { apiUrl, serverApiUrl } from "@/lib/api";
 import { MINI_MAX, type MiniStudent } from "@/lib/miniProject";
+import ResultsTabs from "../ResultsTabs";
 
 export const dynamic = "force-dynamic";
 
@@ -25,18 +26,13 @@ export default async function MiniResultsPage() {
 
   return (
     <main className="mt-7">
+      <ResultsTabs active="mini" />
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <span className="eyebrow">Mini project · 3rd year · out of {MINI_MAX}</span>
           <h2 className="font-display text-[22px] font-bold">Results</h2>
           <p className="num mt-1 text-[12.5px] text-ink-3">
             {marked.length} of {rows.length} students marked
-          </p>
-          <p className="mt-1 text-[12.5px] text-ink-2">
-            Final-year results are under{" "}
-            <Link href="/results" className="text-knust underline-offset-2 hover:underline">
-              Results
-            </Link>.
           </p>
         </div>
         <a href={apiUrl("/api/mini/results?format=csv")} className="btn btn-primary">Download CSV</a>
