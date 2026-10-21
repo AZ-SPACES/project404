@@ -120,3 +120,14 @@ create table if not exists mini_scores (
 );
 
 create index if not exists mini_students_supervisor_idx on mini_students(supervisor_id);
+
+-- ---------------------------------------------------------------------------
+-- Who has the site open right now. Each browser pings /api/presence while a
+-- page is visible; anyone seen inside the window counts as online. Nothing here
+-- identifies a person — the id is random and lives in that browser only.
+-- ---------------------------------------------------------------------------
+
+create table if not exists presence (
+  session_id text primary key,
+  last_seen  timestamptz not null default now()
+);

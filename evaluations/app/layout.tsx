@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import "./globals.css";
+import OnlineTab from "./OnlineTab";
 
 export const metadata: Metadata = {
   title: "CS Defense Scoring — KNUST",
@@ -50,6 +51,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <Link href="/transfers" className="btn">Transfers</Link>
                 <Link href="/results" className="btn">Results</Link>
                 <Link href="/import" className="btn">Import</Link>
+                <OnlineTab />
               </nav>
               <Image src="/css-logo.png" alt="Computer Science Society" width={60} height={40}
                      className="h-10 w-auto" />
