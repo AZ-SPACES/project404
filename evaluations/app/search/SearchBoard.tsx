@@ -86,12 +86,12 @@ export default function SearchBoard() {
                 <p className="text-[13.5px] font-semibold">{s.name}</p>
                 <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-[12px]">
                   {s.finalYear > 0 && (
-                    <Link href={`/supervisors/${s.id}`} className="font-medium text-knust underline-offset-2 hover:underline">
+                    <Link href={`/supervisors/${s.id}/final`} className="font-medium text-knust underline-offset-2 hover:underline">
                       {s.finalYear} final year project &rarr;
                     </Link>
                   )}
                   {s.mini > 0 && (
-                    <Link href={`/mini/${s.id}`} className="font-medium text-knust underline-offset-2 hover:underline">
+                    <Link href={`/supervisors/${s.id}/mini`} className="font-medium text-knust underline-offset-2 hover:underline">
                       {s.mini} mini project (3rd year) &rarr;
                     </Link>
                   )}
@@ -187,7 +187,7 @@ function FinalYearDetail({ s }: { s: FinalYearHit }) {
       <dl className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
         <Fact label="Supervisor">
           {s.supervisorId ? (
-            <Link href={`/supervisors/${s.supervisorId}`} className="text-knust underline-offset-2 hover:underline">
+            <Link href={`/supervisors/${s.supervisorId}/final`} className="text-knust underline-offset-2 hover:underline">
               {s.supervisorName}
             </Link>
           ) : "—"}
@@ -257,7 +257,7 @@ function MiniDetail({ s }: { s: MiniHit }) {
     <>
       <dl className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">
         <Fact label="Supervisor">
-          <Link href={`/mini/${s.supervisorId}`} className="text-knust underline-offset-2 hover:underline">
+          <Link href={`/supervisors/${s.supervisorId}/mini`} className="text-knust underline-offset-2 hover:underline">
             {s.supervisorName}
           </Link>
         </Fact>

@@ -4,8 +4,8 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { apiUrl } from "@/lib/api";
 import { MINI_MAX, type MiniStudent } from "@/lib/miniProject";
-import type { Supervisor } from "@/app/supervisors/[supervisor]/SupervisorBoard";
-import MarkSheetPanel from "@/app/supervisors/[supervisor]/MarkSheetPanel";
+import type { Supervisor } from "./SupervisorBoard";
+import MarkSheetPanel from "./MarkSheetPanel";
 
 /** What the user typed, before it is known to be a number. */
 type Draft = { text: string; error: string | null };
@@ -33,9 +33,9 @@ function readMark(text: string):
 }
 
 export default function MiniBoard({
-  supervisor, initialStudents, finalYearCount = 0,
+  supervisor, initialStudents,
 }: {
-  supervisor: Supervisor; initialStudents: MiniStudent[]; finalYearCount?: number;
+  supervisor: Supervisor; initialStudents: MiniStudent[];
 }) {
   const [students, setStudents] = useState(initialStudents);
   const [drafts, setDrafts] = useState<Map<string, Draft>>(new Map());
@@ -129,20 +129,14 @@ export default function MiniBoard({
     <main className="mt-6">
       <div className="flex flex-wrap items-end justify-between gap-x-5 gap-y-3">
         <div className="min-w-0">
-          <Link href="/mini" className="eyebrow hover:text-ink-2">
-            &larr; Mini project (3rd year) · all supervisors
+          <Link href={`/supervisors/${supervisor.id}`} className="eyebrow hover:text-ink-2">
+            &larr; Mini project (3rd year) · switch project
           </Link>
           <h2 className="font-display text-[22px] font-bold">{supervisor.name}</h2>
           <p className="mt-0.5 text-[12.5px] text-ink-2">
             Mini project mark out of {MINI_MAX} for {students.length} third-year student
             {students.length === 1 ? "" : "s"}
           </p>
-          {finalYearCount > 0 && (
-            <Link href={`/supervisors/${supervisor.id}`}
-                  className="mt-1 inline-block text-[12.5px] font-medium text-knust underline-offset-2 hover:underline">
-              Your {finalYearCount} final year project student{finalYearCount === 1 ? "" : "s"} &rarr;
-            </Link>
-          )}
         </div>
         <div className="flex w-full flex-wrap items-center gap-x-3 gap-y-2 sm:w-auto">
           <div className="num order-last flex w-full flex-wrap gap-x-2 text-[11.5px] text-ink-3 sm:order-none sm:w-auto sm:flex-col sm:items-end sm:gap-x-0">

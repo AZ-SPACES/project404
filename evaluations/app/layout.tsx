@@ -46,8 +46,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <nav className="flex flex-wrap items-center gap-2 whitespace-nowrap">
                 <Link href="/" className="btn">Rooms</Link>
                 <Link href="/search" className="btn">Search</Link>
-                <Link href="/supervisors" className="btn">Final year project</Link>
-                <Link href="/mini" className="btn">Mini project (3rd year)</Link>
+                <Link href="/supervisors" className="btn">Supervisors</Link>
                 <Link href="/transfers" className="btn">Transfers</Link>
                 <Link href="/results" className="btn">Results</Link>
                 <Link href="/import" className="btn">Import</Link>

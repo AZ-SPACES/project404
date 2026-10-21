@@ -45,8 +45,8 @@ export default async function MiniResultsPage() {
       {!marked.length ? (
         <p className="card mt-5 p-10 text-center text-[13px] text-ink-3">
           No marks yet. They appear here as supervisors file them under{" "}
-          <Link href="/mini" className="text-knust underline-offset-2 hover:underline">
-            Mini project
+          <Link href="/supervisors" className="text-knust underline-offset-2 hover:underline">
+            Supervisors
           </Link>.
         </p>
       ) : (

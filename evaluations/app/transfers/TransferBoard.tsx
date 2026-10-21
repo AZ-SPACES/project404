@@ -104,7 +104,7 @@ export default function TransferBoard({ supervisors }: { supervisors: Supervisor
                   <p className="mt-1 text-[12px] text-ink-2">
                     Supervisor:{" "}
                     {s.supervisorId ? (
-                      <Link href={`/supervisors/${s.supervisorId}`}
+                      <Link href={`/supervisors/${s.supervisorId}/final`}
                             className="text-knust underline underline-offset-2">
                         {s.supervisorName}
                       </Link>
