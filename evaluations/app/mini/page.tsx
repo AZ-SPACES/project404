@@ -32,7 +32,8 @@ export default async function MiniProjectPage() {
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <p className="num text-[12px] text-ink-3">{scored} of {students} marks recorded</p>
-          <a href={apiUrl("/api/mini/results")} className="btn" title="Every third year and their mark">
+          <Link href="/mini/results" className="btn">View results</Link>
+          <a href={apiUrl("/api/mini/results?format=csv")} className="btn" title="Every third year and their mark">
             Export CSV
           </a>
         </div>

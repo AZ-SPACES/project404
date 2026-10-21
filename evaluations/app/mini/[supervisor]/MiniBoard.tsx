@@ -151,7 +151,7 @@ export default function MiniBoard({
               {saving ? "Saving…" : savedAt ? `Saved ${savedAt}` : "Marks save as you type"}
             </span>
           </div>
-          <a href={apiUrl(`/api/mini/results?supervisor=${supervisor.id}`)}
+          <a href={apiUrl(`/api/mini/results?format=csv&supervisor=${supervisor.id}`)}
              className="btn shrink-0" title="Every one of your third years, with their mark">
             Export<span className="hidden sm:inline">&nbsp;CSV</span>
           </a>

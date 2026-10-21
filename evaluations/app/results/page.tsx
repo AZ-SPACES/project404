@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { apiUrl, serverApiUrl } from "@/lib/api";
 import {
   CRITERIA, PANEL_SHARE, SUPERVISOR_SHARE, type Ballot,
@@ -44,6 +45,12 @@ export default async function ResultsPage() {
           <h2 className="font-display text-[22px] font-bold">Results</h2>
           <p className="num mt-1 text-[12.5px] text-ink-3">
             {complete} of {rows.length} students have both halves · {marked.length} have one
+          </p>
+          <p className="mt-1 text-[12.5px] text-ink-2">
+            Third-year results are under{" "}
+            <Link href="/mini/results" className="text-knust underline-offset-2 hover:underline">
+              Mini project results
+            </Link>.
           </p>
         </div>
         <a href={apiUrl("/api/results?format=csv")} className="btn btn-primary">Download CSV</a>

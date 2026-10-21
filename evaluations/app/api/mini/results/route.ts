@@ -6,10 +6,18 @@ export const dynamic = "force-dynamic";
 
 const csvCell = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
 
-/** Every third year, or one supervisor's with ?supervisor=, as CSV. */
+/**
+ * Every third year, or one supervisor's with ?supervisor=. JSON by default, CSV
+ * with ?format=csv — the same contract as /api/results for the final years.
+ */
 export async function GET(req: Request) {
-  const supervisorId = new URL(req.url).searchParams.get("supervisor");
+  const params = new URL(req.url).searchParams;
+  const supervisorId = params.get("supervisor");
   const rows = await loadMiniStudents(supervisorId);
+
+  if (params.get("format") !== "csv") {
+    return NextResponse.json({ students: rows });
+  }
 
   const lines = [
     ["Supervisor", "Index No", "Student", `Mark (of ${MINI_MAX})`, "Notes"].map(csvCell).join(","),
